@@ -42,6 +42,7 @@ CONFIG_PATH = "configs/vision_baseline.yaml"
 RUN_DIR = "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42"
 CHECKPOINT_PATH = f"{RUN_DIR}/checkpoints/convnext_tiny_best.pth"
 CLASS_TO_IDX_PATH = f"{RUN_DIR}/configs/class_to_idx.json"
+CHECKPOINT_META_PATH = f"{RUN_DIR}/checkpoints/checkpoint_meta.json"
 DEMO_SAMPLE_DIR = "demo_samples"
 
 
@@ -67,6 +68,7 @@ def check_required_files() -> None:
         "配置文件": Path(CONFIG_PATH),
         "模型权重": Path(CHECKPOINT_PATH),
         "类别映射文件": Path(CLASS_TO_IDX_PATH),
+        "模型元信息文件": Path(CHECKPOINT_META_PATH),
     }
 
     missing_files = [
@@ -115,6 +117,12 @@ def load_class_mapping(class_to_idx_path: str):
 
     idx_to_class = {int(v): k for k, v in class_to_idx.items()}
     return class_to_idx, idx_to_class
+
+def load_checkpoint_metadata(meta_path: str) -> dict:
+    """读取 checkpoint 对应的模型元信息。"""
+
+    with open(meta_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def build_transform(image_size: int):
@@ -231,6 +239,7 @@ check_required_files()
 
 config = load_config(CONFIG_PATH)
 class_to_idx, idx_to_class = load_class_mapping(CLASS_TO_IDX_PATH)
+checkpoint_meta = load_checkpoint_metadata(CHECKPOINT_META_PATH)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 transform = build_transform(config["image_size"])
@@ -256,9 +265,24 @@ input_mode = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.write(f"Backbone: `{config['backbone']}`")
+st.sidebar.markdown("### 模型信息")
+st.sidebar.write(f"Project: `{checkpoint_meta.get('project', 'Unknown')}`")
+st.sidebar.write(f"Version: `{checkpoint_meta.get('version', 'Unknown')}`")
+st.sidebar.write(f"Stage: `{checkpoint_meta.get('stage', 'Unknown')}`")
+st.sidebar.write(f"Dataset: `{checkpoint_meta.get('dataset', 'Unknown')}`")
+st.sidebar.write(f"Backbone: `{checkpoint_meta.get('backbone', config['backbone'])}`")
+st.sidebar.write(f"Input Size: `{checkpoint_meta.get('input_size', config['image_size'])}`")
+st.sidebar.write(f"Seed: `{checkpoint_meta.get('seed', 'Unknown')}`")
+st.sidebar.write(f"Checkpoint: `{checkpoint_meta.get('checkpoint', 'Unknown')}`")
 st.sidebar.write(f"Device: `{device}`")
-st.sidebar.write("Version: `v0.1.0`")
+
+st.sidebar.markdown("### 测试集指标")
+st.sidebar.write(f"Accuracy: `{checkpoint_meta.get('test_accuracy', 0) * 100:.2f}%`")
+st.sidebar.write(f"Macro Recall: `{checkpoint_meta.get('macro_recall', 0) * 100:.2f}%`")
+st.sidebar.write(f"Macro F1: `{checkpoint_meta.get('macro_f1', 0) * 100:.2f}%`")
+
+st.sidebar.markdown("### 使用限制")
+st.sidebar.warning("仅用于科研和工程演示，不能用于临床诊断。")
 
 
 # =====================================================
@@ -351,6 +375,7 @@ if image is not None:
             st.write(f"预测标签：**{pred_display_label}**")
 
         st.write(f"置信度：**{confidence:.4f}**")
+        st.caption("Confidence 表示模型 softmax 输出概率，不等同于医学诊断可信度。")
 
         st.markdown("### Top-3 Prediction Probabilities")
 
@@ -360,7 +385,7 @@ if image is not None:
                 f"({item['probability']:.4f})"
             )
 
-        st.caption(f"Raw Prediction: `{pred_raw_label}`")
+        st.caption(f"Internal Label: `{pred_raw_label}`")
 
     st.markdown("---")
     st.markdown(

@@ -1,0 +1,19 @@
+{
+  "project": "OphAgent",
+  "version": "v0.1.1",
+  "stage": "Vision Baseline",
+  "dataset": "APTOS2019",
+  "task": "5-class diabetic retinopathy classification",
+  "backbone": "convnext_tiny",
+  "input_size": 224,
+  "seed": 42,
+  "checkpoint": "convnext_tiny_best.pth",
+  "config": "configs/vision_baseline.yaml",
+  "class_mapping": "class_to_idx.json",
+  "test_accuracy": 0.8136,
+  "macro_precision": 0.7079,
+  "macro_recall": 0.6555,
+  "macro_f1": 0.6496,
+  "weighted_f1": 0.8093,
+  "intended_use": "Research and engineering demo only. Not for clinical diagnosis."
+}

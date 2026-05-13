@@ -157,6 +157,11 @@ experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_bes
 experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 ```
 
+同时建议下载对应的模型元信息文件：
+
+```text
+checkpoint_meta.json
+
 说明：
 
 - checkpoint 用于复现 v0.1.1 Demo 与推理结果
