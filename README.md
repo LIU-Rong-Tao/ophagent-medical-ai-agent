@@ -224,11 +224,18 @@ streamlit run app/demo_v2.py
 app/            # Streamlit demos
 configs/        # YAML experiment configs
 demo_samples/   # demo images
-docs/            # figures / galleries
-evaluation/     # evaluation outputs
-experiments/    # checkpoints / logs / evaluation
+docs/           # figures / galleries / README assets
+experiments/    # checkpoints / logs / evaluation outputs
 explain/        # CAM explainability
-src/            # training & inference pipeline
+models/         # classifier training / inference / evaluation
+notes/          # development notes
+scripts/        # utility scripts
+```
+
+Evaluation outputs are saved under:
+
+```text
+experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/evaluation/
 ```
 
 ---
@@ -237,7 +244,13 @@ src/            # training & inference pipeline
 
 建议使用 Python 3.10。
 
-安装依赖：
+如果使用 CUDA 12.1 环境，建议先安装 PyTorch CUDA wheel：
+
+```bash
+pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+然后安装项目依赖：
 
 ```bash
 pip install -r requirements.txt
@@ -277,7 +290,7 @@ experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 # Training
 
 ```bash
-python train_classifier.py \
+python -m models.classifiers.train_classifier \
   --config configs/vision_baseline.yaml
 ```
 
@@ -302,11 +315,11 @@ logs/
 # Inference
 
 ```bash
-python infer_classifier.py \
+python -m models.classifiers.infer_classifier \
   --image demo_samples/cmoderatedr/b9127e38d9b9.png \
   --config configs/vision_baseline.yaml \
   --checkpoint experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth \
-  --class-to-idx experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
+  --class_to_idx experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 ```
 
 ---
@@ -314,10 +327,10 @@ python infer_classifier.py \
 # Evaluation
 
 ```bash
-python evaluate_classifier.py \
+python -m models.classifiers.evaluate_classifier \
   --config configs/vision_baseline.yaml \
   --checkpoint experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth \
-  --class-to-idx experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
+  --split test
 ```
 
 生成结果：
