@@ -4,7 +4,7 @@ OphAgent v0.2 Grad-CAM Explainability
 功能：
 1. 加载 v0.1.x ConvNeXt-Tiny 分类模型
 2. 对单张眼底图像进行预测
-3. 使用 Grad-CAM 生成模型关注区域
+3. 使用 Grad-CAM / HiResCAM / EigenCAM / LayerCAM 生成模型关注区域
 4. 保存 original / heatmap / overlay 三张图
 
 注意：
@@ -13,7 +13,6 @@ Grad-CAM 仅用于模型可解释性展示，不等同于医学病灶定位。
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 import cv2
@@ -23,7 +22,7 @@ import torch
 import torch.nn.functional as F
 import yaml
 from PIL import Image
-from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam import GradCAM, HiResCAM, EigenCAM, LayerCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from torchvision import transforms
@@ -42,7 +41,7 @@ def parse_args():
     """解析命令行参数。"""
 
     parser = argparse.ArgumentParser(
-        description="Generate Grad-CAM visualization for OphAgent classifier."
+        description="Generate CAM visualization for OphAgent classifier."
     )
 
     parser.add_argument(
@@ -77,7 +76,35 @@ def parse_args():
         "--output",
         type=str,
         required=True,
-        help="Grad-CAM 输出目录。",
+        help="CAM 输出目录。",
+    )
+
+    parser.add_argument(
+        "--method",
+        type=str,
+        default="gradcam",
+        choices=["gradcam", "hirescam", "eigencam", "layercam"],
+        help="CAM 方法，可选：gradcam, hirescam, eigencam, layercam。",
+    )
+
+    parser.add_argument(
+        "--target-layer",
+        type=str,
+        default="stage3",
+        choices=["stage4", "stage3", "stage2"],
+        help="CAM 目标层。stage4 语义最强但最粗，stage3 默认折中，stage2 更细但可能更噪。",
+    )
+
+    parser.add_argument(
+        "--aug-smooth",
+        action="store_true",
+        help="使用 test-time augmentation smoothing，通常更平滑但速度更慢。",
+    )
+
+    parser.add_argument(
+        "--eigen-smooth",
+        action="store_true",
+        help="使用 eigen smoothing，通常可减少噪声。",
     )
 
     return parser.parse_args()
@@ -128,7 +155,7 @@ def build_transform(image_size: int):
     构建与训练 / 推理阶段一致的图像预处理。
 
     注意：
-    Grad-CAM 推理输入必须和模型训练时保持一致。
+    CAM 推理输入必须和模型训练时保持一致。
     """
 
     return transforms.Compose(
@@ -157,14 +184,68 @@ def load_image_for_model(image_path: str, image_size: int):
     return image_pil, input_tensor, image_rgb
 
 
-def get_target_layers(model):
+def get_target_layer(model, target_layer: str):
     """
-    使用 ConvNeXt 第 3 个 stage 的最后一个 depthwise conv。
+    根据命令行参数选择 ConvNeXt 的目标层。
 
-    相比最后一个 stage，这一层空间分辨率更高，
-    Grad-CAM 通常会更细一些。
+    stage4:
+        最深层，语义最强，但 feature map 最小，CAM 最粗。
+    stage3:
+        默认推荐层，语义和空间分辨率折中。
+    stage2:
+        空间分辨率更高，但语义较弱，可能更噪。
     """
-    return [model.stages[2].blocks[-1].conv_dw]
+
+    target_layer = target_layer.lower()
+
+    if target_layer == "stage4":
+        return model.stages[-1].blocks[-1].conv_dw
+
+    if target_layer == "stage3":
+        return model.stages[2].blocks[-1].conv_dw
+
+    if target_layer == "stage2":
+        return model.stages[1].blocks[-1].conv_dw
+
+    raise ValueError(
+        f"Unknown target layer: {target_layer}. "
+        "Choose from: stage4, stage3, stage2."
+    )
+
+
+def build_cam(method: str, model, target_layers):
+    """根据命令行参数构建不同 CAM 方法。"""
+
+    method = method.lower()
+
+    if method == "gradcam":
+        return GradCAM(
+            model=model,
+            target_layers=target_layers,
+        )
+
+    if method == "hirescam":
+        return HiResCAM(
+            model=model,
+            target_layers=target_layers,
+        )
+
+    if method == "eigencam":
+        return EigenCAM(
+            model=model,
+            target_layers=target_layers,
+        )
+
+    if method == "layercam":
+        return LayerCAM(
+            model=model,
+            target_layers=target_layers,
+        )
+
+    raise ValueError(
+        f"Unknown CAM method: {method}. "
+        "Choose from: gradcam, hirescam, eigencam, layercam."
+    )
 
 
 def predict(model, input_tensor: torch.Tensor, device: torch.device):
@@ -249,13 +330,18 @@ def main():
     )
 
     print(f"Device: {device}")
+    print(f"CAM Method: {args.method}")
+    print(f"Target Layer: {args.target_layer}")
+    print(f"Aug Smooth: {args.aug_smooth}")
+    print(f"Eigen Smooth: {args.eigen_smooth}")
     print(f"Prediction: {pred_display_class}")
     print(f"Raw Class: {pred_raw_class}")
     print(f"Confidence: {confidence:.4f}")
 
-    target_layers = get_target_layers(model)
+    target_layers = [get_target_layer(model, args.target_layer)]
 
-    cam = GradCAM(
+    cam = build_cam(
+        method=args.method,
         model=model,
         target_layers=target_layers,
     )
@@ -265,6 +351,8 @@ def main():
     grayscale_cam = cam(
         input_tensor=input_tensor.to(device),
         targets=targets,
+        aug_smooth=args.aug_smooth,
+        eigen_smooth=args.eigen_smooth,
     )[0]
 
     overlay_rgb = show_cam_on_image(
@@ -280,7 +368,7 @@ def main():
         output_dir=args.output,
     )
 
-    print(f"Grad-CAM results saved to: {args.output}")
+    print(f"CAM results saved to: {args.output}")
 
 
 if __name__ == "__main__":
