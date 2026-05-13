@@ -1,51 +1,239 @@
 # OphAgent
 
-OphAgent 是一个面向眼科医学影像的深度学习实验项目，当前聚焦于糖尿病视网膜病变（Diabetic Retinopathy, DR）分类与模型可解释性研究。
+> 面向眼科医学影像的可复现 AI Research Framework  
+>
+> DR Classification · Explainability · Qualitative Analysis · Medical AI Demo
 
-当前版本基于 APTOS2019 数据集与 ConvNeXt-Tiny baseline，实现了：
-
-- 可复现训练流程
-- 配置化实验管理
-- 单图推理与批量评估
-- Streamlit Demo
-- Grad-CAM Explainability（v0.2）
+<p align="center">
+  <img src="docs/assets/teaser.png" width="900">
+</p>
 
 ---
 
-## 当前结果
+# 项目简介
 
-测试集结果：
+OphAgent 是一个面向眼科医学影像的研究型 AI 项目，
+当前聚焦于糖尿病视网膜病变（Diabetic Retinopathy, DR）分类与模型可解释性分析。
 
-- Accuracy：81.36%
-- Macro Precision：70.79%
-- Macro Recall：65.55%
-- Macro F1：64.96%
-- Weighted F1：80.93%
+项目不仅关注分类性能，
+更强调：
+
+- 可复现实验流程（Reproducibility）
+- Explainability（Grad-CAM）
+- 定性失败案例分析（Failure Analysis）
+- 医学影像可视化
+- Demo 展示与版本化管理
+
+当前版本（v0.2.0）已引入基于 CAM 的 Explainability Pipeline，
+用于分析模型在 DR 分类中的关注区域与潜在 shortcut behavior。
 
 ---
 
-## 项目结构
+# Key Features
+
+- ConvNeXt-Tiny DR Classification Baseline
+- YAML 配置化实验管理
+- Reproducible Training Pipeline
+- Grad-CAM / HiResCAM Explainability
+- Failure Case Analysis
+- Streamlit Interactive Demo
+- Versioned Experiment Structure
+- GitHub Release 权重管理
+
+---
+
+# Benchmark Results
+
+APTOS2019 Test Set：
+
+| Metric | Score |
+|---|---|
+| Accuracy | 81.36% |
+| Macro Precision | 70.79% |
+| Macro Recall | 65.55% |
+| Macro F1 | 64.96% |
+| Weighted F1 | 80.93% |
+
+---
+
+# Explainability（v0.2）
+
+OphAgent v0.2 将 Explainability 作为核心研究模块，
+用于分析模型在 DR 分类中的视觉关注行为。
+
+当前支持：
+
+- GradCAM
+- HiResCAM
+- EigenCAM
+- LayerCAM
+
+默认方案：
+
+- Method：HiResCAM
+- Target Layer：stage3
+- Smoothing：disabled
+
+该组合基于多组定性实验对比后选择，
+在病灶聚焦能力与稳定性之间取得较好平衡。
+
+---
+
+# Visual Explainability
+
+<p align="center">
+  <img src="docs/assets/gradcam_good.png" width="850">
+</p>
+
+---
+
+# Why Explainability?
+
+医学影像分类模型可能存在：
+
+- shortcut learning
+- 边缘偏置
+- illumination bias
+- 非病灶区域过度关注
+
+因此，
+OphAgent v0.2 引入 CAM-based Explainability，
+用于辅助分析模型行为与 failure mode。
+
+注意：
+
+当前 Explainability 仅用于研究与可视化分析，
+不代表临床病灶定位结果。
+
+---
+
+# Qualitative Analysis
+
+项目当前不仅关注 quantitative metrics，
+同时强调模型行为的 qualitative understanding。
+
+当前 Explainability Gallery 包含：
+
+- Good Cases
+- Failure Cases
+- Interesting Cases
+
+目录结构：
 
 ```text
-ophagent-medical-ai-agent/
-├── app/
-├── configs/
-├── demo_samples/
-├── docs/
-├── evaluation/
-├── experiments/
-├── explain/
-├── findings/
-├── scripts/
-├── src/
-├── README.md
-├── requirements.txt
-└── requirements-dev.txt
+docs/gradcam_gallery/
+├── good_cases/
+├── failure_cases/
+└── interesting_cases/
 ```
 
 ---
 
-## 环境安装
+# Good Cases
+
+<p align="center">
+  <img src="docs/assets/gradcam_good.png" width="850">
+</p>
+
+特点：
+
+- 热区与病灶区域较一致
+- 模型 attention 较稳定
+- 可用于 README / Demo 展示
+
+代表案例：
+
+- cmoderatedr_b9127e38d9b9
+- cmoderatedr_d9bbdc33db83
+- dseveredr_383e72af1955
+
+---
+
+# Failure Cases
+
+<p align="center">
+  <img src="docs/assets/gradcam_failure.png" width="850">
+</p>
+
+Attention drifts toward retinal boundary and illumination artifacts,
+showing potential shortcut behavior and unstable lesion localization.
+
+特点：
+
+- 热区偏离病灶
+- attention 偏向边缘区域
+- 受亮度与图像质量影响
+
+代表案例：
+
+- bmilddr_07929d32b5b3
+- eproliferativedr_247e98aba610
+- eproliferativedr_bba38f2294a3
+
+---
+
+# Interesting Cases
+
+<p align="center">
+  <img src="docs/assets/gradcam_interesting.png" width="850">
+</p>
+
+特点：
+
+- attention 行为复杂
+- 病灶区域存在歧义
+- 具有进一步分析价值
+
+代表案例：
+
+- anodr_c9e697117f3f
+- dseveredr_e93394175a19
+- eproliferativedr_6c3745a222da
+
+---
+
+# Streamlit Demo
+
+当前 Demo 支持：
+
+- 上传眼底图像
+- Top-3 分类结果
+- Explainability Gallery
+- 模型指标展示
+- 离线 Grad-CAM 可视化
+
+启动方式：
+
+```bash
+streamlit run app/demo_v2.py
+```
+
+---
+
+# Demo Preview
+
+<p align="center">
+  <img src="docs/assets/demo_v2.png" width="900">
+</p>
+
+---
+
+# Project Structure
+
+```text
+app/            # Streamlit demos
+configs/        # YAML experiment configs
+demo_samples/   # demo images
+docs/            # figures / galleries
+evaluation/     # evaluation outputs
+experiments/    # checkpoints / logs / evaluation
+explain/        # CAM explainability
+src/            # training & inference pipeline
+```
+
+---
+
+# Installation
 
 建议使用 Python 3.10。
 
@@ -63,41 +251,30 @@ pip install -r requirements-dev.txt
 
 ---
 
-## 下载预训练权重
+# Download Pretrained Weights
 
-请从 GitHub Release 下载以下文件：
+请从 GitHub Release 下载：
 
 - convnext_tiny_best.pth
 - checkpoint_meta.json
 
-下载后放到：
+放置到：
 
 ```text
 experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/
 ```
 
-目录结构应如下：
-
-```text
-experiments/
-└── aptos_convnext_tiny/
-    └── lr1e-4_bs32_seed42/
-        ├── checkpoints/
-        │   ├── convnext_tiny_best.pth
-        │   └── checkpoint_meta.json
-        └── configs/
-            └── class_to_idx.json
-```
-
-同时确保类别映射文件存在：
+同时确保：
 
 ```text
 experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 ```
 
+存在。
+
 ---
 
-## 模型训练
+# Training
 
 ```bash
 python train_classifier.py \
@@ -122,7 +299,7 @@ logs/
 
 ---
 
-## 单图推理
+# Inference
 
 ```bash
 python infer_classifier.py \
@@ -134,7 +311,7 @@ python infer_classifier.py \
 
 ---
 
-## 批量评估
+# Evaluation
 
 ```bash
 python evaluate_classifier.py \
@@ -143,7 +320,7 @@ python evaluate_classifier.py \
   --class-to-idx experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 ```
 
-评估结果包括：
+生成结果：
 
 ```text
 metrics.json
@@ -154,46 +331,7 @@ test_predictions.csv
 
 ---
 
-## Streamlit Demo
-
-启动 Demo：
-
-```bash
-streamlit run app/demo_v1.py
-```
-
-当前支持：
-
-- 上传眼底图像
-- 内置 demo_samples
-- 显示预测类别与 confidence
-- Top-3 分类结果
-- 显示模型版本与测试集指标
-
-注意：
-
-Softmax confidence 不等同于医学诊断可信度。
-
----
-
-## Grad-CAM 可解释性（v0.2）
-
-OphAgent v0.2 新增了基于 CAM 的眼底分类可解释性支持，用于观察模型在糖尿病视网膜病变分类中的关注区域。
-
-当前支持：
-
-- GradCAM
-- HiResCAM
-- EigenCAM
-- LayerCAM
-
-默认配置：
-
-- Method：HiResCAM
-- Target Layer：stage3
-- Smoothing：关闭
-
-该默认配置基于多种 CAM 方法、不同 target layer 以及 smoothing 组合的定性对比结果选择。
+# Grad-CAM Usage
 
 示例命令：
 
@@ -208,7 +346,7 @@ python -m explain.gradcam \
   --output experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/explain/single_test/
 ```
 
-生成结果包括：
+生成结果：
 
 ```text
 original.png
@@ -216,47 +354,67 @@ heatmap.png
 overlay.png
 ```
 
-项目同时提供了定性 Explainability Gallery：
+---
 
-```text
-docs/gradcam_gallery/
-├── good_cases/
-├── failure_cases/
-└── interesting_cases/
+# Current Limitations
+
+当前项目仍属于研究型 baseline，
+尚未用于临床环境。
+
+当前限制包括：
+
+- 仅验证 ConvNeXt-Tiny backbone
+- 缺少 cross-dataset evaluation
+- DR 类别存在类别不平衡
+- Explainability 仍以定性分析为主
+- CAM 结果可能受到亮度与边缘结构影响
+
+当前 CAM 可视化不等同于病灶分割或医学诊断依据。
+
+---
+
+# Roadmap
+
+## v0.3 Candidate Directions
+
+- Explainability Benchmark
+- Multi-backbone Comparison
+- Lesion-aware Evaluation
+- Dynamic Grad-CAM Demo
+- Multi-task Retina Pipeline
+- Medical VLM Integration
+- Retina Report Generation
+
+---
+
+# Releases
+
+当前正式版本：
+
+- v0.2.0 — Grad-CAM Explainability
+
+GitHub Release 提供：
+
+- 预训练权重
+- checkpoint metadata
+- 版本说明
+
+---
+
+# Citation
+
+```bibtex
+@misc{ophagent2026,
+  title={OphAgent: Ophthalmology AI Research Framework},
+  author={Liu Rongtao},
+  year={2026},
+  howpublished={GitHub repository},
+  url={https://github.com/LIU-Rong-Tao/ophagent-medical-ai-agent}
+}
 ```
 
-注意：
-
-当前 CAM 可视化仅用于模型行为分析与定性解释，不等同于医学病灶分割或临床诊断结果。
-
 ---
 
-## 当前限制
-
-当前项目仍存在以下限制：
-
-- 仅使用 ConvNeXt-Tiny baseline
-- 尚未进行多模型对比
-- DR 类别存在类别不平衡问题
-- Explainability 仍属于 preliminary stage
-- CAM 可视化可能受到边缘、亮度与图像质量影响
-
----
-
-## Roadmap
-
-计划中的方向包括：
-
-- 更强 backbone（Swin / ViT）
-- 多模态 Ophthalmology Agent
-- 多任务学习
-- 更稳定的 Explainability
-- 更完整的 Streamlit Demo
-- Retina report generation
-- Medical VLM integration
-
----
-
-## License
+# License
 
 MIT License
