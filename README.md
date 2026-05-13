@@ -2,10 +2,10 @@
 
 OphAgent 是一个面向眼科医学影像的 AI 项目。
 
-当前版本：**v0.1.1 Vision Baseline Polish Release**
+当前版本：**v0.1.2 Vision Baseline Polish Release**
 
 > 注意：当前版本还不是完整的 Agent 系统。  
-> v0.1.1 主要目标是构建一个可复现、可评估、可运行 Demo 的眼底图像分类 baseline。
+> v0.1.2 主要目标是构建一个可复现、可评估、可运行 Demo 的眼底图像分类 baseline。
 
 ---
 
@@ -24,7 +24,7 @@ OphAgent 的长期目标是构建一个多模态眼科 AI 助手，支持：
 
 ---
 
-# 当前版本：v0.1.1 Vision Baseline
+# 当前版本：v0.1.2 Vision Baseline
 
 当前已实现：
 
@@ -37,8 +37,9 @@ OphAgent 的长期目标是构建一个多模态眼科 AI 助手，支持：
 - Test set 批量评估
 - 混淆矩阵可视化
 - Streamlit Demo 展示
-- checkpoint 缺失时的友好提示
-- GitHub Release 权重下载说明
+- checkpoint metadata 模型追踪机制
+- Demo 模型身份信息展示
+- checkpoint 缺失友好提示
 
 当前未实现：
 
@@ -78,7 +79,7 @@ OphAgent 的长期目标是构建一个多模态眼科 AI 助手，支持：
 
 # 安装依赖
 
-建议先创建独立 Python 环境：
+建议使用独立 Python 环境：
 
 ```bash
 conda create -n ophagent python=3.10 -y
@@ -87,45 +88,35 @@ conda activate ophagent
 
 ---
 
-## PyTorch Installation (CUDA 12.1)
+## Install Runtime Dependencies
 
-当前项目默认使用 CUDA 12.1 环境训练与推理。
-
-请先安装对应版本的 PyTorch：
-
-```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
-
-如果你使用 CPU 环境，可以参考 PyTorch 官网安装对应版本。
-
----
-
-## Install Other Dependencies
-
-安装其余项目依赖：
+安装项目运行所需依赖：
 
 ```bash
 pip install -r requirements.txt
 ```
 
+说明：
+
+- 当前实验环境使用 PyTorch 2.5.1 + CUDA 12.1
+- 如果本机 CUDA 版本不同，请根据实际环境调整 PyTorch 安装版本
+- `requirements.txt` 为项目运行所需的最小核心依赖
+
 ---
 
-## Verify Installation
+## Install Full Development Environment (Optional)
 
-可以通过以下命令验证 PyTorch CUDA 是否正常：
+如果希望尽可能复现作者完整实验环境，可以额外安装：
 
 ```bash
-python -c "import torch; print(torch.cuda.is_available())"
+pip install -r requirements-dev.txt
 ```
 
-如果输出：
+说明：
 
-```text
-True
-```
-
-说明 CUDA 环境安装成功。
+- `requirements-dev.txt` 包含完整开发与实验环境依赖
+- 可能包含 Jupyter、调试工具及额外 CUDA 相关包
+- 该文件主要用于完整实验复现与开发环境恢复
 
 ---
 
@@ -157,16 +148,26 @@ experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_bes
 experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json
 ```
 
-同时建议下载对应的模型元信息文件：
+---
+
+## Checkpoint Metadata
+
+当前版本同时提供：
 
 ```text
 checkpoint_meta.json
+```
 
-说明：
+用于记录：
 
-- checkpoint 用于复现 v0.1.1 Demo 与推理结果
-- 同一 checkpoint 与同一输入图像下，推理结果固定可复现
-- checkpoint 仅用于科研和工程演示，不能用于临床诊断
+- 模型版本
+- 数据集
+- backbone
+- seed
+- 测试集指标
+- intended use
+
+该文件用于提升实验可追踪性（traceability），并供 Streamlit Demo 展示模型身份信息。
 
 ---
 
@@ -192,6 +193,7 @@ experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/
 
 ```text
 checkpoints/convnext_tiny_best.pth
+checkpoints/checkpoint_meta.json
 configs/class_to_idx.json
 logs/train_log.csv
 figures/loss_curve.png
@@ -259,6 +261,7 @@ Demo 支持：
 - 显示 confidence
 - 显示 Top-3 probabilities
 - 显示预测是否正确
+- 显示模型版本与实验信息
 
 说明：
 
@@ -266,9 +269,17 @@ Demo 支持：
 
 如果缺少 checkpoint，Demo 会提示先从 GitHub Release 下载模型权重。
 
+Demo 当前会显示：
+
+- 模型版本
+- 数据集信息
+- backbone
+- checkpoint 信息
+- 测试集指标
+
 ---
 
-# v0.1.1 实验结果
+# v0.1.2 实验结果
 
 实验设置：
 
@@ -307,7 +318,7 @@ Demo 支持：
 
 # 局限性
 
-v0.1.1 仅是视觉 baseline，仍存在明显局限：
+v0.1.2 仅是视觉 baseline，仍存在明显局限：
 
 - 当前模型仅在 APTOS2019 数据集上训练与评估
 - 尚未进行外部数据集验证
@@ -351,6 +362,7 @@ ophagent-medical-ai-agent/
 ├── README.md
 ├── CHANGELOG.md
 ├── requirements.txt
+├── requirements-dev.txt
 └── LICENSE
 ```
 
