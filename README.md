@@ -143,6 +143,13 @@ Backbone：ConvNeXt-Tiny
 
 ---
 
+# Demo 展示
+
+`demo_samples/` 中仅包含少量随机抽样测试图片，用于 Streamlit Demo 展示，不代表完整测试集结果。
+
+---
+
+
 # 实验目录结构
 
 ```text
