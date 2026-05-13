@@ -1,0 +1,12 @@
+data_root: /data/LRT/RETFound/Data_split/APTOS2019
+backbone: convnext_tiny
+num_classes: 5
+image_size: 224
+batch_size: 32
+num_epochs: 10
+learning_rate: 0.0001
+experiment_root: experiments
+experiment_name: aptos_convnext_tiny
+run_name: lr1e-4_bs32_seed42
+seed: 42
+pretrained: true
