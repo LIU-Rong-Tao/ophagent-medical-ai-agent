@@ -1,0 +1,13 @@
+# OphAgent v0.2.2 report generation config
+
+report:
+  # 默认使用 rule_based，保证 demo 不依赖外部 API
+  provider: rule_based
+
+  # provider 失败时回退到 rule_based
+  fallback_provider: rule_based
+
+  language: zh
+
+  # 当前报告仅用于研究展示，不用于临床诊断
+  disclaimer: true
