@@ -1,0 +1,13 @@
+{
+  "case_id": "case_010",
+  "source_image": "/data/LRT/ophagent-medical-ai-agent/demo_samples/dseveredr/383e72af1955.png",
+  "saved_original": "/data/LRT/ophagent-medical-ai-agent/experiments/v0_2_2_vl_reasoning_demo_batch/case_010/original.png",
+  "prediction": "Severe DR",
+  "raw_class": "dseveredr",
+  "confidence": 0.5,
+  "cam_method": null,
+  "cam_target_layer": null,
+  "cam_output_path": null,
+  "created_at": "2026-05-14T17:32:06",
+  "note": "This is a lightweight VL reasoning demo artifact. Prediction/confidence are mock values in this batch script."
+}
