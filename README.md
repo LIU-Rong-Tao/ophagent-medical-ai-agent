@@ -1,4 +1,3 @@
-````markdown
 # OphAgent
 
 > 眼科医学影像 AI Demo  
@@ -13,7 +12,7 @@ OphAgent 是一个面向眼科医学影像的研究型 AI 项目，
 
 - 糖尿病视网膜病变（DR）分类
 - Explainability（Grad-CAM / HiResCAM）
-- 结构化 findings 生成
+- 结构化 Findings 生成
 - Lightweight VL Reasoning
 - 可复现实验流程
 
@@ -44,11 +43,11 @@ Rule-based / OpenAI 中文报告
 ## 功能特性
 
 - ConvNeXt-Tiny DR 分类 baseline
-- Grad-CAM / HiResCAM 可解释性可视化
-- Explainability failure-case gallery
+- Grad-CAM / HiResCAM Explainability
+- Explainability Failure-case Gallery
 - Streamlit 交互式 Demo
 - Rule-based 医学报告生成
-- 可选 OpenAI Report Provider（带 fallback）
+- OpenAI Report Provider（支持 fallback）
 - YAML 配置化实验管理
 - 可复现实验目录结构
 
@@ -67,6 +66,38 @@ streamlit run app/demo.py
 - Classification & VL Reasoning Report
 - Grad-CAM / HiResCAM Gallery
 - Model / Evaluation Info
+
+---
+
+## Explainability Showcase
+
+当前项目包含：
+
+- Grad-CAM
+- HiResCAM
+- Failure-case Analysis
+- Interesting-case Visualization
+
+Explainability Gallery 位于：
+
+```text
+docs/gradcam_gallery/
+```
+
+包含：
+
+```text
+good_cases/
+failure_cases/
+interesting_cases/
+```
+
+用于展示：
+
+- 热力图与病变区域对应情况
+- Explainability failure cases
+- 模型关注区域分析
+- 不同 DR 等级下的 CAM 表现
 
 ---
 
@@ -94,6 +125,22 @@ streamlit run app/demo.py
 
 ---
 
+## 项目结构
+
+```text
+app/                Streamlit Demo
+configs/            YAML configs
+demo_samples/       Demo 输入样例
+docs/               Explainability Gallery / Assets
+explain/            Grad-CAM / HiResCAM
+findings/           Structured Findings
+models/             Classification Models
+reasoning/          Report Providers / Reasoning
+scripts/            Utility Scripts
+```
+
+---
+
 ## 当前版本
 
 当前版本：`v0.2.2`
@@ -103,6 +150,22 @@ streamlit run app/demo.py
 - 统一 Streamlit Demo 入口
 - Lightweight VL Reasoning 工作流
 - Rule/OpenAI provider abstraction
-- Structured findings generation
+- Structured Findings generation
 - Explainability Gallery 重构
-````
+
+---
+
+## Quick Start
+
+安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+启动 Demo：
+
+```bash
+streamlit run app/demo.py
+```
+
