@@ -1,11 +1,22 @@
 # OphAgent v0.2.2 report generation config
 
 report:
-  # 默认使用 rule_based，保证 demo 不依赖外部 API
-  provider: rule_based
+  # 可选：
+  # - openai
+  # - rule_based
+  provider: openai
 
-  # provider 失败时回退到 rule_based
+  # API 不可用时自动回退
   fallback_provider: rule_based
+
+  # OpenAI 模型配置
+  model: gpt-4o-mini
+  temperature: 0.2
+  timeout: 30
+
+  # 从环境变量读取 API key
+  # 不在 YAML 中保存真实 key
+  api_key_env: OPENAI_API_KEY
 
   language: zh
 
