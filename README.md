@@ -1,90 +1,128 @@
 # OphAgent
 
-> 眼科医学影像 AI Demo  
-> DR Classification · Explainability · Lightweight VL Reasoning
+轻量级眼科医学 AI Workflow Demo。
 
----
+当前项目聚焦于：
 
-## 项目简介
-
-OphAgent 是一个面向眼科医学影像的研究型 AI 项目，
-当前聚焦于：
-
-- 糖尿病视网膜病变（DR）分类
+- DR（糖尿病视网膜病变）分类
 - Explainability（Grad-CAM / HiResCAM）
-- 结构化 Findings 生成
-- Lightweight VL Reasoning
-- 可复现实验流程
+- Structured Findings
+- Rule-based / OpenAI Reasoning
+- Lightweight Agent Runner Workflow
 
-当前 Demo 流程：
+本项目主要用于：
+
+- 医学 AI Workflow 展示
+- Explainability 分析
+- Research Engineering Demo
+- Ophthalmology AI 原型验证
+
+---
+
+# 当前定位
+
+OphAgent 当前不是：
 
 ```text
-输入眼底图像
-↓
-DR 分类预测
-↓
-Grad-CAM / HiResCAM
-↓
-结构化 Findings
-↓
-Rule-based / OpenAI 中文报告
+单纯 DR 分类 baseline
 ```
 
-当前 baseline 使用：
-
-- ConvNeXt-Tiny
-- APTOS2019 DR 数据集
-
-> 本项目仅用于科研与工程展示，  
-> 不用于临床诊断。
-
----
-
-## 功能特性
-
-- ConvNeXt-Tiny DR 分类 baseline
-- Grad-CAM / HiResCAM Explainability
-- Explainability Failure-case Gallery
-- Streamlit 交互式 Demo
-- Rule-based 医学报告生成
-- OpenAI Report Provider（支持 fallback）
-- YAML 配置化实验管理
-- 可复现实验目录结构
-
----
-
-## Demo
-
-统一 Streamlit 入口：
-
-```bash
-streamlit run app/demo.py
-```
-
-当前 Demo 包含：
-
-- Classification & VL Reasoning Report
-- Grad-CAM / HiResCAM Gallery
-- Model / Evaluation Info
-
----
-
-## Explainability Showcase
-
-当前项目包含：
-
-- Grad-CAM
-- HiResCAM
-- Failure-case Analysis
-- Interesting-case Visualization
-
-Explainability Gallery 位于：
+而是：
 
 ```text
-docs/gradcam_gallery/
+Ophthalmology Medical AI Workflow Demo
 ```
 
-包含：
+重点包括：
+
+```text
+classification
+explainability
+structured findings
+reasoning
+workflow integration
+```
+
+---
+
+# Workflow
+
+```text
+image
+  ↓
+run_agent(...)
+  ↓
+classification
+  ↓
+top-k prediction
+  ↓
+structured findings
+  ↓
+rule-based / OpenAI reasoning
+```
+
+---
+
+# 当前功能
+
+## 1. DR Classification
+
+支持：
+
+- No DR
+- Mild DR
+- Moderate DR
+- Severe DR
+- Proliferative DR
+
+当前默认 backbone：
+
+```text
+ConvNeXt-Tiny
+```
+
+---
+
+## 2. Structured Findings
+
+当前 findings 模块：
+
+```text
+classification
+    ↓
+structured findings
+```
+
+说明：
+
+- 当前不是 lesion detector
+- findings 基于分类先验与 explainability context
+- 用于 workflow explanation
+- 不作为临床病灶检测结果
+
+---
+
+## 3. Rule-based / OpenAI Reasoning
+
+支持：
+
+```text
+rule_based
+openai
+```
+
+当前 OpenAI report：
+
+- 可选生成
+- 默认不调用 API
+- Streamlit 中按钮触发
+- 避免重复 rerun
+
+---
+
+## 4. Explainability Gallery
+
+当前包含：
 
 ```text
 good_cases/
@@ -92,70 +130,50 @@ failure_cases/
 interesting_cases/
 ```
 
-用于展示：
+用于：
 
-- 热力图与病变区域对应情况
-- Explainability failure cases
-- 模型关注区域分析
-- 不同 DR 等级下的 CAM 表现
+- Grad-CAM showcase
+- failure analysis
+- explainability discussion
 
 ---
 
-## 示例流程
+# 项目结构
 
 ```text
-眼底图像
-→ 分类预测
-→ Top-3 Confidence
-→ Explainability Visualization
-→ Structured Findings
-→ 中文推理报告
+agent/
+  __init__.py
+  schema.py
+  runner.py
+  providers.py
+
+app/
+  demo.py
+
+configs/
+
+findings/
+
+reasoning/
+
+explain/
+
+docs/
+  gradcam_gallery/
 ```
 
 ---
 
-## 数据集
+# Demo 启动
 
-当前 baseline 使用：
+## 环境
 
-- APTOS2019 Blindness Detection
-
-`demo_samples/` 为从 APTOS2019 test split 中选取的代表性样例，
-用于定性展示与 explainability showcase。
-
----
-
-## 项目结构
+建议：
 
 ```text
-app/                Streamlit Demo
-configs/            YAML configs
-demo_samples/       Demo 输入样例
-docs/               Explainability Gallery / Assets
-explain/            Grad-CAM / HiResCAM
-findings/           Structured Findings
-models/             Classification Models
-reasoning/          Report Providers / Reasoning
-scripts/            Utility Scripts
+Python 3.10+
+CUDA + PyTorch
 ```
-
----
-
-## 当前版本
-
-当前版本：`v0.2.2`
-
-近期更新：
-
-- 统一 Streamlit Demo 入口
-- Lightweight VL Reasoning 工作流
-- Rule/OpenAI provider abstraction
-- Structured Findings generation
-- Explainability Gallery 重构
-
----
-
-## Quick Start
 
 安装依赖：
 
@@ -163,9 +181,137 @@ scripts/            Utility Scripts
 pip install -r requirements.txt
 ```
 
-启动 Demo：
+---
+
+## 启动 Streamlit Demo
 
 ```bash
 streamlit run app/demo.py
 ```
 
+---
+
+# Demo 页面
+
+当前 Demo 包含：
+
+## Classification & VL Reasoning Report
+
+支持：
+
+- 上传眼底图像
+- 使用 demo samples
+- classification
+- Top-k prediction
+- structured findings
+- rule-based report
+- optional OpenAI report
+
+---
+
+## Grad-CAM / HiResCAM Gallery
+
+展示：
+
+- good cases
+- failure cases
+- interesting cases
+
+用于 explainability showcase。
+
+---
+
+## Model / Evaluation Info
+
+展示：
+
+- checkpoint metadata
+- evaluation metrics
+- training summary
+
+---
+
+# 当前版本
+
+```text
+v0.3.0
+```
+
+---
+
+# v0.3.0 更新内容
+
+```text
+- introduce lightweight agent runner workflow
+- unified run_agent(...) interface
+- integrate structured findings
+- integrate reasoning providers
+- simplify Streamlit workflow
+- optional OpenAI reasoning report
+- improve project architecture
+```
+
+---
+
+# 当前设计目标
+
+v0.3 重点不是：
+
+```text
+增加更多页面
+```
+
+也不是：
+
+```text
+继续堆 demo
+```
+
+而是：
+
+```text
+workflow 开始稳定
+```
+
+当前目标：
+
+- unified workflow
+- reusable run_agent(...)
+- stable Streamlit demo
+- reusable reasoning pipeline
+
+---
+
+# 后续计划
+
+## v0.4+
+
+计划方向：
+
+```text
+benchmark
+multiple backbones
+VLM integration
+Qwen / multimodal reasoning
+online CAM generation
+real clinical case analysis
+```
+
+---
+
+# Disclaimer
+
+本项目仅用于：
+
+```text
+research
+education
+engineering demo
+```
+
+不用于：
+
+```text
+clinical diagnosis
+medical decision making
+```

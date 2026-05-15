@@ -1,37 +1,13 @@
 """
-OphAgent v0.2.2 Streamlit Demo
+OphAgent v0.3.0 Streamlit Demo
 
 统一入口：
     streamlit run app/demo.py
-
-功能：
-1. 分类预测 Demo
-   - 上传眼底图像
-   - 使用内置 demo_samples
-   - 显示预测类别、confidence、Top-3
-
-2. Lightweight VL Reasoning Report
-   - 根据 prediction / confidence / structured findings 生成中文报告
-   - 同时展示 rule_based 与 OpenAI provider 输出
-   - OpenAI 不可用时自动 fallback，不影响 demo
-
-3. Grad-CAM Gallery
-   - 展示离线生成的 Grad-CAM / HiResCAM 样例
-   - 用于 explainability showcase
-
-注意：
-- 本 Demo 仅用于科研与工程展示
-- 不用于临床诊断
 """
 
 import json
 import sys
 from pathlib import Path
-
-# =====================================================
-# 把项目根目录加入 Python 搜索路径
-# 避免 streamlit run app/demo.py 时找不到 findings / reasoning
-# =====================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -42,28 +18,18 @@ import pandas as pd
 import streamlit as st
 import timm
 import torch
-import torch.nn.functional as F
 import yaml
 from PIL import Image
-from torchvision import transforms
 
-from findings.finding_generator import generate_case_findings
+from agent import AgentInput, run_agent
 from reasoning.report_generator import generate_report
 
 
-# =====================================================
-# 页面配置
-# =====================================================
-
 st.set_page_config(
-    page_title="OphAgent v0.2.2 Demo",
+    page_title="OphAgent v0.3.0 Demo",
     layout="wide",
 )
 
-
-# =====================================================
-# 固定路径配置
-# =====================================================
 
 CONFIG_PATH = Path("configs/vision_baseline.yaml")
 
@@ -91,15 +57,6 @@ GALLERY_ROOT = Path("docs/gradcam_gallery")
 
 
 CLASS_DISPLAY_NAMES = {
-    "anodr": "No DR",
-    "bmilddr": "Mild DR",
-    "cmoderatedr": "Moderate DR",
-    "dseveredr": "Severe DR",
-    "eproliferativedr": "Proliferative DR",
-}
-
-
-RAW_CLASS_TO_DISPLAY = {
     "anodr": "No DR",
     "bmilddr": "Mild DR",
     "cmoderatedr": "Moderate DR",
@@ -140,12 +97,7 @@ CASE_NOTES = {
 }
 
 
-# =====================================================
-# 工具函数
-# =====================================================
-
 def load_json(path: Path):
-    """读取 JSON 文件。"""
     if not path.exists():
         return None
 
@@ -154,7 +106,6 @@ def load_json(path: Path):
 
 
 def load_yaml(path: Path):
-    """读取 YAML 文件。"""
     if not path.exists():
         return None
 
@@ -163,7 +114,6 @@ def load_yaml(path: Path):
 
 
 def get_image_size(config: dict) -> int:
-    """从 config 中读取 image_size，兼容不同字段写法。"""
     if "image_size" in config:
         return int(config["image_size"])
 
@@ -174,7 +124,6 @@ def get_image_size(config: dict) -> int:
 
 
 def get_backbone(config: dict) -> str:
-    """从 config 中读取 backbone，兼容不同字段写法。"""
     if "backbone" in config:
         return config["backbone"]
 
@@ -185,7 +134,6 @@ def get_backbone(config: dict) -> str:
 
 
 def get_num_classes(config: dict, class_to_idx: dict) -> int:
-    """读取类别数。"""
     if "num_classes" in config:
         return int(config["num_classes"])
 
@@ -195,18 +143,14 @@ def get_num_classes(config: dict, class_to_idx: dict) -> int:
     return len(class_to_idx)
 
 
-def build_transform(image_size: int):
-    """构建模型输入预处理。"""
-    return transforms.Compose(
-        [
-            transforms.Resize((image_size, image_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-        ]
-    )
+def infer_ground_truth_from_path(image_path: str) -> str:
+    path = Path(image_path)
+    parent_name = path.parent.name
+
+    if parent_name in CLASS_DISPLAY_NAMES:
+        return parent_name
+
+    return "unknown"
 
 
 @st.cache_resource
@@ -215,8 +159,6 @@ def load_model_cached(
     checkpoint_path: str,
     class_to_idx_path: str,
 ):
-    """缓存加载模型，避免 Streamlit 每次刷新都重新加载 checkpoint。"""
-
     config = load_yaml(Path(config_path))
     class_to_idx = load_json(Path(class_to_idx_path))
 
@@ -256,139 +198,139 @@ def load_model_cached(
     return model, device, idx_to_class, image_size, config
 
 
-def predict_image(model, device, image: Image.Image, image_size: int):
-    """对单张图像进行分类预测。"""
-    transform = build_transform(image_size)
-
-    input_tensor = transform(image.convert("RGB")).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        logits = model(input_tensor)
-        probs = F.softmax(logits, dim=1)[0]
-
-    return probs.cpu()
-
-
 def get_demo_sample_paths():
-    """读取 demo_samples 下所有图片路径。"""
     if not DEMO_SAMPLES_ROOT.exists():
         return []
 
     image_paths = []
+
     for suffix in ["*.png", "*.jpg", "*.jpeg"]:
         image_paths.extend(DEMO_SAMPLES_ROOT.rglob(suffix))
 
     return sorted(image_paths)
 
 
-def infer_raw_class_from_path(image_path: Path) -> str:
-    """从 demo sample 路径推断 raw_class。上传图像则返回 unknown。"""
-    try:
-        parent_name = image_path.parent.name
-        if parent_name in RAW_CLASS_TO_DISPLAY:
-            return parent_name
-    except Exception:
-        pass
-
-    return "unknown"
+def load_report_config() -> dict:
+    report_config = load_yaml(REPORT_CONFIG_PATH) or {}
+    return report_config.get("report", report_config)
 
 
-def build_topk_dataframe(probs, idx_to_class: dict, k: int = 3):
-    """构造 Top-K 结果表。"""
-    top_probs, top_indices = torch.topk(probs, k=min(k, len(probs)))
-
+def topk_to_dataframe(topk_predictions):
     rows = []
-    for rank, (idx, prob) in enumerate(zip(top_indices.tolist(), top_probs.tolist()), start=1):
-        raw_class = idx_to_class[idx]
-        display_name = CLASS_DISPLAY_NAMES.get(raw_class, raw_class)
+
+    for item in topk_predictions:
         rows.append(
             {
-                "Rank": rank,
-                "Raw Class": raw_class,
-                "Prediction": display_name,
-                "Confidence": float(prob),
+                "Rank": item.rank,
+                "Prediction": item.display_name,
+                "Confidence": float(item.confidence),
             }
         )
 
     return pd.DataFrame(rows)
 
 
-def build_case_findings_from_prediction(
-    image_path: str,
-    prediction: str,
-    raw_class: str,
-    confidence: float,
-    topk_df: pd.DataFrame,
-):
-    """把 Streamlit 分类结果转换为 CaseFindings。"""
+def render_findings_panel(findings):
+    st.subheader("Structured Findings")
 
-    topk_predictions = [
-        {row["Prediction"]: float(row["Confidence"])}
-        for _, row in topk_df.iterrows()
-    ]
-
-    # Streamlit 当前页使用离线 Grad-CAM Gallery，不实时生成 CAM。
-    # 因此这里 CAM 字段先置空，报告里只描述分类与可能视觉线索。
-    return generate_case_findings(
-        image_path=image_path,
-        prediction=prediction,
-        raw_class=raw_class,
-        confidence=confidence,
-        topk_predictions=topk_predictions,
-        cam_method=None,
-        cam_target_layer=None,
-        cam_output_path=None,
+    st.caption(
+        "Structured findings are generated from classification priors "
+        "and explainability context. "
+        "They are not lesion detector outputs."
     )
 
+    generated_findings = getattr(findings, "findings", [])
 
-def render_reasoning_reports(case_findings):
-    """
-    同时展示 rule_based 和 OpenAI provider 报告。
+    if generated_findings:
+        for i, finding in enumerate(generated_findings, start=1):
+            display_name = getattr(
+                finding,
+                "display_name",
+                f"Finding {i}",
+            )
 
-    OpenAI 不可用时，generate_report 内部会 fallback 到 rule_based，
-    保证 Streamlit demo 不崩。
-    """
+            description = getattr(
+                finding,
+                "description",
+                "",
+            )
 
-    st.subheader("VL Reasoning Report")
+            confidence = getattr(
+                finding,
+                "confidence",
+                None,
+            )
+
+            evidence = getattr(
+                finding,
+                "evidence",
+                [],
+            )
+
+            with st.expander(
+                f"{i}. {display_name}",
+                expanded=True,
+            ):
+                if confidence is not None:
+                    st.write(f"**Confidence:** `{float(confidence):.4f}`")
+
+                if evidence:
+                    st.write("**Evidence:**")
+                    st.write(", ".join(evidence))
+
+                st.write(description)
+
+    else:
+        st.info("No structured findings available.")
+
+    disclaimer = getattr(findings, "disclaimer", None)
+
+    if disclaimer:
+        st.warning(disclaimer)
+
+
+def render_rule_based_report_panel(agent_result):
+    st.subheader("Rule-based Report")
+
     st.caption(
-        "Provider comparison: rule-based fallback vs optional OpenAI report provider. "
+        "Generated by the lightweight agent runner. "
         "Reports are for research/demo use only, not clinical diagnosis."
     )
 
-    report_config = load_yaml(REPORT_CONFIG_PATH) or {}
-    report_config = report_config.get("report", {})
+    report = getattr(agent_result, "report", "")
 
-    tab_rule, tab_openai = st.tabs(
-        ["Rule-based Report", "OpenAI Report"]
+    if isinstance(report, dict):
+        st.json(report)
+    else:
+        st.markdown(str(report))
+
+
+def render_openai_report_panel(agent_result, report_config, image_source):
+    st.subheader("OpenAI Report")
+
+    st.caption(
+        "Click the button to generate an OpenAI report. "
+        "The result is cached in the current Streamlit session."
     )
 
-    with tab_rule:
-        rule_report = generate_report(
-            case_findings,
-            provider_name="rule_based",
-            fallback_provider_name="rule_based",
-            provider_config=report_config,
-        )
-        st.markdown(rule_report)
+    cache_key = f"openai_report::{image_source}"
 
-    with tab_openai:
+    if st.button("Generate OpenAI Report"):
         with st.spinner("Generating OpenAI report..."):
-            openai_report = generate_report(
-                case_findings,
+            st.session_state[cache_key] = generate_report(
+                agent_result.findings,
                 provider_name="openai",
                 fallback_provider_name="rule_based",
                 provider_config=report_config,
             )
 
-        st.markdown(openai_report)
-        st.caption(
-            "If OpenAI API is unavailable, this tab falls back to the rule-based provider."
-        )
+    if cache_key in st.session_state:
+        st.markdown(st.session_state[cache_key])
+    else:
+        st.info("Click the button to generate an OpenAI report.")
 
 
 def render_metrics_panel():
-    """展示训练/评估元信息。"""
-
     st.subheader("Model / Evaluation Info")
 
     checkpoint_meta = load_json(CHECKPOINT_META_PATH)
@@ -408,13 +350,10 @@ def render_metrics_panel():
     with col2:
         st.markdown("**Evaluation Summary**")
 
-        # 如果存在 metrics.json，则优先展示
         if metrics:
             st.json(metrics)
 
-        # 否则从 checkpoint_meta 中抽取核心指标
         elif checkpoint_meta:
-
             metric_keys = [
                 "test_accuracy",
                 "macro_precision",
@@ -437,7 +376,7 @@ def render_metrics_panel():
             if summary_rows:
                 st.dataframe(
                     pd.DataFrame(summary_rows),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:
@@ -448,9 +387,8 @@ def render_metrics_panel():
 
 
 def render_gradcam_gallery():
-    """展示离线 Grad-CAM Gallery。"""
-
     st.header("Grad-CAM / HiResCAM Gallery")
+
     st.caption(
         "This gallery uses offline generated CAM artifacts. "
         "It is intended for explainability and failure analysis."
@@ -461,6 +399,7 @@ def render_gradcam_gallery():
         return
 
     group_names = list(CASE_GROUPS.keys())
+
     selected_group = st.selectbox(
         "Select case group",
         group_names,
@@ -490,21 +429,25 @@ def render_gradcam_gallery():
         return
 
     cols = st.columns(3)
+
     for i, image_path in enumerate(images):
         with cols[i % 3]:
-            st.image(str(image_path), caption=image_path.name, use_container_width=True)
+            st.image(
+                str(image_path),
+                caption=image_path.name,
+                width="stretch",
+            )
+
             note = CASE_NOTES.get(image_path.name)
+
             if note:
                 st.caption(note)
 
 
-# =====================================================
-# 主页面
-# =====================================================
+st.title("OphAgent v0.3.0")
 
-st.title("OphAgent v0.2.2")
 st.caption(
-    "Diabetic Retinopathy Classification + Explainability + Lightweight VL Reasoning"
+    "Diabetic Retinopathy Classification + Explainability + Lightweight Agent Runner"
 )
 
 st.warning(
@@ -567,7 +510,11 @@ if page == "Classification & Report":
 
     with left_col:
         st.subheader("Input Fundus Image")
-        st.image(selected_image, use_container_width=True)
+
+        st.image(
+            selected_image,
+            width="stretch",
+        )
 
     try:
         model, device, idx_to_class, image_size, config = load_model_cached(
@@ -576,50 +523,87 @@ if page == "Classification & Report":
             str(CLASS_TO_IDX_PATH),
         )
 
-        probs = predict_image(
+        report_config = load_report_config()
+
+        agent_result = run_agent(
+            AgentInput(
+                image=selected_image,
+                image_source=image_source,
+                top_k=3,
+                report_providers=("rule_based",),
+                fallback_report_provider="rule_based",
+                report_config=report_config,
+            ),
             model=model,
             device=device,
-            image=selected_image,
-            image_size=image_size,
-        )
-
-        topk_df = build_topk_dataframe(
-            probs=probs,
             idx_to_class=idx_to_class,
-            k=3,
+            image_size=image_size,
+            class_display_names=CLASS_DISPLAY_NAMES,
         )
 
-        top1 = topk_df.iloc[0]
-        prediction = top1["Prediction"]
-        raw_class = top1["Raw Class"]
-        confidence = float(top1["Confidence"])
+        ground_truth_label = infer_ground_truth_from_path(image_source)
+
+        ground_truth_display = CLASS_DISPLAY_NAMES.get(
+            ground_truth_label,
+            "unknown",
+        )
+
+        topk_df = topk_to_dataframe(agent_result.topk)
 
         with right_col:
             st.subheader("Prediction")
-            st.metric("Predicted Class", prediction)
-            st.metric("Confidence", f"{confidence:.4f}")
+
+            st.metric(
+                "Predicted Class",
+                agent_result.predicted_display_name,
+            )
+
+            st.metric(
+                "Confidence",
+                f"{agent_result.confidence:.4f}",
+            )
+
+            if ground_truth_label != "unknown":
+                st.caption(
+                    f"Ground Truth: `{ground_truth_display}` ({ground_truth_label})"
+                )
 
             st.markdown("**Top-3 Predictions**")
+
             st.dataframe(
                 topk_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
         st.divider()
 
-        case_findings = build_case_findings_from_prediction(
-            image_path=image_source,
-            prediction=prediction,
-            raw_class=raw_class,
-            confidence=confidence,
-            topk_df=topk_df,
+        render_findings_panel(agent_result.findings)
+
+        st.divider()
+
+        st.subheader("VL Reasoning Report")
+
+        tab_rule, tab_openai = st.tabs(
+            [
+                "Rule-based Report",
+                "OpenAI Report",
+            ]
         )
 
-        render_reasoning_reports(case_findings)
+        with tab_rule:
+            render_rule_based_report_panel(agent_result)
+
+        with tab_openai:
+            render_openai_report_panel(
+                agent_result=agent_result,
+                report_config=report_config,
+                image_source=image_source,
+            )
 
     except FileNotFoundError as exc:
         st.error(str(exc))
+
         st.info(
             "请确认 checkpoint、config、class_to_idx 是否存在。"
             "如果只是查看 gallery，可切换到 Grad-CAM Gallery 页面。"
