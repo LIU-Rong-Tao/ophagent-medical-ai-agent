@@ -17,33 +17,49 @@ def read_optional_json(path: Path) -> dict:
 
 
 def build_summary(run_dir: Path) -> pd.DataFrame:
-    meta_path = run_dir / "checkpoints" / "checkpoint_meta.json"
     config_path = run_dir / "configs" / "config.json"
+    train_summary_path = run_dir / "logs" / "summary.json"
+    metrics_path = run_dir / "evaluation" / "test" / "metrics.json"
 
-    meta = read_optional_json(meta_path)
     config = read_optional_json(config_path)
+    train_summary = read_optional_json(train_summary_path)
+    metrics = read_optional_json(metrics_path)
+
+    if not config:
+        raise FileNotFoundError(f"Missing config file: {config_path}")
+
+    if not train_summary:
+        raise FileNotFoundError(f"Missing training summary file: {train_summary_path}")
+
+    if not metrics:
+        raise FileNotFoundError(f"Missing evaluation metrics file: {metrics_path}")
 
     row = {
-        "project": meta.get("project"),
-        "version": meta.get("version"),
-        "stage": meta.get("stage"),
-        "dataset": meta.get("dataset"),
-        "task": meta.get("task"),
-        "backbone": meta.get("backbone", config.get("backbone")),
-        "input_size": meta.get("input_size", config.get("image_size")),
-        "seed": meta.get("seed", config.get("seed")),
-        "checkpoint": meta.get("checkpoint"),
-        "test_accuracy": meta.get("test_accuracy"),
-        "macro_precision": meta.get("macro_precision"),
-        "macro_recall": meta.get("macro_recall"),
-        "macro_f1": meta.get("macro_f1"),
-        "weighted_f1": meta.get("weighted_f1"),
+        "project": "OphAgent",
+        "stage": "Vision Baseline",
+        "dataset": train_summary.get("dataset"),
+        "task": "5-class diabetic retinopathy classification",
+        "backbone": metrics.get("backbone", config.get("backbone")),
+        "input_size": config.get("image_size"),
+        "seed": train_summary.get("seed", config.get("seed")),
+        "checkpoint": metrics.get("checkpoint"),
+        "test_accuracy": metrics.get("accuracy"),
+        "macro_precision": metrics.get("precision_macro"),
+        "macro_recall": metrics.get("recall_macro"),
+        "macro_f1": metrics.get("f1_macro"),
+        "weighted_f1": metrics.get("f1_weighted"),
+        "num_samples": metrics.get("num_samples"),
+        "best_val_acc": train_summary.get("best_acc"),
+        "best_epoch": train_summary.get("best_epoch"),
         "batch_size": config.get("batch_size"),
         "num_epochs": config.get("num_epochs"),
         "learning_rate": config.get("learning_rate"),
         "pretrained": config.get("pretrained"),
         "run_dir": str(run_dir),
-        "intended_use": meta.get("intended_use"),
+        "intended_use": (
+            "Research and engineering demo only. "
+            "Not for clinical diagnosis."
+        ),
     }
 
     return pd.DataFrame([row])

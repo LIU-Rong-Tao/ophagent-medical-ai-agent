@@ -1,0 +1,12 @@
+{
+    "best_acc": 0.8365758754863813,
+    "best_epoch": 9,
+    "total_train_time_sec": null,
+    "total_train_time_min": null,
+    "avg_epoch_time_sec": null,
+    "backbone": "convnext_tiny",
+    "dataset": "APTOS2019",
+    "run_name": "lr1e-4_bs32_seed42",
+    "seed": 42,
+    "device": "cuda"
+}
