@@ -1,0 +1,2 @@
+num_epochs_logged,best_epoch,best_val_acc,best_recorded_acc_before_epoch,final_epoch,final_train_loss,final_val_loss,final_val_acc,min_train_loss,min_val_loss
+10,9,0.8365758754863813,0.8268482490272373,10,0.2944651996949687,0.6123521923727822,0.830739299610895,0.2944651996949687,0.4874231539228383

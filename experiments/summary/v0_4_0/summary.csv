@@ -1,0 +1,2 @@
+project,version,stage,dataset,task,backbone,input_size,seed,checkpoint,test_accuracy,macro_precision,macro_recall,macro_f1,weighted_f1,batch_size,num_epochs,learning_rate,pretrained,run_dir,intended_use
+OphAgent,v0.1.1,Vision Baseline,APTOS2019,5-class diabetic retinopathy classification,convnext_tiny,224,42,convnext_tiny_best.pth,0.8136,0.7079,0.6555,0.6496,0.8093,32,10,0.0001,True,experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42,Research and engineering demo only. Not for clinical diagnosis.
