@@ -376,7 +376,7 @@ def render_metrics_panel():
             if summary_rows:
                 st.dataframe(
                     pd.DataFrame(summary_rows),
-                    width="stretch",
+                    use_container_width=True,
                     hide_index=True,
                 )
             else:
@@ -435,7 +435,7 @@ def render_gradcam_gallery():
             st.image(
                 str(image_path),
                 caption=image_path.name,
-                width="stretch",
+                use_container_width=True,
             )
 
             note = CASE_NOTES.get(image_path.name)
@@ -513,7 +513,7 @@ if page == "Classification & Report":
 
         st.image(
             selected_image,
-            width="stretch",
+            use_container_width=True,
         )
 
     try:
@@ -572,7 +572,7 @@ if page == "Classification & Report":
 
             st.dataframe(
                 topk_df,
-                width="stretch",
+                use_container_width=True,
                 hide_index=True,
             )
 
