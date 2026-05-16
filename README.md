@@ -1,6 +1,6 @@
 # OphAgent
 
-轻量级眼科医学 AI Workflow Demo。
+轻量级眼科医学 AI Workflow 与 Benchmark Demo。
 
 当前项目聚焦于：
 
@@ -9,6 +9,7 @@
 - Structured Findings
 - Rule-based / OpenAI Reasoning
 - Lightweight Agent Runner Workflow
+- Benchmark Infrastructure
 
 本项目主要用于：
 
@@ -30,7 +31,7 @@ OphAgent 当前不是：
 而是：
 
 ```text
-Ophthalmology Medical AI Workflow Demo
+Ophthalmology Medical AI Workflow + Benchmark Demo
 ```
 
 重点包括：
@@ -41,6 +42,7 @@ explainability
 structured findings
 reasoning
 workflow integration
+benchmark infrastructure
 ```
 
 ---
@@ -75,10 +77,11 @@ rule-based / OpenAI reasoning
 - Severe DR
 - Proliferative DR
 
-当前默认 backbone：
+当前 baseline backbones：
 
 ```text
 ConvNeXt-Tiny
+Swin-Tiny
 ```
 
 ---
@@ -138,6 +141,40 @@ interesting_cases/
 
 ---
 
+## 5. Benchmark Infrastructure
+
+当前支持：
+
+```text
+统一 experiment schema
+统一 evaluation schema
+summary builder
+backbone comparison
+benchmark summary
+```
+
+当前 benchmark schema：
+
+训练产物：
+
+```text
+logs/
+checkpoints/
+configs/
+figures/
+```
+
+评估产物：
+
+```text
+evaluation/test/
+  metrics.json
+  classification_report.txt
+  test_predictions.csv
+```
+
+---
+
 # 项目结构
 
 ```text
@@ -160,6 +197,9 @@ explain/
 
 docs/
   gradcam_gallery/
+
+experiments/
+  summary/
 ```
 
 ---
@@ -225,76 +265,133 @@ streamlit run app/demo.py
 
 展示：
 
-- checkpoint metadata
-- evaluation metrics
+- unified evaluation metrics
+- benchmark summary
 - training summary
+- backbone comparison
 
 ---
 
 # 当前版本
 
 ```text
-v0.3.0
+v0.4.1
 ```
 
 ---
 
-# v0.3.0 更新内容
+# v0.4.x 当前阶段
+
+当前阶段重点：
 
 ```text
-- introduce lightweight agent runner workflow
-- unified run_agent(...) interface
-- integrate structured findings
-- integrate reasoning providers
-- simplify Streamlit workflow
-- optional OpenAI reasoning report
-- improve project architecture
+benchmark infrastructure
+experiment packaging
+multi-backbone baseline
+unified evaluation schema
 ```
+
+当前已经完成：
+
+```text
+v0.4.0
+  - experiment summary builder
+
+v0.4.1
+  - Swin-Tiny baseline
+  - unified evaluation schema
+  - backbone comparison summary
+```
+
+---
+
+# 当前 Benchmark
+
+当前单 seed benchmark：
+
+| Backbone | Test Accuracy | Macro F1 | Weighted F1 |
+|---|---:|---:|---:|
+| ConvNeXt-Tiny | 0.8136 | 0.6496 | 0.8093 |
+| Swin-Tiny | 0.8291 | 0.6567 | 0.8202 |
+
+当前结果中：
+
+```text
+Swin-Tiny 略高于 ConvNeXt-Tiny
+```
+
+但当前仍属于：
+
+```text
+single-seed comparison
+```
+
+尚未形成完整 benchmark。
 
 ---
 
 # 当前设计目标
 
-v0.3 重点不是：
+当前重点不是：
 
 ```text
-增加更多页面
-```
-
-也不是：
-
-```text
-继续堆 demo
+继续堆叠 demo 页面
 ```
 
 而是：
 
 ```text
-workflow 开始稳定
+构建稳定 benchmark workflow
 ```
 
 当前目标：
 
-- unified workflow
-- reusable run_agent(...)
-- stable Streamlit demo
-- reusable reasoning pipeline
+- unified experiment schema
+- reusable evaluation pipeline
+- benchmark summary generation
+- multi-backbone infrastructure
+- stable workflow demo
 
 ---
 
 # 后续计划
 
-## v0.4+
-
-计划方向：
+## v0.4.2
 
 ```text
-benchmark
-multiple backbones
-VLM integration
-Qwen / multimodal reasoning
-online CAM generation
-real clinical case analysis
+multi-experiment aggregation
+benchmark table generation
+leaderboard summary
+```
+
+---
+
+## v0.5.0
+
+```text
+formal multi-backbone benchmark
+ConvNeXt
+Swin
+ViT / EVA
+RETFound-style backbone
+```
+
+---
+
+## v0.6.0
+
+```text
+multimodal reasoning
+professional medical report generation
+Qwen / OpenAI providers
+```
+
+---
+
+## v0.7.0
+
+```text
+OCT / 3D ophthalmology modality
 ```
 
 ---
