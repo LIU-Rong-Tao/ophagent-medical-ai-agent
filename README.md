@@ -1,5 +1,7 @@
 # OphAgent
 
+![OphAgent Workflow](docs/assets/ophagent_interview_workflow.png)
+
 轻量级眼科医学 AI Workflow 与 Benchmark Infrastructure。
 
 当前项目聚焦于：
