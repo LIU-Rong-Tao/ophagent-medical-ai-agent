@@ -1,4 +1,3 @@
-````markdown
 # OphAgent
 
 轻量级眼科医学 AI Workflow 与 Benchmark Infrastructure。
@@ -476,4 +475,4 @@ engineering demo
 clinical diagnosis
 medical decision making
 ```
-````
+
