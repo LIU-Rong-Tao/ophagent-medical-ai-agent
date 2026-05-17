@@ -1,6 +1,7 @@
+````markdown
 # OphAgent
 
-轻量级眼科医学 AI Workflow 与 Benchmark Demo。
+轻量级眼科医学 AI Workflow 与 Benchmark Infrastructure。
 
 当前项目聚焦于：
 
@@ -31,7 +32,7 @@ OphAgent 当前不是：
 而是：
 
 ```text
-Ophthalmology Medical AI Workflow + Benchmark Demo
+Ophthalmology Medical AI Workflow + Benchmark Infrastructure
 ```
 
 重点包括：
@@ -212,13 +213,31 @@ experiments/
 
 ```text
 Python 3.10+
-CUDA + PyTorch
+PyTorch
 ```
 
 安装依赖：
 
 ```bash
 pip install -r requirements.txt
+```
+
+---
+
+## Checkpoints
+
+当前仓库不包含模型权重文件。
+
+请将 checkpoint 放置于：
+
+```text
+experiments/.../checkpoints/
+```
+
+例如：
+
+```text
+experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/
 ```
 
 ---
@@ -275,7 +294,7 @@ streamlit run app/demo.py
 # 当前版本
 
 ```text
-v0.4.1
+v0.4.2
 ```
 
 ---
@@ -301,11 +320,26 @@ v0.4.1
   - Swin-Tiny baseline
   - unified evaluation schema
   - backbone comparison summary
+
+v0.4.2
+  - benchmark infrastructure cleanup
+  - experiment metadata consistency
+  - summary builder improvements
 ```
 
 ---
 
 # 当前 Benchmark
+
+统一 benchmark protocol：
+
+- APTOS2019
+- 224×224
+- batch size = 32
+- lr = 1e-4
+- seed = 42
+- 10 epochs
+- test split evaluation
 
 当前单 seed benchmark：
 
@@ -327,6 +361,22 @@ single-seed comparison
 ```
 
 尚未形成完整 benchmark。
+
+---
+
+# Reproducibility
+
+当前 benchmark：
+
+- single-seed evaluation
+- fixed training protocol
+- unified evaluation schema
+
+后续计划加入：
+
+- multi-seed benchmark
+- leaderboard aggregation
+- formal benchmark protocol
 
 ---
 
@@ -354,9 +404,23 @@ single-seed comparison
 
 ---
 
+# 当前阶段不包含
+
+当前暂不包含：
+
+- OCT / 3D modality
+- Qwen-VL pipeline
+- Real-time CAM generation
+- Clinical deployment
+- Lesion detection
+
+这些内容将在后续阶段逐步扩展。
+
+---
+
 # 后续计划
 
-## v0.4.2
+## v0.4.3
 
 ```text
 multi-experiment aggregation
@@ -412,3 +476,4 @@ engineering demo
 clinical diagnosis
 medical decision making
 ```
+````
