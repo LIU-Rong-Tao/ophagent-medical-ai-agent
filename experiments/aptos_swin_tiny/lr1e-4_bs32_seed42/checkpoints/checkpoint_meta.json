@@ -1,0 +1,22 @@
+{
+  "project": "OphAgent",
+  "version": "v0.4.1",
+  "stage": "Second Backbone Baseline",
+  "dataset": "APTOS2019",
+  "task": "5-class diabetic retinopathy classification",
+  "backbone": "swin_tiny",
+  "input_size": 224,
+  "seed": 42,
+
+  "checkpoint": "checkpoints/swin_tiny_patch4_window7_224.ms_in1k_best.pth",
+  "config": "configs/swin_tiny_baseline.yaml",
+  "class_mapping": "configs/class_to_idx.json",
+
+  "test_accuracy": 0.8291,
+  "macro_precision": 0.7204,
+  "macro_recall": 0.6642,
+  "macro_f1": 0.6567,
+  "weighted_f1": 0.8202,
+
+  "intended_use": "Research and engineering demo only. Not for clinical diagnosis."
+}

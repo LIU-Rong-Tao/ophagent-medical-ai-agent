@@ -3,7 +3,7 @@
 ## Overview
 
 - Project: `OphAgent`
-- Version: `None`
+- Version: `v0.4.1`
 - Stage: `Vision Baseline`
 - Dataset: `APTOS2019`
 - Task: `5-class diabetic retinopathy classification`

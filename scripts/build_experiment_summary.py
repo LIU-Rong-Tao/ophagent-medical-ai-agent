@@ -16,7 +16,7 @@ def read_optional_json(path: Path) -> dict:
     return load_json(path)
 
 
-def build_summary(run_dir: Path) -> pd.DataFrame:
+def build_summary(run_dir: Path, version: str) -> pd.DataFrame:
     config_path = run_dir / "configs" / "config.json"
     train_summary_path = run_dir / "logs" / "summary.json"
     metrics_path = run_dir / "evaluation" / "test" / "metrics.json"
@@ -36,6 +36,7 @@ def build_summary(run_dir: Path) -> pd.DataFrame:
 
     row = {
         "project": "OphAgent",
+        "version": version,
         "stage": "Vision Baseline",
         "dataset": train_summary.get("dataset"),
         "task": "5-class diabetic retinopathy classification",
@@ -204,6 +205,11 @@ def main():
         type=Path,
         help="Output directory for summary artifacts.",
     )
+    parser.add_argument(
+        "--version",
+        default="v0.4.1",
+        help="Project/release version for generated summary artifacts.",
+    )
 
     args = parser.parse_args()
 
@@ -215,7 +221,7 @@ def main():
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    summary_df = build_summary(run_dir)
+    summary_df = build_summary(run_dir, version=args.version)
     curve_df = build_training_curve_summary(run_dir)
     class_df = build_class_mapping(run_dir)
 

@@ -1,5 +1,5 @@
 """
-OphAgent v0.3.0 Streamlit Demo
+OphAgent v0.4.1 Streamlit Demo
 
 统一入口：
     streamlit run app/demo.py
@@ -26,7 +26,7 @@ from reasoning.report_generator import generate_report
 
 
 st.set_page_config(
-    page_title="OphAgent v0.3.0 Demo",
+    page_title="OphAgent v0.4.1 Demo",
     layout="wide",
 )
 
@@ -45,8 +45,9 @@ CLASS_TO_IDX_PATH = Path(
     "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json"
 )
 
-METRICS_PATH = Path(
-    "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/evaluation/metrics.json"
+METRICS_PATH = (
+    "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/"
+    "evaluation/test/metrics.json"
 )
 
 REPORT_CONFIG_PATH = Path("configs/report_generation.yaml")
@@ -444,7 +445,7 @@ def render_gradcam_gallery():
                 st.caption(note)
 
 
-st.title("OphAgent v0.3.0")
+st.title("OphAgent v0.4.1")
 
 st.caption(
     "Diabetic Retinopathy Classification + Explainability + Lightweight Agent Runner"
