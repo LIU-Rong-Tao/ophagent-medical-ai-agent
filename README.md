@@ -43,7 +43,7 @@ Grad-CAM Explainability
 Representation Comparison
         ↓
 Grounded Reasoning
-
+```
 ---
 
 ## v0.5 Foundation Benchmark
