@@ -1,5 +1,5 @@
 """
-OphAgent v0.4.1 Streamlit Demo
+OphAgent v0.4.2 Streamlit Demo
 
 统一入口：
     streamlit run app/demo.py
@@ -26,7 +26,7 @@ from reasoning.report_generator import generate_report
 
 
 st.set_page_config(
-    page_title="OphAgent v0.4.1 Demo",
+    page_title="OphAgent v0.4.2 Demo",
     layout="wide",
 )
 
@@ -445,7 +445,7 @@ def render_gradcam_gallery():
                 st.caption(note)
 
 
-st.title("OphAgent v0.4.1")
+st.title("OphAgent v0.4.2")
 
 st.caption(
     "Diabetic Retinopathy Classification + Explainability + Lightweight Agent Runner"
