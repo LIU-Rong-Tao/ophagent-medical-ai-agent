@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 
-import timm
+from models.classifiers.builder import build_model
 
 from sklearn.metrics import (
     accuracy_score,
@@ -259,23 +259,12 @@ def main():
     # 构建模型
     # =================================================
 
-    model = timm.create_model(
-        backbone,
-        pretrained=False,
-        num_classes=num_classes,
+    model = build_model(
+        config=config,
+        checkpoint_path=args.checkpoint,
+        device=device,
+        training=False,
     )
-
-    checkpoint = torch.load(
-        args.checkpoint,
-        map_location=device,
-        weights_only=True,
-    )
-
-    model.load_state_dict(checkpoint)
-
-    model = model.to(device)
-
-    model.eval()
 
     # =================================================
     # 批量推理

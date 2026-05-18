@@ -2,9 +2,15 @@ import torch
 import timm
 
 
-def build_model(config: dict, checkpoint_path: str | None = None, device=None):
+def build_model(
+    config: dict,
+    checkpoint_path: str | None = None,
+    device=None,
+    training: bool = False,
+):
     backbone = config["backbone"]
     num_classes = config["num_classes"]
+    pretrained = config.get("pretrained", False)
 
     if backbone in [
         "convnext_tiny",
@@ -12,7 +18,7 @@ def build_model(config: dict, checkpoint_path: str | None = None, device=None):
     ]:
         model = timm.create_model(
             backbone,
-            pretrained=False,
+            pretrained=pretrained if training else False,
             num_classes=num_classes,
         )
 
@@ -36,5 +42,9 @@ def build_model(config: dict, checkpoint_path: str | None = None, device=None):
     if device is not None:
         model.to(device)
 
-    model.eval()
+    if training:
+        model.train()
+    else:
+        model.eval()
+
     return model

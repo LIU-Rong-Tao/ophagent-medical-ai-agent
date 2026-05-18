@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 from torch.optim import AdamW
 
-import timm
+from models.classifiers.builder import build_model
 from tqdm import tqdm
 
 from models.datasets.aptos_dataset import build_aptos_dataloader
@@ -250,10 +250,10 @@ def main():
     # 构建模型
     # =================================================
 
-    model = timm.create_model(
-        backbone,
-        pretrained=pretrained,
-        num_classes=num_classes,
+    model = build_model(
+        config=config,
+        device=device,
+        training=True,
     )
 
     model = model.to(device)
