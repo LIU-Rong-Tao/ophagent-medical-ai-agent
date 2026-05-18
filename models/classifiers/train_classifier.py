@@ -5,7 +5,7 @@ import json
 import yaml
 import random
 import time
-
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -50,7 +50,49 @@ def load_config(config_path: str):
 
     return config
 
+# =====================================================
+# Cosine Learning Rate Scheduler
+# =====================================================
 
+def cosine_lr_schedule(
+    base_lr,
+    min_lr,
+    epoch_progress,
+    num_epochs,
+    warmup_epochs,
+):
+    # warmup
+    if epoch_progress < warmup_epochs:
+        return (
+            base_lr
+            * epoch_progress
+            / max(1, warmup_epochs)
+        )
+
+    progress = (
+        (epoch_progress - warmup_epochs)
+        / max(1, num_epochs - warmup_epochs)
+    )
+
+    return (
+        min_lr
+        + 0.5
+        * (base_lr - min_lr)
+        * (1.0 + math.cos(math.pi * progress))
+    )
+
+
+# =====================================================
+# 更新 optimizer 学习率
+# =====================================================
+
+def set_optimizer_lr(
+    optimizer,
+    lr,
+):
+    for group in optimizer.param_groups:
+        group["lr"] = lr
+        
 # =====================================================
 # 验证函数
 # =====================================================
@@ -114,14 +156,48 @@ def main():
     image_size = config["image_size"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
-    learning_rate = config["learning_rate"]
+    learning_rate = config.get(
+        "learning_rate",
+        None,
+    )
+    blr = config.get("blr", None)
+    weight_decay = config.get(
+        "weight_decay",
+        0.01,
+    )
+
+    warmup_epochs = config.get(
+        "warmup_epochs",
+        0,
+    )
+
+    min_lr = config.get(
+        "min_lr",
+        0.0,
+    )
+
+    label_smoothing = config.get(
+        "label_smoothing",
+        0.0,
+    )
     pretrained = config["pretrained"]
     seed = config["seed"]
+    # =================================================
+    # ViT / Foundation-style base LR scaling
+    # =================================================
 
+    if blr is not None:
+        learning_rate = (
+            blr * batch_size / 256
+        )
+
+    if learning_rate is None:
+        raise ValueError(
+            "Either learning_rate or blr must be provided."
+        )
     experiment_root = config["experiment_root"]
     experiment_name = config["experiment_name"]
     run_name = config["run_name"]
-
     experiment_dir = (
         f"{experiment_root}/"
         f"{experiment_name}/"
@@ -262,11 +338,14 @@ def main():
     # 损失函数与优化器
     # =================================================
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(
+        label_smoothing=label_smoothing,
+        )
 
     optimizer = AdamW(
         model.parameters(),
         lr=learning_rate,
+        weight_decay=weight_decay,
     )
 
     # =================================================
@@ -288,10 +367,26 @@ def main():
 
         progress_bar = tqdm(train_loader)
 
-        for images, labels in progress_bar:
+        for batch_idx, (images, labels) in enumerate(progress_bar):
             images = images.to(device)
             labels = labels.to(device)
+            epoch_progress = (
+                epoch
+                + batch_idx / len(train_loader)
+            )
 
+            current_lr = cosine_lr_schedule(
+                base_lr=learning_rate,
+                min_lr=min_lr,
+                epoch_progress=epoch_progress,
+                num_epochs=num_epochs,
+                warmup_epochs=warmup_epochs,
+            )
+
+            set_optimizer_lr(
+                optimizer,
+                current_lr,
+            )
             outputs = model(images)
 
             loss = criterion(outputs, labels)

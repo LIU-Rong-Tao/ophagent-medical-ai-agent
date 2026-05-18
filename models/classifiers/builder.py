@@ -1,6 +1,8 @@
 import torch
 import timm
+
 from models.classifiers.vit import build_vit_model
+from models.classifiers.retfound import build_retfound_mae_cfp_model
 
 
 def build_model(
@@ -12,6 +14,7 @@ def build_model(
     backbone = config["backbone"]
     num_classes = config["num_classes"]
     pretrained = config.get("pretrained", False)
+    drop_path = config.get("drop_path", 0.0)
 
     if backbone in [
         "convnext_tiny",
@@ -27,6 +30,14 @@ def build_model(
         model = build_vit_model(
             num_classes=num_classes,
             pretrained=pretrained if training else False,
+            drop_path_rate=drop_path,
+        )
+
+    elif backbone == "retfound_mae_cfp":
+        model = build_retfound_mae_cfp_model(
+            num_classes=num_classes,
+            checkpoint_path=config["retfound_checkpoint"],
+            drop_path_rate=drop_path,
         )
 
     else:
