@@ -17,7 +17,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import timm
+from models.classifiers.builder import build_model
 import torch
 import torch.nn.functional as F
 import yaml
@@ -126,29 +126,6 @@ def load_class_mapping(class_to_idx_path: str):
     idx_to_class = {int(v): k for k, v in class_to_idx.items()}
 
     return class_to_idx, idx_to_class
-
-
-def build_model(config: dict, checkpoint_path: str, device: torch.device):
-    """构建并加载 ConvNeXt 分类模型。"""
-
-    model = timm.create_model(
-        config["backbone"],
-        pretrained=False,
-        num_classes=config["num_classes"],
-    )
-
-    checkpoint = torch.load(
-        checkpoint_path,
-        map_location=device,
-        weights_only=True,
-    )
-
-    model.load_state_dict(checkpoint)
-    model.to(device)
-    model.eval()
-
-    return model
-
 
 def build_transform(image_size: int):
     """
