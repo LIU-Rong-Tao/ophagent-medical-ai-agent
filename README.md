@@ -438,7 +438,7 @@ formal multi-backbone benchmark
 ConvNeXt
 Swin
 ViT / EVA
-RETFound-style backbone
+ViT-B/16 baseline and future retinal foundation backbone
 ```
 
 ---

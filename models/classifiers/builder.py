@@ -1,5 +1,6 @@
 import torch
 import timm
+from models.classifiers.vit import build_vit_model
 
 
 def build_model(
@@ -22,10 +23,10 @@ def build_model(
             num_classes=num_classes,
         )
 
-    elif backbone == "retfound":
-        raise NotImplementedError(
-            "RETFound is not implemented yet. "
-            "Add RETFound model loading in models/classifiers/retfound.py later."
+    elif backbone == "vit_base_patch16":
+        model = build_vit_model(
+            num_classes=num_classes,
+            pretrained=pretrained if training else False,
         )
 
     else:
