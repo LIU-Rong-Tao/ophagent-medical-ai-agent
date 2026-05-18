@@ -27,13 +27,28 @@ foundation representation benchmark
 
 ## Workflow
 
-![workflow](docs/assets/workflow_overview.png)
+当前 workflow 包括：
+
+```text
+APTOS2019 / Fundus Image
+        ↓
+Training Engine
+        ↓
+Backbone Benchmark
+        ↓
+Evaluation Schema
+        ↓
+Grad-CAM Explainability
+        ↓
+Representation Comparison
+        ↓
+Grounded Reasoning
 
 ---
 
 ## v0.5 Foundation Benchmark
 
-![benchmark](docs/assets/foundation_benchmark_overview.png)
+![benchmark](docs/assets/ophagent_v0_5_benchmark_overview.png)
 
 ### Core Results
 
