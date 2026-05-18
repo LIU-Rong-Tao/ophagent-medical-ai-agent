@@ -70,12 +70,14 @@ RETFound-MAE-CFP 在相同 foundation-style training protocol 下，
 
 ## Documentation
 
-| Page | Description |
+| 页面 | 内容 |
 |---|---|
 | [v0.5 Foundation Benchmark](docs/v0_5_foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
-| [Development Notes](notes/) | 各版本开发记录 |
-| [Experiment Summaries](experiments/summary/) | 实验 summary 与 benchmark 输出 |
-| [Grad-CAM Assets](docs/assets/) | Grad-CAM 示例与 workflow 图 |
+| [v0.4.2 README Archive](docs/v0_4_2_readme_archive.md) | v0.5 重构前的旧版 README 归档 |
+| [Experiment Summaries](experiments/summary/) | 各阶段实验汇总 |
+| [Development Notes](notes/) | 版本开发记录 |
+| [Grad-CAM Assets](docs/assets/) | 可解释性与展示图片 |
+| [Changelog](CHANGELOG.md) | 版本更新记录 |
 
 ---
 
