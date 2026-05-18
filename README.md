@@ -2,7 +2,7 @@
 
 ## Grounded & Explainable Ophthalmology AI Workflow
 
-![teaser](docs/assets/ophagent_v0_5_overview.png)
+![OphAgent v0.5 项目总览](docs/assets/ophagent_v0_5_overview.png)
 
 OphAgent 是一个面向眼科医学影像的 AI workflow 项目，当前正在从：
 
@@ -48,9 +48,9 @@ Grounded Reasoning
 
 ## v0.5 Foundation Benchmark
 
-![benchmark](docs/assets/ophagent_v0_5_benchmark_overview.png)
+![OphAgent v0.5 Benchmark 总览](docs/assets/ophagent_v0_5_benchmark_overview.png)
 
-### Core Results
+### 核心结果
 
 | Backbone | Setting | Macro F1 |
 |---|---|---:|
@@ -59,7 +59,7 @@ Grounded Reasoning
 | ViT-B/16 | official-like | 0.5800 |
 | RETFound-MAE-CFP | official-like | 0.6095 |
 
-### Key Observation
+### 当前观察
 
 ```text
 RETFound-MAE-CFP 在相同 foundation-style training protocol 下，
@@ -68,7 +68,7 @@ RETFound-MAE-CFP 在相同 foundation-style training protocol 下，
 
 ---
 
-## Documentation
+## 文档导航
 
 | 页面 | 内容 |
 |---|---|
@@ -93,6 +93,6 @@ RETFound-MAE-CFP 在相同 foundation-style training protocol 下，
 
 ---
 
-## Disclaimer
+## 使用声明
 
-This project is for research and engineering demonstration only. It is not intended for clinical diagnosis.
+本项目仅用于科研与工程展示，不用于临床诊断。
