@@ -2,7 +2,7 @@
 
 ## 面向眼科基础模型的可信评测工作流
 
-![OphAgent 项目总览](docs/assets/ophagent_overview.png)
+![OphAgent 项目总览](docs/assets/ophagent_v0_5_overview.png)
 
 OphAgent 是一个面向眼科医学影像的 AI workflow 项目，当前正在从早期的：
 
@@ -47,8 +47,6 @@ ophthalmic foundation representation benchmark
 ---
 
 ## Workflow
-
-![OphAgent Workflow](docs/assets/ophagent_workflow_pipeline.png)
 
 当前 workflow 包括：
 
@@ -103,7 +101,7 @@ RETFound-MAE-CFP 相比 ImageNet-pretrained ViT-B/16 获得了更高的 Macro-F1
 
 ## Explainability
 
-![Grad-CAM 示例](docs/assets/gradcam_example.png)
+![Grad-CAM 示例](docs/assets/gradcam_good.png)
 
 当前项目已集成 Grad-CAM 可解释性流程，用于观察不同 backbone 在眼底图像分类任务中的关注区域差异。
 
