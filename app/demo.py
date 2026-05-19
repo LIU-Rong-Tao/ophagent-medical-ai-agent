@@ -98,13 +98,12 @@ CASE_NOTES = {
 }
 
 
-def load_json(path: Path):
+def load_json(path):
+    path = Path(path)
     if not path.exists():
-        return None
-
+        return {}
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 def load_yaml(path: Path):
     if not path.exists():
