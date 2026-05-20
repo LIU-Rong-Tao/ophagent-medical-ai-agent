@@ -74,28 +74,37 @@ Grounded Reasoning Exploration
 
 ### Benchmark Results
 
-| Backbone | Setting | Macro-F1 | Notes |
-|---|---|---:|---|
-| ConvNeXt-Tiny | lightweight baseline | 0.6496 | 通用视觉 CNN baseline |
-| Swin-Tiny | lightweight baseline | 0.6567 | 通用视觉 Transformer baseline |
-| ViT-B/16 | official-like | 0.5800 | ImageNet-pretrained ViT baseline |
-| RETFound-MAE-CFP | official-like | 0.6095 | 眼科基础模型表示 |
+| Backbone | Accuracy | Macro-F1 | Weighted-F1 | QWK |
+|---|---:|---:|---:|---:|
+| ConvNeXt-Tiny | 0.814 | 0.650 | 0.809 | 0.862 |
+| Swin-Tiny | 0.829 | 0.657 | 0.820 | 0.898 |
+| RETFound-MAE-CFP | 0.790 | 0.552 | 0.769 | 0.834 |
 
 ### 当前观察
 
-在当前实验设置下：
+当前 benchmark 结果显示：
 
-```text
-RETFound-MAE-CFP 相比 ImageNet-pretrained ViT-B/16 获得了更高的 Macro-F1，
-但尚未超过 lightweight ConvNeXt / Swin baseline。
-```
+- Swin-Tiny 在当前实验设置下取得了更高的 Accuracy、Weighted-F1 与 QWK
+- ConvNeXt-Tiny 在 Severe DR 类别上表现相对更稳定
+- RETFound-MAE-CFP 当前未超过 lightweight ConvNeXt/Swin baseline 的整体分类性能
 
-这说明：
+但 RETFound 仍展现出一些不同于普通 ImageNet representation 的行为特征：
 
-- 眼科基础模型并不一定直接带来最高的分类分数；
-- Macro-F1 受到 APTOS2019 类别不均衡影响较大；
-- 后续需要结合 Weighted-F1、QWK、calibration、hardcase analysis 等指标进行更完整评估；
-- RETFound 的价值不应只从 raw accuracy 判断，也需要进一步分析其解释稳定性和不确定性行为。
+- Moderate DR recall 较高
+- prediction entropy 更高
+- confidence margin 更低
+
+需要注意的是：
+
+当前 benchmark 仍基于单次实验结果，
+且不同 backbone 的 training protocol、architecture family 与 initialization strategy 并不完全一致。
+
+因此当前观察更适合作为：
+
+- representation behavior analysis
+- uncertainty characteristic observation
+
+而不是严格意义上的 controlled SOTA comparison。
 
 ---
 
@@ -160,10 +169,10 @@ RETFound-MAE-CFP 相比 ImageNet-pretrained ViT-B/16 获得了更高的 Macro-F1
 
 | 页面 | 内容 |
 |---|---|
+| [v0.5.1 Metrics Update](experiments/summary/v0_5_1/metrics_update.md) | 多指标 benchmark、QWK 与 uncertainty 分析 |
 | [v0.5 Foundation Benchmark](experiments/summary/v0_5_0/foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
 | [v0.4.2 README Archive](docs/v0_4_2_readme_archive.md) | v0.5 重构前的旧版 README 归档 |
 | [Experiment Summaries](experiments/summary/) | 各阶段实验汇总 |
-| [Development Notes](notes/) | 版本开发记录 |
 | [Grad-CAM Assets](docs/assets/) | 可解释性与展示图片 |
 | [Changelog](CHANGELOG.md) | 版本更新记录 |
 

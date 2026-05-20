@@ -2,6 +2,51 @@
 
 ---
 
+## v0.5.1 - Multi-metric Benchmark Evaluation
+
+### 新增
+
+- multi-metric benchmark evaluation
+- QWK evaluation
+- per-class F1 analysis
+- prediction entropy analysis
+- top1-top2 margin analysis
+- confusion matrix generation
+
+### 新增文件
+
+```text
+scripts/build_benchmark_table.py
+
+experiments/summary/v0_5_1/benchmark_metrics.csv
+experiments/summary/v0_5_1/per_class_f1.csv
+experiments/summary/v0_5_1/confusion_matrices/
+experiments/summary/v0_5_1/metrics_update.md
+```
+
+### Benchmark
+
+| Backbone | Accuracy | Macro-F1 | Weighted-F1 | QWK |
+|---|---:|---:|---:|---:|
+| ConvNeXt-Tiny | 0.814 | 0.650 | 0.809 | 0.862 |
+| Swin-Tiny | 0.829 | 0.657 | 0.820 | 0.898 |
+| RETFound-MAE-CFP | 0.790 | 0.552 | 0.769 | 0.834 |
+
+### 当前观察
+
+- Swin-Tiny 在当前 benchmark 中表现最稳定
+- ConvNeXt-Tiny 在 Severe DR 类别上表现相对更稳定
+- RETFound-MAE-CFP 展现出不同的 uncertainty characteristics 与 class-wise behavior
+
+### 当前限制
+
+- 当前 benchmark 仍基于 single-seed evaluation
+- 不同 backbone 的 training protocol 并不完全一致
+- 当前结果更适合作为 representation behavior observation
+- 尚未形成严格 controlled benchmark leaderboard
+
+---
+
 ## v0.4.2 - Benchmark Infrastructure Cleanup
 
 ### 新增
