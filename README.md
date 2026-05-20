@@ -160,7 +160,7 @@ RETFound-MAE-CFP 相比 ImageNet-pretrained ViT-B/16 获得了更高的 Macro-F1
 
 | 页面 | 内容 |
 |---|---|
-| [v0.5 Foundation Benchmark](docs/v0_5_foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
+| [v0.5 Foundation Benchmark](experiments/summary/v0_5_0/foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
 | [v0.4.2 README Archive](docs/v0_4_2_readme_archive.md) | v0.5 重构前的旧版 README 归档 |
 | [Experiment Summaries](experiments/summary/) | 各阶段实验汇总 |
 | [Development Notes](notes/) | 版本开发记录 |
