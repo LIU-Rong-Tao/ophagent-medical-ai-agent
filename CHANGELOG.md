@@ -2,6 +2,26 @@
 
 ---
 
+## v0.5.2 — Benchmark Consistency Repair
+
+### 修复
+- 修复历史 benchmark artifact inconsistency 问题
+- 修复 legacy experiment naming 与 checkpoint mismatch 导致的实验污染
+- 删除受污染的 `aptos_vit_base_patch16` 历史实验目录
+- 修复 ViT 与 RETFound benchmark recipe 不一致问题
+
+### 新增
+- clean ViT-B/16 ImageNet lightweight baseline
+- official-like clean benchmark configs
+- controlled initialization benchmark
+- benchmark training time analysis
+
+### 变更
+- 统一 benchmark experiment namespace
+- 统一 checkpoint naming schema：`{backbone}_best.pth`
+- 重构 benchmark experiment 目录结构
+- 重构 official-like benchmark 配置结构
+
 ## v0.5.1 - Multi-metric Benchmark Evaluation
 
 ### 新增
@@ -30,17 +50,20 @@ experiments/summary/v0_5_1/metrics_update.md
 |---|---:|---:|---:|---:|
 | ConvNeXt-Tiny | 0.814 | 0.650 | 0.809 | 0.862 |
 | Swin-Tiny | 0.829 | 0.657 | 0.820 | 0.898 |
+| ViT-B/16 | 0.818 | 0.646 | 0.814 | 0.876 |
 | RETFound-MAE-CFP | 0.790 | 0.552 | 0.769 | 0.834 |
 
 ### 当前观察
 
 - Swin-Tiny 在当前 benchmark 中表现最稳定
+- ViT-B/16 lightweight baseline 已接近 ConvNeXt-Tiny 与 Swin-Tiny
 - ConvNeXt-Tiny 在 Severe DR 类别上表现相对更稳定
 - RETFound-MAE-CFP 展现出不同的 uncertainty characteristics 与 class-wise behavior
 
 ### 当前限制
 
 - 当前 benchmark 仍基于 single-seed evaluation
+- 当前 benchmark 同时包含 lightweight baseline 与 official-like foundation setting
 - 不同 backbone 的 training protocol 并不完全一致
 - 当前结果更适合作为 representation behavior observation
 - 尚未形成严格 controlled benchmark leaderboard

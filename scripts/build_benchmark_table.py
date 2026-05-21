@@ -39,8 +39,18 @@ EXPERIMENTS = {
         "path": "experiments/aptos_swin_tiny/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv",
         "setting": "lightweight baseline",
     },
-    "RETFound-MAE-CFP": {
-        "path": "experiments/aptos_vit_base_patch16/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv",
+    "ViT-B/16": {
+        "path": "experiments/aptos_vit_base_patch16_imagenet/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv",
+        "setting": "lightweight baseline",
+    },
+    "ViT-B/16 official-like": {
+        "path": "experiments/aptos_vit_base_patch16_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv",
+        "display_name": "ViT-B/16",
+        "setting": "official-like",
+    },
+    "RETFound-MAE-CFP official-like": {
+        "path": "experiments/aptos_retfound_mae_cfp_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv",
+        "display_name": "RETFound-MAE-CFP",
         "setting": "official-like",
     },
 }
@@ -150,8 +160,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output-dir",
-        default="experiments/summary/v0_5_1",
-        help="Output directory for v0.5.1 benchmark summaries.",
+        default="experiments/summary/v0_5_2",
+        help="Output directory for v0.5.2 benchmark summaries.",
     )
     args = parser.parse_args()
 
@@ -178,7 +188,7 @@ def main():
         metrics, report, cm = compute_metrics(y_true, y_pred, probs)
 
         row = {
-            "backbone": backbone,
+            "backbone": info.get("display_name", backbone),
             "setting": setting,
             "n_samples": len(df),
         }
@@ -206,8 +216,11 @@ def main():
         all_per_class.to_csv(output_dir / "per_class_f1.csv", index=False)
 
     with open(output_dir / "README.md", "w", encoding="utf-8") as f:
-        f.write("# v0.5.1 Multi-metric Benchmark Cleanup\n\n")
-        f.write("This folder contains multi-metric benchmark results for OphAgent v0.5.1.\n\n")
+        f.write("# v0.5.2 Benchmark Consistency Repair\n\n")
+        f.write(
+            "This folder contains the unified multi-metric benchmark results "
+            "after v0.5.2 consistency repair.\n\n"
+        )
         f.write("Generated files:\n\n")
         f.write("- benchmark_metrics.csv\n")
         f.write("- per_class_f1.csv\n")

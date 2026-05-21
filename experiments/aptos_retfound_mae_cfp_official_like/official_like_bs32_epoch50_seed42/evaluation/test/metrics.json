@@ -1,0 +1,13 @@
+{
+    "split": "test",
+    "accuracy": 0.8036363636363636,
+    "precision_macro": 0.7543858969391708,
+    "recall_macro": 0.5989973350398969,
+    "f1_macro": 0.5834373647903611,
+    "precision_weighted": 0.8251762060746951,
+    "recall_weighted": 0.8036363636363636,
+    "f1_weighted": 0.7885383894057365,
+    "num_samples": 1100,
+    "backbone": "retfound_mae_cfp",
+    "checkpoint": "experiments/aptos_retfound_mae_cfp_official_like/official_like_bs32_epoch50_seed42/checkpoints/retfound_mae_cfp_best.pth"
+}

@@ -1,0 +1,13 @@
+{
+    "split": "test",
+    "accuracy": 0.8181818181818182,
+    "precision_macro": 0.6669444662334457,
+    "recall_macro": 0.6348118246561483,
+    "f1_macro": 0.6462110328178807,
+    "precision_weighted": 0.8145175294327262,
+    "recall_weighted": 0.8181818181818182,
+    "f1_weighted": 0.8140112385696139,
+    "num_samples": 1100,
+    "backbone": "vit_base_patch16",
+    "checkpoint": "experiments/aptos_vit_base_patch16_imagenet/lr1e-4_bs32_seed42/checkpoints/vit_base_patch16_best.pth"
+}
