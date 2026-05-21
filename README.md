@@ -269,8 +269,6 @@ ophagent-medical-ai-agent/
 ├── notes/                  # 开发记录
 ├── reasoning/              # report / reasoning 相关模块
 └── scripts/                # 工具脚本
-```
-
 ---
 
 ## Config Structure
