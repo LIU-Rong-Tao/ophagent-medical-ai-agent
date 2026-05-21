@@ -239,12 +239,10 @@ retinal-domain foundation initialization
 
 | 页面 | 内容 |
 |---|---|
-| [v0.5.1 Metrics Update](experiments/summary/v0_5_1/metrics_update.md) | 多指标 benchmark、QWK 与 uncertainty 分析 |
-| [ViT official-like Summary](experiments/summary/v0_5_2_vit_official_like/summary.md) | v0.5.2 ViT-B/16 official-like controlled benchmark summary |
-| [RETFound official-like Summary](experiments/summary/v0_5_2_retfound_official_like/summary.md) | v0.5.2 RETFound-MAE-CFP official-like controlled benchmark summary |
+| [v0.5.2 Benchmark Summary](experiments/summary/v0_5_2/README.md) | v0.5.2 unified multi-metric benchmark summary |
 | [v0.5 Foundation Benchmark](experiments/summary/v0_5_0/foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
 | [v0.4.2 README Archive](docs/v0_4_2_readme_archive.md) | v0.5 重构前的旧版 README 归档 |
-| [Experiment Summaries](experiments/summary/) | 各阶段实验汇总 |
+| [Experiment Summaries](experiments/summary/) | 各阶段 benchmark summary 与实验结果 |
 | [Development Notes](notes/) | 版本开发记录 |
 | [Grad-CAM Assets](docs/assets/) | 可解释性与展示图片 |
 | [Changelog](CHANGELOG.md) | 版本更新记录 |
