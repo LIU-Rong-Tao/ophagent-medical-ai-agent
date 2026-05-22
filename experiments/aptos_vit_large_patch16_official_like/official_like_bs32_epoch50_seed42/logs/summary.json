@@ -1,0 +1,14 @@
+{
+    "best_acc": 0.7957198443579766,
+    "best_epoch": 5,
+    "total_train_time_sec": 1627.3279330730438,
+    "total_train_time_min": 27.122132217884065,
+    "avg_epoch_time_sec": 32.54655866146088,
+    "backbone": "vit_large_patch16",
+    "dataset": "APTOS2019",
+    "run_name": "official_like_bs32_epoch50_seed42",
+    "seed": 42,
+    "device": "cuda",
+    "gpu_name": "NVIDIA GeForce RTX 4090",
+    "gpu_memory_total_gb": 23.64
+}

@@ -1,0 +1,13 @@
+{
+    "split": "test",
+    "accuracy": 0.8009090909090909,
+    "precision_macro": 0.6513686400549045,
+    "recall_macro": 0.5860643263833394,
+    "f1_macro": 0.5685067975305944,
+    "precision_weighted": 0.794309281823046,
+    "recall_weighted": 0.8009090909090909,
+    "f1_weighted": 0.7828903875746389,
+    "num_samples": 1100,
+    "backbone": "vit_large_patch16",
+    "checkpoint": "experiments/aptos_vit_large_patch16_official_like/official_like_bs32_epoch50_seed42/checkpoints/vit_large_patch16_best.pth"
+}

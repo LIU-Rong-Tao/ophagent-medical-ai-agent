@@ -1,0 +1,11 @@
+                  precision    recall  f1-score   support
+
+           No DR       0.97      0.98      0.97       542
+         Mild DR       0.61      0.48      0.54       111
+     Moderate DR       0.70      0.80      0.75       300
+       Severe DR       0.50      0.02      0.03        58
+Proliferative DR       0.48      0.66      0.56        89
+
+        accuracy                           0.80      1100
+       macro avg       0.65      0.59      0.57      1100
+    weighted avg       0.79      0.80      0.78      1100

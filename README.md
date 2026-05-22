@@ -82,7 +82,7 @@ v0.5 阶段主要围绕 foundation representation benchmark 展开，目标是�
 
 ## Benchmark Consistency Repair（v0.5.2）
 
-v0.5.2 对 benchmark pipeline 进行了 consistency repair，修复了早期实验中由历史命名与 checkpoint 复用导致的 artifact inconsistency。
+v0.5.2 对 benchmark pipeline 进行了 consistency repair，修复了早期实验中由历史命名、checkpoint 复用与 benchmark namespace 混乱导致的 artifact inconsistency。
 
 修复后，当前 benchmark 被划分为两个部分：
 
@@ -92,33 +92,23 @@ v0.5.2 对 benchmark pipeline 进行了 consistency repair，修复了早期实�
 - Swin-Tiny
 - ViT-B/16（ImageNet pretrained）
 
-### Official-like Controlled Benchmark
+### Backbone-scale-aligned Official-like Comparison
 
-- ViT-B/16 official-like
+- ViT-B/16 official-like reference
+- ViT-L/16 official-like
 - RETFound-MAE-CFP official-like
 
-在 official-like controlled benchmark 中，仅保留：
+其中，ViT-B/16 official-like 保留为 reference baseline；ViT-L/16 official-like 与 RETFound-MAE-CFP 使用相同 ViT-L/16 backbone scale，因此二者可以作为 backbone-scale-aligned pretraining comparison。
 
-- initialization difference
-
-其余训练设置保持一致，包括：
-
-- optimizer
-- batch size
-- augmentation
-- learning rate schedule
-- regularization
-- random seed
-
-该设置用于更严格地比较：
+需要注意的是，RETFound-MAE-CFP 当前使用：
 
 ```text
-ImageNet pretrained initialization
-vs
-retinal-domain foundation initialization
+ViT-L/16 architecture
++
+retinal-domain MAE pretraining
 ```
 
----
+因此，RETFound-MAE-CFP 与 ViT-L/16 official-like 的差异更适合作为 retinal-domain foundation pretraining effect 的初步观察，而不是简单的 architecture scaling gain。
 
 ## Benchmark Results
 
@@ -130,32 +120,30 @@ retinal-domain foundation initialization
 | Swin-Tiny | lightweight baseline | 0.829 | 0.657 | 0.820 | 0.898 |
 | ViT-B/16 | lightweight baseline | 0.818 | 0.646 | 0.814 | 0.876 |
 
-### Official-like Controlled Benchmark
+### Backbone-scale-aligned Official-like Comparison
 
 | Backbone | Setting | Accuracy | Macro-F1 | Weighted-F1 | QWK |
 |---|---|---:|---:|---:|---:|
-| ViT-B/16 | official-like | 0.799 | 0.567 | 0.778 | 0.829 |
+| ViT-B/16 | official-like reference | 0.799 | 0.567 | 0.778 | 0.829 |
+| ViT-L/16 | official-like | 0.801 | 0.569 | 0.783 | 0.860 |
 | RETFound-MAE-CFP | official-like | 0.804 | 0.583 | 0.789 | 0.866 |
-
----
 
 ## 当前观察
 
 当前 benchmark 结果显示：
 
-- Swin-Tiny 在 lightweight baseline 设置下取得了最高 Accuracy、Weighted-F1 与 QWK
-- ViT-B/16 lightweight baseline 已接近 ConvNeXt-Tiny 与 Swin-Tiny
-- 在 official-like controlled benchmark 中，RETFound-MAE-CFP 相比 ImageNet ViT-B/16 存在小幅稳定增益
-- RETFound initialization 对 long-tail DR 类别有一定帮助
-- Severe DR 类别仍然表现较差，说明 retinal-domain initialization 本身不足以解决 APTOS2019 的严重类别不平衡问题
-- RETFound official-like 的训练成本明显高于 ViT official-like，约为 3.3×，因此需要结合 cost-performance tradeoff 进行分析
+- Swin-Tiny 在 lightweight baseline 中取得最高 Accuracy、Weighted-F1 与 QWK，仍是当前最强轻量级 baseline
+- ViT-B/16 lightweight baseline 已接近 ConvNeXt-Tiny 与 Swin-Tiny，说明 clean ViT baseline 并不弱
+- ViT-B/16 official-like 到 ViT-L/16 official-like 的提升有限，单纯扩大 backbone scale 并未显著解决 DR grading 难点
+- 在 backbone scale 对齐后，RETFound-MAE-CFP 相比 ViT-L/16 official-like baseline 存在小幅稳定增益
+- Severe DR 类别在所有 backbone 上仍表现较差，当前瓶颈更可能来自 class imbalance、hardcase scarcity 与 ordinal ambiguity
 
 需要注意的是：
 
 当前 benchmark 同时包含：
 
 - lightweight baseline
-- official-like controlled benchmark
+- backbone-scale-aligned official-like comparison
 
 且当前结果仍基于：
 
@@ -165,7 +153,7 @@ retinal-domain foundation initialization
 因此当前观察更适合作为：
 
 - representation behavior analysis
-- initialization effect observation
+- foundation pretraining effect observation
 - benchmark infrastructure validation
 
 而不是严格意义上的统计显著性结论。
@@ -253,8 +241,10 @@ retinal-domain foundation initialization
 
 ```text
 ophagent-medical-ai-agent/
+├── agent/                  # Agent runner 与 provider 抽象
 ├── app/                    # Demo 与展示入口
 ├── configs/                # 训练与模型配置
+├── demo_samples/           # Demo 样例数据
 ├── docs/                   # 项目文档
 │   ├── assets/             # README 与文档图片资源
 │   └── v0_4_2_readme_archive.md
@@ -269,6 +259,8 @@ ophagent-medical-ai-agent/
 ├── notes/                  # 开发记录
 ├── reasoning/              # report / reasoning 相关模块
 └── scripts/                # 工具脚本
+```
+
 ---
 
 ## Config Structure
@@ -281,6 +273,7 @@ configs/
 ├── swin_tiny_baseline.yaml
 ├── vit_base_patch16_clean.yaml
 ├── vit_base_patch16_official_like_clean.yaml
+├── vit_large_patch16_official_like_clean.yaml
 ├── retfound_mae_cfp_official_like_clean.yaml
 └── report_generation.yaml
 ```
@@ -290,8 +283,9 @@ configs/
 - `vision_baseline.yaml`：ConvNeXt-Tiny lightweight baseline
 - `swin_tiny_baseline.yaml`：Swin-Tiny lightweight baseline
 - `vit_base_patch16_clean.yaml`：ViT-B/16 ImageNet lightweight baseline
-- `vit_base_patch16_official_like_clean.yaml`：ViT-B/16 official-like controlled benchmark
-- `retfound_mae_cfp_official_like_clean.yaml`：RETFound-MAE-CFP official-like controlled benchmark
+- `vit_base_patch16_official_like_clean.yaml`：ViT-B/16 official-like reference baseline
+- `vit_large_patch16_official_like_clean.yaml`：ViT-L/16 official-like baseline
+- `retfound_mae_cfp_official_like_clean.yaml`：RETFound-MAE-CFP official-like setting
 - `report_generation.yaml`：报告生成相关配置
 
 ---

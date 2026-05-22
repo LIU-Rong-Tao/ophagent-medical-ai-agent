@@ -8,19 +8,18 @@
 - 修复历史 benchmark artifact inconsistency 问题
 - 修复 legacy experiment naming 与 checkpoint mismatch 导致的实验污染
 - 删除受污染的 `aptos_vit_base_patch16` 历史实验目录
-- 修复 ViT 与 RETFound benchmark recipe 不一致问题
+- 修正 RETFound 对比中 initialization-only controlled benchmark 的表述风险
 
 ### 新增
 - clean ViT-B/16 ImageNet lightweight baseline
-- official-like clean benchmark configs
-- controlled initialization benchmark
-- benchmark training time analysis
+- ViT-L/16 official-like baseline
+- RETFound-MAE-CFP official-like setting
+- backbone-scale-aligned official-like comparison
 
 ### 变更
 - 统一 benchmark experiment namespace
 - 统一 checkpoint naming schema：`{backbone}_best.pth`
-- 重构 benchmark experiment 目录结构
-- 重构 official-like benchmark 配置结构
+- 重构 benchmark experiment 与 official-like config 结构
 
 ## v0.5.1 - Multi-metric Benchmark Evaluation
 

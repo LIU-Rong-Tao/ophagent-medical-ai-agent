@@ -33,6 +33,14 @@ def build_model(
             drop_path_rate=drop_path,
         )
 
+    elif backbone == "vit_large_patch16":
+        model = timm.create_model(
+            "vit_large_patch16_224",
+            pretrained=pretrained if training else False,
+            num_classes=num_classes,
+            drop_path_rate=drop_path,
+        )
+
     elif backbone == "retfound_mae_cfp":
         model = build_retfound_mae_cfp_model(
             num_classes=num_classes,

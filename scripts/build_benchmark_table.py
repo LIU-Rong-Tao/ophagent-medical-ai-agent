@@ -48,6 +48,11 @@ EXPERIMENTS = {
         "display_name": "ViT-B/16",
         "setting": "official-like",
     },
+    "ViT-L/16 official-like": {
+    "path": "experiments/aptos_vit_large_patch16_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv",
+    "display_name": "ViT-L/16",
+    "setting": "official-like",
+    },
     "RETFound-MAE-CFP official-like": {
         "path": "experiments/aptos_retfound_mae_cfp_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv",
         "display_name": "RETFound-MAE-CFP",
