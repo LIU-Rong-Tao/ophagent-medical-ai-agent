@@ -43,7 +43,7 @@ trustworthy ophthalmic foundation benchmark
 
 - 不同 backbone 在类别不均衡 DR grading 任务中的表现差异
 - RETFound 等眼科基础模型与通用 ImageNet backbone 的对比
-- retinal-domain initialization 对 long-tail DR 类别的影响
+- retinal-domain foundation pretraining 对 long-tail DR 类别的影响
 - Grad-CAM 热力图是否能辅助理解模型决策
 - 错分样本、低置信样本和 hardcase 的表现特征
 - 后续向 calibration、explainability consistency 和 uncertainty-aware triage 扩展
@@ -201,7 +201,7 @@ retinal-domain MAE pretraining
 - top1-top2 margin analysis
 - confusion matrix generation
 - benchmark artifact consistency repair
-- official-like controlled benchmark
+- backbone-scale-aligned official-like comparison
 - Grad-CAM 可解释性展示
 - 实验结果、配置与 artifact 管理
 - v0.5 benchmark 文档整理
