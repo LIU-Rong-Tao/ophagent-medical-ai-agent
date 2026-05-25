@@ -19,6 +19,7 @@ def build_model(
     if backbone in [
         "convnext_tiny",
         "swin_tiny_patch4_window7_224",
+        "swin_tiny_patch4_window7_224.ms_in1k",
     ]:
         model = timm.create_model(
             backbone,

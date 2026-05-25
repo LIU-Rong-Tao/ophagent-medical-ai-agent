@@ -1,32 +1,35 @@
 """
-批量生成不同 Grad-CAM 参数组合的可视化结果。
+批量生成不同 CAM 参数组合的可视化结果。
 
 用途：
 - 对比不同 CAM 方法：gradcam / hirescam / eigencam / layercam
-- 对比不同目标层：stage2 / stage3 / stage4
+- ConvNeXt 对比不同目标层：stage2 / stage3 / stage4
+- Transformer backbone 对比不同 target depth：early / middle / late
 - 对比是否使用 smoothing
-- 为 v0.2 explainability 选择默认配置提供依据
+- 为 v0.5.3 CAM adapter foundation 与 v0.6 explainability consistency benchmark 做准备
 
 示例运行：
 
 python scripts/run_gradcam_grid.py \
-  --image demo_samples/cmoderatedr/b9127e38d9b9.png \
-  --config configs/vision_baseline.yaml \
-  --checkpoint experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth \
-  --class-to-idx experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json \
-  --output-root experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/explain/grid_compare/b9127e38d9b9
+  --image demo_samples/cmoderatedr/d9bbdc33db83.png \
+  --config configs/vit_large_patch16_official_like_clean.yaml \
+  --checkpoint experiments/aptos_vit_large_patch16_official_like/official_like_bs32_epoch50_seed42/checkpoints/vit_large_patch16_best.pth \
+  --class-to-idx experiments/aptos_vit_large_patch16_official_like/official_like_bs32_epoch50_seed42/configs/class_to_idx.json \
+  --output-root experiments/summary/v0_5_3/cam_grid_compare/d9bbdc33db83/vit_l
 """
 
 import argparse
 import subprocess
 from pathlib import Path
 
+import yaml
+
 
 def parse_args():
     """解析命令行参数。"""
 
     parser = argparse.ArgumentParser(
-        description="Run Grad-CAM grid comparison for one fundus image."
+        description="Run CAM grid comparison for one fundus image."
     )
 
     parser.add_argument(
@@ -64,7 +67,54 @@ def parse_args():
         help="所有对比结果的输出根目录。",
     )
 
+    parser.add_argument(
+        "--methods",
+        nargs="*",
+        default=["gradcam", "hirescam", "eigencam", "layercam"],
+        help="CAM 方法列表。",
+    )
+
+    parser.add_argument(
+        "--target-layers",
+        nargs="*",
+        default=None,
+        help=(
+            "手动指定 target layers。"
+            "ConvNeXt 可用 stage2/stage3/stage4；"
+            "Transformer 可用 early/middle/late/block<N>。"
+            "不指定时根据 backbone 自动选择。"
+        ),
+    )
+
     return parser.parse_args()
+
+
+def load_config(config_path: str) -> dict:
+    """读取 YAML 配置。"""
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def infer_target_layers(backbone: str):
+    """根据 backbone 自动选择 CAM target layers。"""
+
+    backbone = backbone.lower()
+
+    if backbone == "convnext_tiny":
+        return ["stage2", "stage3", "stage4"]
+
+    if backbone in [
+        "swin_tiny",
+        "swin_tiny_patch4_window7_224",
+        "swin_tiny_patch4_window7_224.ms_in1k",
+        "vit_base_patch16",
+        "vit_large_patch16",
+        "retfound_mae_cfp",
+    ]:
+        return ["early", "middle", "late"]
+
+    raise ValueError(f"Unsupported backbone for CAM grid: {backbone}")
 
 
 def run_command(command):
@@ -81,28 +131,19 @@ def run_command(command):
 def main():
     args = parse_args()
 
+    config = load_config(args.config)
+    backbone = config["backbone"]
+
     output_root = Path(args.output_root)
     output_root.mkdir(parents=True, exist_ok=True)
 
-    # CAM 方法候选
-    methods = [
-        "gradcam",
-        "hirescam",
-        "eigencam",
-        "layercam",
-    ]
+    methods = args.methods
 
-    # ConvNeXt 目标层候选
-    target_layers = [
-        "stage2",
-        "stage3",
-        "stage4",
-    ]
+    if args.target_layers is not None and len(args.target_layers) > 0:
+        target_layers = args.target_layers
+    else:
+        target_layers = infer_target_layers(backbone)
 
-    # smoothing 组合
-    # none：不使用 smoothing，更忠实
-    # eigen：只使用 eigen smoothing
-    # aug_eigen：同时使用 aug smoothing 和 eigen smoothing，更平滑但更慢
     smooth_settings = [
         {
             "name": "none",
@@ -120,6 +161,11 @@ def main():
 
     total = len(methods) * len(target_layers) * len(smooth_settings)
     current = 0
+
+    print(f"Backbone: {backbone}")
+    print(f"Methods: {methods}")
+    print(f"Target layers: {target_layers}")
+    print(f"Output root: {output_root}")
 
     for method in methods:
         for target_layer in target_layers:
