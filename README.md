@@ -10,16 +10,18 @@ OphAgent 是一个面向眼科医学影像的 AI workflow 项目，当前从 **�
 证据瓶颈病例报告原型
 ```
 
+- 示例 HTML 病例报告：[Example HTML Case Report](experiments/case_reports/d9bbdc33db83/report.html)
+
 v0.6.0 的核心流程：
 
 ```text
 眼底图像
 → 模型预测
 → CAM 弱视觉证据
-→ 结构化 Findings
-→ Claim 级别验证
+→ 结构化发现
+→ 声明级验证
 → 报告草稿
-→ Case Artifact
+→ 病例级产物
 ```
 
 v0.6.0 不训练临床报告生成模型，也不声称实现眼科报告生成 SOTA。当前目标是在缺少**图像-报告配对数据、病灶级标注、完整临床上下文**的条件下，构建一个可追踪、可审核、未来可升级的 evidence-bottleneck workflow baseline。
@@ -39,9 +41,11 @@ v0.6.0 不训练临床报告生成模型，也不声称实现眼科报告生成 
 
 ---
 
-## 10 秒能看到什么
+## 病例报告产物展示
 
 v0.6.0 可以对单张眼底图像生成完整 case artifact：
+
+![v0.6 Case Report Showcase](docs/assets/v0_6_case_report_showcase.png)
 
 ```text
 experiments/case_reports/d9bbdc33db83/
@@ -154,7 +158,7 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | [v0.6.0 Report Generation Design](notes/v0.6.0_report_generation_design.md) | v0.6.0 证据瓶颈病例报告原型设计 |
 | [v0.6.0 Case Findings Schema](docs/schema/case_findings_schema_v0_6.md) | `findings.json` 与 `validation.json` 的字段规范 |
 | [Example Case Report](experiments/case_reports/d9bbdc33db83/report.md) | 示例病例报告草稿 |
-| [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | Claim 级别验证结果 |
+| [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | 声明级级别验证结果 |
 | [v0.5.3 README Archive](docs/v0_5_3_readme_archive.md) | 旧版 benchmark-oriented README 归档 |
 | [Changelog](CHANGELOG.md) | 版本更新记录 |
 
