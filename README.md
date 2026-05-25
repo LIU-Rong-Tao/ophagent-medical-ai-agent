@@ -10,7 +10,7 @@ OphAgent 是一个面向眼科医学影像的 AI workflow 项目，当前从 **�
 证据瓶颈病例报告原型
 ```
 
-- 示例 HTML 病例报告：[Example HTML Case Report](experiments/case_reports/d9bbdc33db83/report.html)
+- 卡片式 HTML 报告：`experiments/case_reports/d9bbdc33db83/report.html`，GitHub 会显示源码，需下载或本地打开查看
 
 v0.6.0 的核心流程：
 

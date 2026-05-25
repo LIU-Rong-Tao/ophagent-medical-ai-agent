@@ -1,0 +1,5 @@
+# Generated experiment artifacts should not affect GitHub language statistics.
+experiments/case_reports/** linguist-generated=true
+
+# Generated showcase image.
+docs/assets/** linguist-generated=true
