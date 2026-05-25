@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OphAgent Case Analysis Report</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 960px; margin: 40px auto; line-height: 1.6; padding: 0 20px; }
+h1, h2, h3 { color: #1f2937; }
+code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+pre { background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }
+li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<h1>OphAgent Case Analysis Report</h1>
+<br>
+<h2>1. Case Overview</h2>
+<br>
+<li>Case ID: `d9bbdc33db83`</li>
+<li>Input image: `demo_samples/cmoderatedr/d9bbdc33db83.png`</li>
+<li>Report type: AI-generated research/demo draft</li>
+<br>
+<h2>2. Model Prediction</h2>
+<br>
+<li>The model predicts Moderate DR for the input fundus image with confidence 0.6026.</li>
+<br>
+<h3>Top-k Predictions</h3>
+<br>
+<li>Rank 1: Moderate DR (`cmoderatedr`), confidence=0.6026</li>
+<li>Rank 2: Severe DR (`dseveredr`), confidence=0.3330</li>
+<li>Rank 3: Mild DR (`bmilddr`), confidence=0.0535</li>
+<br>
+<h2>3. Visual Evidence</h2>
+<br>
+<li>CAM-based visual evidence is provided only as weak model attention evidence and must not be interpreted as lesion annotation.</li>
+<br>
+<li>CAM method: `gradcam`</li>
+<li>CAM target layer: `stage3`</li>
+<li>CAM smoothing: `eigen`</li>
+<li>CAM overlay: `experiments/case_reports/d9bbdc33db83/cam/overlay.png`</li>
+<br>
+<h2>4. Quality-aware Context</h2>
+<br>
+<li>Automatic image quality assessment is not implemented in this version; the output should be interpreted with caution.</li>
+<li>Image quality assessed: `False`</li>
+<li>Image quality level: `unknown`</li>
+<li>Quality-aware mode: `not_implemented`</li>
+<li>Action: `caution`</li>
+<br>
+<h2>5. Structured Findings</h2>
+<br>
+<li>**classification_tendency**: The model prediction suggests a tendency toward Moderate DR with confidence 0.6026.</li>
+<p>  - Supported by: `pred_001`</p>
+<p>  - Caution: This is a model prediction, not a clinical diagnosis.</p>
+<li>**possible_visual_cue**: For the predicted DR category, possible related visual cues may include: microaneurysm-like changes, dot- or blot-hemorrhage-like visual cues, hard-exudate-like bright regions, focal retinal microvascular abnormality-like patterns. These are class-level explanatory cues, not confirmed lesions.</li>
+<p>  - Supported by: `pred_001`</p>
+<p>  - Caution: These cues are not independent lesion detections.</p>
+<li>**cam_attention_observation**: The CAM result is included as weak visual evidence to support model interpretability. It should be reviewed only as a model attention visualization.</li>
+<p>  - Supported by: `ev_cam_001`</p>
+<p>  - Caution: CAM does not provide lesion-level annotation.</p>
+<br>
+<h2>6. Interpretation Summary</h2>
+<br>
+<p>The current evidence-bottleneck output supports a model-level tendency toward Moderate DR. The explanation remains limited by the absence of lesion-level annotation, image quality assessment, and clinical metadata.</p>
+<br>
+<h2>7. Limitations</h2>
+<br>
+<li>No lesion-level annotation is available.</li>
+<li>No physician report ground truth is available.</li>
+<li>No multimodal clinical context is used.</li>
+<li>Automatic image quality assessment is not implemented in v0.6.0.</li>
+<li>CAM is not equivalent to lesion localization.</li>
+<li>This system has not been clinically validated.</li>
+<li>This report must not be used for clinical diagnosis or treatment decisions.</li>
+<li>Human review is required.</li>
+<br>
+<h2>8. Non-clinical-use Disclaimer</h2>
+<br>
+<li>This report is an AI-generated research/demo draft and must not be used for clinical diagnosis or treatment decisions. Human review is required.</li>
+<br>
+<h2>9. Artifact Metadata</h2>
+<br>
+<li>Backbone: `convnext_tiny`</li>
+<li>Config: `configs/vision_baseline.yaml`</li>
+<li>Checkpoint: `experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth`</li>
+<li>Generated at: `2026-05-25T16:44:29`</li>
+<li>Workflow: `v0.6.0_case_report`</li>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "schema_valid": true,
+  "required_files_present": true,
+  "required_disclaimer_present": true,
+  "human_review_required": true,
+  "cam_described_as_weak_evidence": true,
+  "clinical_diagnosis_claim_present": false,
+  "unsupported_claim_count": 0,
+  "unsupported_claim_ids": [],
+  "evidence_coverage_rate": 1.0,
+  "image_quality_overclaimed": false,
+  "non_clinical_use_statement_present": true,
+  "report_reproducible": true,
+  "validation_warnings": []
+}

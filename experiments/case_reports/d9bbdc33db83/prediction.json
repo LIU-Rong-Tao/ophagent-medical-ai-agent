@@ -1,0 +1,27 @@
+{
+  "prediction_id": "pred_001",
+  "raw_class": "cmoderatedr",
+  "display_name": "Moderate DR",
+  "confidence": 0.602624,
+  "topk_predictions": [
+    {
+      "rank": 1,
+      "raw_class": "cmoderatedr",
+      "display_name": "Moderate DR",
+      "confidence": 0.602624
+    },
+    {
+      "rank": 2,
+      "raw_class": "dseveredr",
+      "display_name": "Severe DR",
+      "confidence": 0.332957
+    },
+    {
+      "rank": 3,
+      "raw_class": "bmilddr",
+      "display_name": "Mild DR",
+      "confidence": 0.053548
+    }
+  ],
+  "task": "diabetic_retinopathy_grading"
+}

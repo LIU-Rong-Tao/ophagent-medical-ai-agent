@@ -1,0 +1,14 @@
+{
+  "case_id": "d9bbdc33db83",
+  "created_at": "2026-05-25T16:44:29",
+  "workflow": "v0.6.0_case_report",
+  "image_path": "demo_samples/cmoderatedr/d9bbdc33db83.png",
+  "output_dir": "experiments/case_reports/d9bbdc33db83",
+  "prediction": "Moderate DR",
+  "raw_class": "cmoderatedr",
+  "confidence": 0.602624,
+  "cam_method": "gradcam",
+  "cam_target_layer": "stage3",
+  "cam_smoothing": "eigen",
+  "note": "Research/demo artifact only. Not for clinical use."
+}

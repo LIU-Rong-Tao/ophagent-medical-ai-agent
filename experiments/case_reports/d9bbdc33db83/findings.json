@@ -1,0 +1,178 @@
+{
+  "case_id": "d9bbdc33db83",
+  "input": {
+    "image_path": "demo_samples/cmoderatedr/d9bbdc33db83.png",
+    "saved_input_path": "experiments/case_reports/d9bbdc33db83/input.png",
+    "image_id": "d9bbdc33db83",
+    "modality": "fundus_color_photography",
+    "dataset_hint": "demo_samples"
+  },
+  "prediction": {
+    "prediction_id": "pred_001",
+    "raw_class": "cmoderatedr",
+    "display_name": "Moderate DR",
+    "confidence": 0.602624,
+    "topk_predictions": [
+      {
+        "rank": 1,
+        "raw_class": "cmoderatedr",
+        "display_name": "Moderate DR",
+        "confidence": 0.602624
+      },
+      {
+        "rank": 2,
+        "raw_class": "dseveredr",
+        "display_name": "Severe DR",
+        "confidence": 0.332957
+      },
+      {
+        "rank": 3,
+        "raw_class": "bmilddr",
+        "display_name": "Mild DR",
+        "confidence": 0.053548
+      }
+    ],
+    "task": "diabetic_retinopathy_grading"
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_cam_001",
+      "evidence_type": "cam",
+      "source": "gradcam_stage3_eigen",
+      "region": "model-attended fundus regions",
+      "description": "CAM overlay provides a weak visual reference for regions that contributed to the model prediction.",
+      "clinical_strength": "weak",
+      "caution": "CAM is not lesion annotation and must not be interpreted as clinical lesion localization.",
+      "artifact_path": "experiments/case_reports/d9bbdc33db83/cam/overlay.png",
+      "replaceable_by": [
+        "segmentation_mask",
+        "bounding_box",
+        "lesion_detector"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "finding_001",
+      "finding_type": "classification_tendency",
+      "description": "The model prediction suggests a tendency toward Moderate DR with confidence 0.6026.",
+      "supported_by": [
+        "pred_001"
+      ],
+      "confidence_level": "model_probability",
+      "caution": "This is a model prediction, not a clinical diagnosis."
+    },
+    {
+      "finding_id": "finding_002",
+      "finding_type": "possible_visual_cue",
+      "description": "For the predicted DR category, possible related visual cues may include: microaneurysm-like changes, dot- or blot-hemorrhage-like visual cues, hard-exudate-like bright regions, focal retinal microvascular abnormality-like patterns. These are class-level explanatory cues, not confirmed lesions.",
+      "supported_by": [
+        "pred_001"
+      ],
+      "confidence_level": "qualitative",
+      "caution": "These cues are not independent lesion detections."
+    },
+    {
+      "finding_id": "finding_003",
+      "finding_type": "cam_attention_observation",
+      "description": "The CAM result is included as weak visual evidence to support model interpretability. It should be reviewed only as a model attention visualization.",
+      "supported_by": [
+        "ev_cam_001"
+      ],
+      "confidence_level": "qualitative",
+      "caution": "CAM does not provide lesion-level annotation."
+    }
+  ],
+  "interpretation": {
+    "summary": "The current evidence-bottleneck output supports a model-level tendency toward Moderate DR. The explanation remains limited by the absence of lesion-level annotation, image quality assessment, and clinical metadata.",
+    "supported_by": [
+      "pred_001",
+      "ev_cam_001",
+      "finding_001",
+      "finding_003",
+      "quality_control"
+    ]
+  },
+  "report_claims": [
+    {
+      "claim_id": "claim_001",
+      "text": "The model predicts Moderate DR for the input fundus image with confidence 0.6026.",
+      "claim_type": "model_prediction",
+      "supported_by": [
+        "pred_001"
+      ],
+      "safety_level": "informational",
+      "section": "Model Prediction"
+    },
+    {
+      "claim_id": "claim_002",
+      "text": "CAM-based visual evidence is provided only as weak model attention evidence and must not be interpreted as lesion annotation.",
+      "claim_type": "visual_evidence",
+      "supported_by": [
+        "ev_cam_001"
+      ],
+      "safety_level": "caution",
+      "section": "Visual Evidence"
+    },
+    {
+      "claim_id": "claim_003",
+      "text": "Automatic image quality assessment is not implemented in this version; the output should be interpreted with caution.",
+      "claim_type": "quality_context",
+      "supported_by": [
+        "quality_control"
+      ],
+      "safety_level": "caution",
+      "section": "Quality-aware Context"
+    },
+    {
+      "claim_id": "claim_004",
+      "text": "This report is an AI-generated research/demo draft and must not be used for clinical diagnosis or treatment decisions. Human review is required.",
+      "claim_type": "disclaimer",
+      "supported_by": [
+        "system_policy"
+      ],
+      "safety_level": "disclaimer",
+      "section": "Non-clinical-use Disclaimer"
+    }
+  ],
+  "quality_control": {
+    "image_quality_assessed": false,
+    "image_quality_level": "unknown",
+    "quality_aware_mode": "not_implemented",
+    "quality_note": "Automatic image quality assessment is not implemented in v0.6.0. The report should be interpreted with caution.",
+    "action": "caution",
+    "future_upgrade": [
+      "image_quality_classifier",
+      "quality_aware_confidence_adjustment",
+      "quality_aware_evidence_weighting",
+      "non_diagnostic_image_refusal"
+    ]
+  },
+  "limitations": [
+    "No lesion-level annotation is available.",
+    "No physician report ground truth is available.",
+    "No multimodal clinical context is used.",
+    "Automatic image quality assessment is not implemented in v0.6.0.",
+    "CAM is not equivalent to lesion localization.",
+    "This system has not been clinically validated.",
+    "This report must not be used for clinical diagnosis or treatment decisions.",
+    "Human review is required."
+  ],
+  "model_info": {
+    "backbone": "convnext_tiny",
+    "config_path": "configs/vision_baseline.yaml",
+    "checkpoint_path": "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth",
+    "class_to_idx_path": "experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json",
+    "cam_method": "gradcam",
+    "cam_target_layer": "stage3",
+    "cam_smoothing": "eigen"
+  },
+  "provenance": {
+    "generated_at": "2026-05-25T16:44:29",
+    "workflow": "v0.6.0_case_report",
+    "script": "scripts/run_case_report.py",
+    "output_dir": "experiments/case_reports/d9bbdc33db83",
+    "ophagent_version": "v0.6.0",
+    "note": "Research/demo artifact only. Not for clinical use."
+  }
+}
