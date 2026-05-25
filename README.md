@@ -24,7 +24,7 @@ trustworthy ophthalmic foundation benchmark
 - 多种视觉 backbone 的 benchmark 对比
 - RETFound 等眼科基础模型表示能力分析
 - benchmark artifact consistency 与 reproducibility
-- Grad-CAM 可解释性展示
+- Grad-CAM / CAM 可解释性展示
 - 后续可信评测方向探索
 
 > 本项目仅用于科研、工程实践与项目展示，不用于临床诊断、治疗建议或真实医疗决策。
@@ -44,7 +44,7 @@ trustworthy ophthalmic foundation benchmark
 - 不同 backbone 在类别不均衡 DR grading 任务中的表现差异
 - RETFound 等眼科基础模型与通用 ImageNet backbone 的对比
 - retinal-domain foundation pretraining 对 long-tail DR 类别的影响
-- Grad-CAM 热力图是否能辅助理解模型决策
+- CAM 热力图是否能辅助理解模型决策
 - 错分样本、低置信样本和 hardcase 的表现特征
 - 后续向 calibration、explainability consistency 和 uncertainty-aware triage 扩展
 
@@ -63,7 +63,7 @@ Backbone Benchmark
         ↓
 Evaluation Schema
         ↓
-Grad-CAM Explainability
+CAM Explainability
         ↓
 Representation Comparison
         ↓
@@ -78,37 +78,14 @@ Grounded Reasoning Exploration
 
 v0.5 阶段主要围绕 foundation representation benchmark 展开，目标是建立一个可复现、可解释、可持续扩展的眼科基础模型评测流程。
 
+v0.5.2 对 benchmark pipeline 进行了 consistency repair，修复了早期实验中由历史命名与 checkpoint 复用导致的 artifact inconsistency，并补充 ViT-L/16 official-like baseline，使 RETFound-MAE-CFP 可以与相同 ViT-L/16 backbone scale 下的 baseline 进行更合理的对照。
+
+当前 benchmark 被划分为：
+
+- lightweight baseline benchmark
+- backbone-scale-aligned official-like comparison
+
 ---
-
-## Benchmark Consistency Repair（v0.5.2）
-
-v0.5.2 对 benchmark pipeline 进行了 consistency repair，修复了早期实验中由历史命名、checkpoint 复用与 benchmark namespace 混乱导致的 artifact inconsistency。
-
-修复后，当前 benchmark 被划分为两个部分：
-
-### Lightweight Baselines
-
-- ConvNeXt-Tiny
-- Swin-Tiny
-- ViT-B/16（ImageNet pretrained）
-
-### Backbone-scale-aligned Official-like Comparison
-
-- ViT-B/16 official-like reference
-- ViT-L/16 official-like
-- RETFound-MAE-CFP official-like
-
-其中，ViT-B/16 official-like 保留为 reference baseline；ViT-L/16 official-like 与 RETFound-MAE-CFP 使用相同 ViT-L/16 backbone scale，因此二者可以作为 backbone-scale-aligned pretraining comparison。
-
-需要注意的是，RETFound-MAE-CFP 当前使用：
-
-```text
-ViT-L/16 architecture
-+
-retinal-domain MAE pretraining
-```
-
-因此，RETFound-MAE-CFP 与 ViT-L/16 official-like 的差异更适合作为 retinal-domain foundation pretraining effect 的初步观察，而不是简单的 architecture scaling gain。
 
 ## Benchmark Results
 
@@ -128,7 +105,7 @@ retinal-domain MAE pretraining
 | ViT-L/16 | official-like | 0.801 | 0.569 | 0.783 | 0.860 |
 | RETFound-MAE-CFP | official-like | 0.804 | 0.583 | 0.789 | 0.866 |
 
-## 当前观察
+### 当前观察
 
 当前 benchmark 结果显示：
 
@@ -140,23 +117,7 @@ retinal-domain MAE pretraining
 
 需要注意的是：
 
-当前 benchmark 同时包含：
-
-- lightweight baseline
-- backbone-scale-aligned official-like comparison
-
-且当前结果仍基于：
-
-- 单次训练（single-run benchmark）
-- 单随机种子（seed=42）
-
-因此当前观察更适合作为：
-
-- representation behavior analysis
-- foundation pretraining effect observation
-- benchmark infrastructure validation
-
-而不是严格意义上的统计显著性结论。
+当前结果仍基于 single-run benchmark 和 seed=42，因此更适合作为 representation behavior analysis 与 benchmark infrastructure validation，而不是严格意义上的统计显著性结论。
 
 ---
 
@@ -164,26 +125,28 @@ retinal-domain MAE pretraining
 
 ![Grad-CAM 示例](docs/assets/gradcam_good.png)
 
-当前项目已集成 Grad-CAM 可解释性流程，用于观察不同 backbone 在眼底图像分类任务中的关注区域差异。
+当前项目已集成 CAM 可解释性流程，用于观察不同 backbone 在眼底图像分类任务中的关注区域差异。
 
 当前 explainability 模块包括：
 
-- Grad-CAM
-- backbone-specific Grad-CAM wrapper
+- Grad-CAM / HiResCAM / EigenCAM / LayerCAM
+- backbone-specific CAM target layer adapter
 - heatmap overlay 导出
-- 可解释性结果展示
+- qualitative lesion-alignment sanity check
 
-当前 explainability 模块主要用于：
+v0.5.3 增加统一 CAM adapter，使 ConvNeXt、Swin、ViT-B、ViT-L 与 RETFound 可以通过同一套接口生成 CAM 可解释性结果。
 
-```text
-从可视化角度观察不同 backbone 的关注区域差异。
-```
+对于 CNN backbone，CAM target layer 使用 stage-based selection；对于 Transformer backbone，使用 relative block depth，例如 early / middle / late。这只是为了统一跨 backbone 可视化接口的工程归一化方式，并不表示 Transformer block 与 CNN stage 在结构上完全等价。
+
+需要注意的是，当前 CAM 结果仅用于 qualitative lesion-alignment sanity check，不作为医学病灶定位、临床诊断或严格 explanation faithfulness 结论。详细说明见 [v0.5.3 CAM Adapter Summary](experiments/summary/v0_5_3/README.md)。
 
 后续可进一步扩展：
 
-- HiResCAM / EigenCAM / LayerCAM 等 CAM variants
-- explainability consistency evaluation
-- 同一图像在不同扰动、增强或 checkpoint 下的 CAM 稳定性分析
+- CAM consistency evaluation
+- perturbation robustness
+- explanation stability
+- hardcase reliability
+- uncertainty-aware explainability analysis
 
 ---
 
@@ -194,24 +157,20 @@ retinal-domain MAE pretraining
 - APTOS2019 眼底图像分类训练流程
 - ConvNeXt / Swin / ViT / RETFound 多 backbone benchmark
 - RETFound-MAE-CFP 权重接入与实验适配
+- lightweight baseline 与 official-like comparison 拆分
 - multi-metric benchmark evaluation
-- QWK evaluation
-- per-class F1 analysis
-- prediction entropy analysis
-- top1-top2 margin analysis
-- confusion matrix generation
-- benchmark artifact consistency repair
-- backbone-scale-aligned official-like comparison
-- Grad-CAM 可解释性展示
+- QWK / per-class F1 / uncertainty-related summary
+- Grad-CAM / CAM 可解释性展示
+- unified CAM adapter foundation
 - 实验结果、配置与 artifact 管理
 - v0.5 benchmark 文档整理
 
 ### 进行中
 
-- benchmark 文档与 summary artifact 同步
 - hardcase 样本分析
 - explainability consistency 方案设计
 - calibration 相关指标设计
+- uncertainty-aware triage 方向探索
 
 ### 后续方向
 
@@ -227,6 +186,7 @@ retinal-domain MAE pretraining
 
 | 页面 | 内容 |
 |---|---|
+| [v0.5.3 CAM Adapter Summary](experiments/summary/v0_5_3/README.md) | 统一 CAM adapter、selected CAM comparison 与 qualitative lesion-alignment sanity check |
 | [v0.5.2 Benchmark Summary](experiments/summary/v0_5_2/README.md) | v0.5.2 unified multi-metric benchmark summary |
 | [v0.5 Foundation Benchmark](experiments/summary/v0_5_0/foundation_benchmark.md) | v0.5 benchmark 设计、结果与当前观察 |
 | [v0.4.2 README Archive](docs/v0_4_2_readme_archive.md) | v0.5 重构前的旧版 README 归档 |
@@ -249,7 +209,7 @@ ophagent-medical-ai-agent/
 │   ├── assets/             # README 与文档图片资源
 │   └── v0_4_2_readme_archive.md
 ├── experiments/            # 实验输出与 summary
-├── explain/                # Grad-CAM 可解释性模块
+├── explain/                # CAM 可解释性模块
 ├── findings/               # 结构化 findings 相关模块
 ├── metrics/                # 评测指标与结果处理
 ├── models/                 # backbone、数据集与分类模型定义
@@ -297,6 +257,7 @@ configs/
 | v0.5.0 | Foundation Representation Benchmark | Completed |
 | v0.5.1 | Multi-metric Benchmark Evaluation | Completed |
 | v0.5.2 | Benchmark Consistency Repair | Completed |
+| v0.5.3 | CAM Adapter Foundation | Completed |
 | v0.6.0 | Explainability Consistency Benchmark | Planned |
 | Future | Calibration & Uncertainty-aware Triage | Planned |
 
@@ -305,3 +266,5 @@ configs/
 ## 使用声明
 
 本项目仅用于科研、工程实践与项目展示，不用于临床诊断、治疗建议或真实医疗决策。
+
+CAM 可解释性结果仅用于模型行为观察和工程展示，不等同于医学病灶定位、临床诊断或治疗建议。
