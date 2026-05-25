@@ -10,7 +10,8 @@ OphAgent 是一个面向眼科医学影像的 AI workflow 项目，当前从 **�
 证据瓶颈病例报告原型
 ```
 
-- 卡片式 HTML 报告：`experiments/case_reports/d9bbdc33db83/report.html`，GitHub 会显示源码，需下载或本地打开查看
+- 卡片式 HTML 报告：[`report.html`](experiments/case_reports/d9bbdc33db83/report.html)  
+  GitHub 会显示源码，点击 **Download raw file** 后本地打开即可正常显示。
 
 v0.6.0 的核心流程：
 
@@ -158,7 +159,7 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | [v0.6.0 Report Generation Design](notes/v0.6.0_report_generation_design.md) | v0.6.0 证据瓶颈病例报告原型设计 |
 | [v0.6.0 Case Findings Schema](docs/schema/case_findings_schema_v0_6.md) | `findings.json` 与 `validation.json` 的字段规范 |
 | [Example Case Report](experiments/case_reports/d9bbdc33db83/report.md) | 示例病例报告草稿 |
-| [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | 声明级级别验证结果 |
+| [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | 声明级别验证结果 |
 | [v0.5.3 README Archive](docs/v0_5_3_readme_archive.md) | 旧版 benchmark-oriented README 归档 |
 | [Changelog](CHANGELOG.md) | 版本更新记录 |
 
