@@ -18,6 +18,7 @@ Evidence-Bottleneck Case Report Prototype.
 """
 
 import argparse
+import base64
 import html
 import json
 import shutil
@@ -661,48 +662,384 @@ def render_report_md(findings_data: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_report_html(report_md: str) -> str:
-    html_lines = [
-        "<!DOCTYPE html>",
-        "<html>",
-        "<head>",
-        '<meta charset="utf-8">',
-        "<title>OphAgent Case Analysis Report</title>",
-        "<style>",
-        "body { font-family: Arial, sans-serif; max-width: 960px; margin: 40px auto; line-height: 1.6; padding: 0 20px; }",
-        "h1, h2, h3 { color: #1f2937; }",
-        "code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }",
-        "pre { background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }",
-        "li { margin-bottom: 6px; }",
-        "</style>",
-        "</head>",
-        "<body>",
-    ]
+def render_report_html(
+    findings_data: dict[str, Any],
+    validation: dict[str, Any] | None = None,
+) -> str:
+    """
+    Render a card-style HTML case report from structured findings.
 
-    for line in report_md.splitlines():
-        escaped = html.escape(line)
+    Unlike the Markdown report, this HTML page is designed as the
+    primary visual artifact for v0.6.0.
+    """
 
-        if line.startswith("# "):
-            html_lines.append(f"<h1>{escaped[2:]}</h1>")
-        elif line.startswith("## "):
-            html_lines.append(f"<h2>{escaped[3:]}</h2>")
-        elif line.startswith("### "):
-            html_lines.append(f"<h3>{escaped[4:]}</h3>")
-        elif line.startswith("- "):
-            html_lines.append(f"<li>{escaped[2:]}</li>")
-        elif not line.strip():
-            html_lines.append("<br>")
-        else:
-            html_lines.append(f"<p>{escaped}</p>")
+    validation = validation or {}
 
-    html_lines.extend(
-        [
-            "</body>",
-            "</html>",
-        ]
+    prediction = findings_data["prediction"]
+    model_info = findings_data["model_info"]
+    quality_control = findings_data["quality_control"]
+    provenance = findings_data["provenance"]
+    evidence = findings_data["evidence"][0]
+
+    def image_to_data_uri(path_str: str) -> str:
+        image_path = Path(path_str)
+
+        if not image_path.is_absolute():
+            image_path = PROJECT_ROOT / image_path
+
+        suffix = image_path.suffix.lower()
+        mime = "image/png"
+
+        if suffix in [".jpg", ".jpeg"]:
+            mime = "image/jpeg"
+        elif suffix == ".webp":
+            mime = "image/webp"
+
+        encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+        return f"data:{mime};base64,{encoded}"
+
+    input_image_src = image_to_data_uri(findings_data["input"]["saved_input_path"])
+    cam_overlay_src = image_to_data_uri(evidence["artifact_path"])
+
+    topk_rows = []
+
+    for item in prediction["topk_predictions"]:
+        topk_rows.append(
+            "<tr>"
+            f"<td>{item['rank']}</td>"
+            f"<td>{html.escape(item['display_name'])}</td>"
+            f"<td><code>{html.escape(item['raw_class'])}</code></td>"
+            f"<td>{item['confidence']:.4f}</td>"
+            "</tr>"
+        )
+
+    finding_items = []
+
+    for finding in findings_data["findings"]:
+        supported_by = ", ".join(finding.get("supported_by", []))
+        finding_items.append(
+            "<div class='finding-card'>"
+            f"<div class='finding-title'>{html.escape(finding['finding_type'])}</div>"
+            f"<p>{html.escape(finding['description'])}</p>"
+            f"<p class='small'><strong>Supported by:</strong> <code>{html.escape(supported_by)}</code></p>"
+            f"<p class='caution'>{html.escape(finding['caution'])}</p>"
+            "</div>"
+        )
+
+    limitation_items = "\n".join(
+        f"<li>{html.escape(item)}</li>"
+        for item in findings_data["limitations"]
     )
 
-    return "\n".join(html_lines)
+    def bool_badge(value: Any, positive_when_true: bool = True) -> str:
+        value_bool = bool(value)
+        ok = value_bool if positive_when_true else not value_bool
+        cls = "ok" if ok else "bad"
+        text = str(value)
+        return f"<span class='badge {cls}'>{html.escape(text)}</span>"
+
+    validation_html = f"""
+    <div class="metric-grid">
+      <div class="metric">
+        <span class="metric-label">Schema valid</span>
+        {bool_badge(validation.get("schema_valid", False))}
+      </div>
+      <div class="metric">
+        <span class="metric-label">Unsupported claims</span>
+        <span class="badge {'ok' if validation.get('unsupported_claim_count', 1) == 0 else 'bad'}">
+          {validation.get('unsupported_claim_count', 'N/A')}
+        </span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Evidence coverage</span>
+        <span class="badge ok">{validation.get('evidence_coverage_rate', 'N/A')}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Clinical diagnosis claim</span>
+        {bool_badge(validation.get("clinical_diagnosis_claim_present", True), positive_when_true=False)}
+      </div>
+      <div class="metric">
+        <span class="metric-label">Image quality overclaim</span>
+        {bool_badge(validation.get("image_quality_overclaimed", True), positive_when_true=False)}
+      </div>
+      <div class="metric">
+        <span class="metric-label">Report reproducible</span>
+        {bool_badge(validation.get("report_reproducible", False))}
+      </div>
+    </div>
+    """
+
+    html_doc = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>OphAgent Case Analysis Report</title>
+  <style>
+    body {{
+      margin: 0;
+      background: #f3f4f6;
+      color: #111827;
+      font-family: Arial, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+    }}
+    .page {{
+      max-width: 1180px;
+      margin: 32px auto;
+      padding: 0 24px 48px;
+    }}
+    .hero {{
+      background: linear-gradient(135deg, #111827, #374151);
+      color: white;
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+    }}
+    .hero h1 {{
+      margin: 0 0 8px;
+      font-size: 34px;
+    }}
+    .hero p {{
+      margin: 0;
+      color: #d1d5db;
+      font-size: 16px;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }}
+    .card {{
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }}
+    .card h2 {{
+      margin: 0 0 16px;
+      font-size: 21px;
+      color: #111827;
+    }}
+    .image-card img {{
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+    }}
+    .caption {{
+      margin-top: 12px;
+      font-size: 14px;
+      color: #6b7280;
+    }}
+    .prediction {{
+      font-size: 30px;
+      font-weight: 700;
+      margin: 4px 0 6px;
+      color: #1f2937;
+    }}
+    .confidence {{
+      font-size: 18px;
+      color: #4b5563;
+      margin-bottom: 18px;
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 10px;
+    }}
+    th, td {{
+      border-bottom: 1px solid #e5e7eb;
+      padding: 8px 6px;
+      text-align: left;
+    }}
+    th {{
+      color: #374151;
+      background: #f9fafb;
+    }}
+    code {{
+      background: #f3f4f6;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 13px;
+    }}
+    .metric-grid {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }}
+    .metric {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+    }}
+    .metric-label {{
+      color: #374151;
+      font-size: 14px;
+    }}
+    .badge {{
+      display: inline-block;
+      min-width: 54px;
+      text-align: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+    }}
+    .badge.ok {{
+      color: #065f46;
+      background: #d1fae5;
+    }}
+    .badge.bad {{
+      color: #991b1b;
+      background: #fee2e2;
+    }}
+    .section-grid {{
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }}
+    .finding-card {{
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: #fbfdff;
+    }}
+    .finding-title {{
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 6px;
+    }}
+    .small {{
+      color: #4b5563;
+      font-size: 14px;
+    }}
+    .caution {{
+      color: #92400e;
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }}
+    .disclaimer {{
+      border-left: 5px solid #dc2626;
+      background: #fef2f2;
+    }}
+    .footer {{
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 18px;
+    }}
+    @media (max-width: 960px) {{
+      .grid, .section-grid {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>OphAgent Case Analysis Report</h1>
+      <p>Evidence-bottleneck research/demo artifact. Not for clinical diagnosis or treatment decisions.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card image-card">
+        <h2>Input Fundus Image</h2>
+        <img src="{input_image_src}" alt="Input fundus image">
+        <div class="caption">
+          Case ID: <code>{html.escape(findings_data['case_id'])}</code><br>
+          Source: <code>{html.escape(findings_data['input']['image_path'])}</code>
+        </div>
+      </div>
+
+      <div class="card image-card">
+        <h2>CAM Weak Visual Evidence</h2>
+        <img src="{cam_overlay_src}" alt="CAM overlay">
+        <div class="caption">
+          CAM: <code>{html.escape(model_info['cam_method'])}_{html.escape(model_info['cam_target_layer'])}_{html.escape(model_info['cam_smoothing'])}</code><br>
+          CAM is weak model attention evidence, not lesion annotation.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Prediction and Validation</h2>
+        <div class="prediction">{html.escape(prediction['display_name'])}</div>
+        <div class="confidence">Confidence: {prediction['confidence']:.4f}</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Class</th>
+              <th>Raw</th>
+              <th>Conf.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {''.join(topk_rows)}
+          </tbody>
+        </table>
+
+        <h2 style="margin-top: 22px;">Validation</h2>
+        {validation_html}
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <h2>Structured Findings</h2>
+        {''.join(finding_items)}
+      </div>
+
+      <div class="card">
+        <h2>Quality-aware Context</h2>
+        <p>{html.escape(quality_control['quality_note'])}</p>
+        <p><strong>Image quality assessed:</strong> <code>{quality_control['image_quality_assessed']}</code></p>
+        <p><strong>Image quality level:</strong> <code>{html.escape(quality_control['image_quality_level'])}</code></p>
+        <p><strong>Action:</strong> <code>{html.escape(quality_control['action'])}</code></p>
+
+        <h2>Evidence Summary</h2>
+        <p>{html.escape(evidence['description'])}</p>
+        <p class="caution">{html.escape(evidence['caution'])}</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Interpretation Summary</h2>
+      <p>{html.escape(findings_data['interpretation']['summary'])}</p>
+    </div>
+
+    <div class="card disclaimer" style="margin-top: 20px;">
+      <h2>Limitations and Safety Boundary</h2>
+      <ul>
+        {limitation_items}
+      </ul>
+      <p><strong>This report is an AI-generated research/demo draft. Human review is required.</strong></p>
+    </div>
+
+    <div class="footer">
+      Generated at: <code>{html.escape(provenance['generated_at'])}</code> |
+      Workflow: <code>{html.escape(provenance['workflow'])}</code> |
+      Script: <code>{html.escape(provenance['script'])}</code>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+    return html_doc
 
 
 def write_json(path: Path, data: dict[str, Any]):
@@ -789,8 +1126,9 @@ def main():
     report_md = render_report_md(findings_data)
     (output_dir / "report.md").write_text(report_md, encoding="utf-8")
 
-    report_html = render_report_html(report_md)
-    (output_dir / "report.html").write_text(report_html, encoding="utf-8")
+    # Write a preliminary HTML file so required_files_present can be checked.
+    preliminary_html = render_report_html(findings_data, validation=None)
+    (output_dir / "report.html").write_text(preliminary_html, encoding="utf-8")
 
     validation = validate_case_artifact(
         findings_data=findings_data,
@@ -799,6 +1137,10 @@ def main():
     )
 
     write_json(output_dir / "validation.json", validation)
+
+    # Rewrite final HTML with validation summary included.
+    report_html = render_report_html(findings_data, validation=validation)
+    (output_dir / "report.html").write_text(report_html, encoding="utf-8")
 
     print("[DONE] Case report artifact generated.")
     print(f"[INFO] Report MD: {output_dir / 'report.md'}")

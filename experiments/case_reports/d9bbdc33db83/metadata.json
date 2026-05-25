@@ -1,6 +1,6 @@
 {
   "case_id": "d9bbdc33db83",
-  "created_at": "2026-05-25T16:44:29",
+  "created_at": "2026-05-25T20:51:57",
   "workflow": "v0.6.0_case_report",
   "image_path": "demo_samples/cmoderatedr/d9bbdc33db83.png",
   "output_dir": "experiments/case_reports/d9bbdc33db83",
