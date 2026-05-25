@@ -2,6 +2,60 @@
 
 ---
 
+## v0.6.0 — Evidence-Bottleneck Case Report Prototype
+
+### 新增
+
+- 增加 evidence-bottleneck case report pipeline，用于从单张眼底图像生成可追踪的病例级 artifact
+- 新增 `scripts/run_case_report.py`，支持一条命令生成：
+  - `prediction.json`
+  - `findings.json`
+  - `validation.json`
+  - `report.md`
+  - `report.html`
+  - `metadata.json`
+  - CAM `original.png` / `heatmap.png` / `overlay.png`
+- 新增 v0.6.0 case findings schema，用于规范 `findings.json` 与 `validation.json`
+- 新增 claim-level traceability，每条 report claim 通过 `supported_by` 指向 prediction / evidence / finding
+- 新增 lightweight validation 输出，用于检查：
+  - schema validity
+  - required disclaimer
+  - human-review-required statement
+  - CAM weak-evidence wording
+  - unsupported claim count
+  - evidence coverage rate
+  - image-quality overclaim
+  - report reproducibility
+- 新增 v0.6.0 example case artifact：
+  - `experiments/case_reports/d9bbdc33db83/`
+
+### 变更
+
+- README 从 benchmark-oriented 首页调整为展示型 landing page
+- 旧版 v0.5.3 README 归档到 `docs/v0_5_3_readme_archive.md`
+- 根目录 README 重点展示：
+  - v0.5 benchmark 代表性结果
+  - v0.5.3 CAM adapter
+  - v0.6.0 evidence-bottleneck case report prototype
+  - `validation.json` 安全与可追踪检查结果
+- v0.6.0 报告生成路线从“自由文本生成”明确收敛为：
+  - prediction
+  - weak visual evidence
+  - structured findings
+  - claim-level validation
+  - report draft
+
+### 说明
+
+- v0.6.0 不训练端到端医学报告生成模型
+- v0.6.0 不声称实现 ophthalmic report generation SOTA
+- 当前 report 是 AI-generated research/demo draft，不是临床诊断报告
+- CAM 仅作为 weak model attention evidence，不是 lesion annotation
+- 当前尚未实现自动图像质量评估，仅保留 quality-aware caution
+- `validation.json` 只检查 artifact 的 schema、安全声明、claim 支撑关系和可追踪性，不评估医学正确性
+
+---
+
 ## v0.5.3 — CAM Adapter Foundation
 
 ### 新增
