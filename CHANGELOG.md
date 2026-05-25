@@ -2,6 +2,27 @@
 
 ---
 
+## v0.5.3 — CAM Adapter Foundation
+
+### 新增
+
+- 增加 unified CAM adapter，支持 ConvNeXt / Swin / ViT-B / ViT-L / RETFound
+- 增加 Transformer backbone 的 relative block depth target selection：`early` / `middle` / `late`
+- 增加 CAM grid generation，用于 `method × target layer/depth × smoothing` 的 qualitative sanity check
+- 增加 representative fundus image 的 selected CAM comparison
+
+### 变更
+
+- `explain/gradcam.py` 改为通过 backbone adapter 获取 target layer 与 reshape transform
+- `scripts/run_gradcam_grid.py` 支持 CNN stage 与 Transformer block depth 两类 target layer schema
+- CAM visualization selection 从“热力图好看”调整为“眼底病灶证据对齐优先”
+
+### 说明
+
+- v0.5.3 的 CAM 结果仅用于 qualitative visualization sanity check
+- 当前 selected CAM setting 不作为医学病灶定位、临床诊断或 explanation faithfulness 结论
+- 正式 CAM consistency evaluation 延后到 v0.6
+
 ## v0.5.2 — Benchmark Consistency Repair
 
 ### 修复
