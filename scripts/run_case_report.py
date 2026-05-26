@@ -38,6 +38,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.classifiers.builder import build_model
+from reasoning.llm_report.renderer import render_guarded_report
 
 
 CLASS_DISPLAY_NAMES = {
@@ -108,6 +109,25 @@ def parse_args():
     parser.add_argument("--cam-smoothing", type=str, default="eigen", choices=["none", "eigen", "aug_eigen"])
 
     parser.add_argument("--top-k", type=int, default=3)
+
+    parser.add_argument(
+        "--report-provider",
+        type=str,
+        default="template",
+        choices=["template", "mock_llm"],
+        help=(
+            "Report generation provider. "
+            "'template' keeps the v0.6.0 deterministic report path; "
+            "'mock_llm' enables the v0.6.1 guarded mock LLM renderer."
+        ),
+    )
+    parser.add_argument(
+        "--mock-llm-mode",
+        type=str,
+        default="safe",
+        choices=["safe", "unsafe_diagnosis", "unsafe_cam", "unsafe_mixed"],
+        help="Deterministic mock LLM mode used only when --report-provider mock_llm.",
+    )
 
     return parser.parse_args()
 
@@ -1141,6 +1161,27 @@ def main():
     # Rewrite final HTML with validation summary included.
     report_html = render_report_html(findings_data, validation=validation)
     (output_dir / "report.html").write_text(report_html, encoding="utf-8")
+
+    if args.report_provider == "mock_llm":
+        render_result = render_guarded_report(
+            case_dir=output_dir,
+            provider_name="mock_llm",
+            mock_llm_mode=args.mock_llm_mode,
+        )
+        metadata["report_provider"] = args.report_provider
+        metadata["mock_llm_mode"] = args.mock_llm_mode
+        metadata["guarded_report"] = {
+            "safety_passed": render_result.safety_passed,
+            "fallback_triggered": render_result.fallback_triggered,
+            "safety_report_path": render_result.safety_report_path,
+        }
+        write_json(output_dir / "metadata.json", metadata)
+        print("[INFO] Guarded LLM report renderer enabled.")
+        print(f"[INFO] Safety report: {render_result.safety_report_path}")
+    else:
+        metadata["report_provider"] = "template"
+        metadata["guarded_report"] = None
+        write_json(output_dir / "metadata.json", metadata)
 
     print("[DONE] Case report artifact generated.")
     print(f"[INFO] Report MD: {output_dir / 'report.md'}")
