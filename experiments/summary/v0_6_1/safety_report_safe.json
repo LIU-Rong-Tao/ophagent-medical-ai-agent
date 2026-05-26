@@ -1,0 +1,69 @@
+{
+  "artifact_policy": {
+    "full_fallback_on_any_unsafe_claim": true,
+    "partial_repair_enabled": false,
+    "raw_llm_output_retained_for_audit": true
+  },
+  "case_id": "d9bbdc33db83_v061_safe_e2e",
+  "checked_report": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/reports/llm_checked.md",
+  "decision": {
+    "reason": "LLM draft passed deterministic safety checks.",
+    "selected_output": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/reports/llm_checked.md"
+  },
+  "fallback_report": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/reports/template.md",
+  "fallback_triggered": false,
+  "final_report_html": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/report.html",
+  "final_report_md": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/report.md",
+  "guarded_html_report": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/reports/llm_guarded.html",
+  "input_report": "experiments/case_reports/d9bbdc33db83_v061_safe_e2e/reports/llm_raw.md",
+  "overall_pass": true,
+  "prompt_length": 10636,
+  "provider": "mock_llm",
+  "provider_metadata": {
+    "deterministic": true,
+    "mock_llm_mode": "safe",
+    "provider_type": "mock_llm",
+    "real_llm_used": false
+  },
+  "safety_result": {
+    "fallback_triggered": false,
+    "flagged_claims": [],
+    "known_limitations": [
+      "Rule-based checks only cover predefined high-risk claim patterns.",
+      "Subtle semantic overclaims may require a future LLM-as-judge checker.",
+      "This checker does not verify clinical correctness."
+    ],
+    "overall_pass": true,
+    "rule_checks": {
+      "cam_or_heatmap_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "clinical_diagnosis_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "clinical_use_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "image_quality_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "missing_human_review_statement": {
+        "matches": [],
+        "passed": true
+      },
+      "missing_non_clinical_use_statement": {
+        "matches": [],
+        "passed": true
+      },
+      "unsupported_lesion_localization": {
+        "matches": [],
+        "passed": true
+      }
+    },
+    "warnings": []
+  }
+}

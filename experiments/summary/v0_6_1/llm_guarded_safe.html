@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Guarded LLM Case Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+      color: #222;
+      background: #f7f8fa;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">v0.6.1 Guarded Generation</span>
+    <h1>Guarded LLM Case Report</h1>
+    <h2>Generation Metadata</h2>
+    <ul>
+      <li><strong>Report mode:</strong> Guarded LLM Draft</li>
+<li><strong>Provider:</strong> mock_llm</li>
+<li><strong>Mock LLM mode:</strong> safe</li>
+<li><strong>Safety check:</strong> Passed</li>
+<li><strong>Fallback used:</strong> No</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Report Draft</h2>
+    <pre># Guarded LLM Case Report Draft
+
+## Interpretation Summary
+
+The model prediction suggests a possible disease-related risk pattern in the fundus image. This statement is based only on the available structured findings and model output.
+
+## Weak Visual Evidence
+
+The CAM overlay is provided as weak visual evidence only. It may help illustrate regions that contributed to the model prediction, but it should not be interpreted as lesion segmentation, lesion localization, or clinical diagnosis.
+
+## Evidence Boundary
+
+This draft does not establish a clinical diagnosis. It does not claim the presence, absence, type, or location of specific retinal lesions beyond the structured findings.
+
+## Safety Statement
+
+This report is not for clinical use. Human review is required before any medical interpretation or downstream decision.
+</pre>
+  </div>
+</body>
+</html>
