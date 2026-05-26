@@ -2,6 +2,55 @@
 
 ---
 
+## v0.6.1 — Guarded LLM Report Drafting with Explicit Safety Trace
+
+### 新增
+
+- 新增 `reasoning/llm_report/` 模块，用于受控 LLM 报告草稿生成实验
+- 新增 `prompt_builder.py`，将 `prediction.json`、`findings.json`、`validation.json` 和 `metadata.json` 转换为受约束 prompt
+- 新增 `provider.py`，提供确定性的 `TemplateProvider` 与 `MockLLMProvider`
+- 新增 `safety_checker.py`，实现规则型生成后安全检查
+- 新增 `renderer.py`，串联 prompt builder、provider 和 safety checker，生成 guarded report artifacts
+- 新增 `safety_report.json`，记录 LLM draft 的安全检查结果、flagged claims、fallback 决策和审计轨迹
+- 新增 `reports/` 中间产物语义：
+  - `llm_raw.md`：Provider 原始输出
+  - `llm_checked.md`：通过安全检查后的草稿
+  - `llm_guarded.html`：简化版 guarded report HTML
+  - `template.md` / `template.html`：确定性模板 fallback
+- 新增 `scripts/run_case_report.py` 参数：
+  - `--report-provider template/mock_llm`
+  - `--mock-llm-mode safe/unsafe_diagnosis/unsafe_cam/unsafe_mixed`
+- 新增 v0.6.1 轻量展示产物：
+  - `experiments/summary/v0_6_1/`
+
+### 变更
+
+- 默认 `--report-provider template`，保持 v0.6.0 确定性模板报告路径不变
+- 当显式使用 `--report-provider mock_llm` 时，系统会在 v0.6.0 artifact 生成后追加 guarded report rendering
+- `metadata.json` 新增 `report_provider` 与 `guarded_report` 字段，用于记录报告生成模式和 fallback 状态
+
+### 验证
+
+- safe mock case：
+  - `overall_pass = true`
+  - `fallback_triggered = false`
+  - LLM draft 被保留为 `llm_checked.md`
+- unsafe CAM mock case：
+  - `overall_pass = false`
+  - `fallback_triggered = true`
+  - CAM / heatmap overclaim 被拦截
+  - 最终报告回退到 deterministic template report
+
+### 说明
+
+- v0.6.1 不接入真实 LLM API
+- v0.6.1 不实现 LLM-as-judge
+- v0.6.1 不声称实现临床级报告生成
+- 当前 MockLLMProvider 用于验证 guarded generation 控制链路，不代表真实模型能力
+- 当前 HTML 仅作为辅助展示，v0.6.1 的核心展示重点是 safety trace，而不是 UI 美观
+
+---
+
 ## v0.6.0 — Evidence-Bottleneck Case Report Prototype
 
 ### 新增
