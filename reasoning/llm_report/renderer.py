@@ -25,9 +25,11 @@ renderer.py 是 guarded report pipeline 的编排层。
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import shutil
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -35,6 +37,10 @@ from typing import Any
 from reasoning.llm_report.prompt_builder import build_guarded_report_prompt, load_case_data
 from reasoning.llm_report.provider import MockLLMMode, ReportProviderName, get_report_provider
 from reasoning.llm_report.safety_checker import RuleBasedSafetyChecker
+
+
+SAFETY_POLICY_VERSION = "v0.6.2-rule-based-safety-guard"
+CHECKER_VERSION = "v0.6.2-rule-based-safety-checker"
 
 
 @dataclass(frozen=True)
@@ -192,10 +198,26 @@ def _build_safety_report(
         else "LLM draft failed deterministic safety checks; template fallback was selected."
     )
 
+    prompt_hash = _sha256_text(prompt)
+    provider_metadata = dict(provider_result.metadata or {})
+
     return {
         "case_id": case_data.get("case_id"),
         "provider": provider_result.provider,
-        "provider_metadata": provider_result.metadata,
+        "provider_metadata": provider_metadata,
+        "audit_metadata": {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "prompt_hash": prompt_hash,
+            "prompt_hash_algorithm": "sha256",
+            "prompt_length": len(prompt),
+            "provider": provider_result.provider,
+            "provider_type": provider_metadata.get("provider_type"),
+            "provider_version": provider_metadata.get("provider_version", "not_specified"),
+            "deterministic_provider": bool(provider_metadata.get("deterministic", False)),
+            "real_llm_used": bool(provider_metadata.get("real_llm_used", False)),
+            "checker_version": CHECKER_VERSION,
+            "safety_policy_version": SAFETY_POLICY_VERSION,
+        },
         "prompt_length": len(prompt),
         "input_report": str(llm_raw_md_path),
         "checked_report": str(llm_checked_md_path) if llm_checked_md_path else None,
@@ -216,6 +238,11 @@ def _build_safety_report(
             "raw_llm_output_retained_for_audit": True,
         },
     }
+
+
+def _sha256_text(text: str) -> str:
+    """计算文本的 SHA-256 哈希，用于审计 prompt 是否变化。"""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _render_html_report(

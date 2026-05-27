@@ -95,6 +95,7 @@ This report is not for clinical use. Human review is required before any medical
             metadata={
                 "deterministic": True,
                 "provider_type": "template",
+                "provider_version": "v0.6.2-template-provider",
                 "fallback_capable": True,
             },
         )
@@ -151,6 +152,7 @@ class MockLLMProvider:
             metadata={
                 "deterministic": True,
                 "provider_type": "mock_llm",
+                "provider_version": "v0.6.2-mock-llm-provider",
                 "mock_llm_mode": self.mode,
                 "real_llm_used": False,
             },
