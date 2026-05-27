@@ -160,6 +160,22 @@ v0.6.0 / v0.6.1 的重点不是“把分类结果拼成报告”，而是围绕�
 
 ---
 
+## validation.json 与 safety_report.json 的分工
+
+v0.6.0 和 v0.6.1 分别引入了两个不同层级的验证产物。
+
+`validation.json` 负责 artifact-level validation，主要检查病例级产物是否完整、基础安全声明是否存在、report claims 是否能追溯到已有 prediction / evidence / findings。它回答的问题是：
+
+    这个 case artifact 是否结构完整、声明是否有基础证据支撑？
+
+`safety_report.json` 负责 generation-level safety trace，主要检查 MockLLMProvider 生成的报告草稿是否越过 evidence boundary，例如 clinical diagnosis overclaim、CAM / heatmap overclaim、unsupported lesion localization 等。它回答的问题是：
+
+    这个 LLM-style draft 是否安全？如果不安全，为什么触发 fallback？
+
+因此，v0.6.1 中 LLM draft 的安全性以 `safety_report.json` 为准；`validation.json` 继续保留为 v0.6.0 case artifact 的基础完整性验证。
+
+---
+
 ## Quick Start
 
 ### 运行前说明
