@@ -289,6 +289,10 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | [v0.6.0 Case Findings Schema](docs/schema/case_findings_schema_v0_6.md) | `findings.json` 与 `validation.json` 的字段规范 |
 | [v0.6.1 Guarded LLM Design](notes/v0.6.1_guarded_llm_report_design.md) | v0.6.1 受控 LLM 报告草稿生成与安全审计设计 |
 | [v0.6.1 Summary Artifacts](experiments/summary/v0_6_1/README.md) | safe / unsafe mock 的 safety trace 展示 |
+| [v0.6.2 Safety Regression Plan](notes/v0.6.2_safety_regression_audit_plan.md) | v0.6.2 safety regression tests 与 audit metadata 计划 |
+| [v0.6.2 Safety Rule Boundaries](docs/safety/llm_report_safety_rule_boundaries.md) | RuleBasedSafetyChecker 覆盖范围、漏检风险与误杀风险 |
+| [v0.6.3 Real LLM Provider Design](notes/v0.6.3_controlled_real_llm_provider_design.md) | v0.6.3 controlled real LLM provider 接入设计 |
+| [v0.6.3 Real LLM Summary Artifacts](experiments/summary/v0_6_3/README.md) | v0.6.3 real LLM summary run 与 safety trace 展示 |
 | [Example Case Report](experiments/case_reports/d9bbdc33db83/report.md) | 示例病例报告草稿 |
 | [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | 声明级别验证结果 |
 | [v0.5.3 README Archive](docs/v0_5_3_readme_archive.md) | 旧版 benchmark-oriented README 归档 |
@@ -302,10 +306,11 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 |---|---|---|
 | v0.5.x | Benchmark + CAM adapter | Completed |
 | v0.6.0 | Evidence-bottleneck case report prototype | Completed |
-| v0.6.1 | Guarded LLM report drafting with safety trace | Current |
-| v0.6.2 | Safety regression tests and audit metadata | Planned |
-| v0.6.3 | Controlled real LLM provider integration | Planned |
-| v0.6.4 | Demo and deployment | Planned |
+| v0.6.1 | Guarded LLM report drafting with safety trace | Completed |
+| v0.6.2 | Safety regression tests and audit metadata | Completed |
+| v0.6.3 | Controlled real LLM provider integration | Completed |
+| v0.6.4 | Real LLM safety probe on a small case set | Planned |
+| v0.6.5 | Integrated showcase / demo polish | Planned |
 | v0.7.0 | Knowledge grounding / RAG | Planned |
 | v0.8.0 | LoRA report verbalization adapter | Planned |
 
@@ -321,6 +326,8 @@ CAM 是 weak model attention evidence，不是病灶标注，也不是病灶定�
 
 v0.6.0 尚未实现自动图像质量评估。
 
-v0.6.1 尚未接入真实 LLM API，当前 MockLLMProvider 仅用于验证 guarded generation 控制链路。
+v0.6.1 使用 MockLLMProvider 验证 guarded generation 控制链路。
+
+v0.6.3 已接入 OpenAI-compatible real LLM provider，但当前 real LLM summary run 仅用于工程链路验证，不代表临床报告生成能力。
 
 所有输出都需要人工审核。
