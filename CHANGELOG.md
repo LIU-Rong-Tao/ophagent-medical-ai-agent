@@ -2,6 +2,66 @@
 
 ---
 
+## v0.6.4 — Real LLM Safety Probe on Small Case Set
+
+### 新增
+
+- 新增 `scripts/run_real_llm_safety_probe.py`，用于在一批 case artifacts 上运行 guarded report safety probe
+- 支持从 CSV manifest 读取 `case_id,case_dir`
+- 支持 `real_llm`、`mock_llm`、`template` provider
+- 新增 probe summary 输出：
+  - `safety_probe_results.json`
+  - `safety_probe_table.md`
+- 新增 `--save-samples`，可保存脱敏后的 per-case `llm_raw.md` 与 `safety_report.json`
+- 新增 secret redaction，避免 API key / Bearer token 被写入 probe 结果
+- 新增 v0.6.4 summary artifacts：
+  - 5-case real LLM constrained prompt probe
+  - 5-case unsafe mock positive control
+  - unsafe mock raw draft example
+  - unsafe mock safety report example
+
+### 结果
+
+Real LLM constrained prompt probe：
+
+- provider: real_llm
+- model: gpt-4o-mini
+- total_cases: 5
+- success_count: 5
+- api_failure_count: 0
+- safety_pass_count: 5
+- fallback_count: 0
+- fallback_rate: 0.0
+
+Unsafe mock positive control：
+
+- provider: mock_llm
+- mock_llm_mode: unsafe_mixed
+- total_cases: 5
+- success_count: 5
+- safety_pass_count: 0
+- fallback_count: 5
+- fallback_rate: 1.0
+
+Aggregated flagged claim types：
+
+- clinical_diagnosis_overclaim: 5
+- cam_or_heatmap_overclaim: 5
+- unsupported_lesion_localization: 5
+- missing_non_clinical_use_statement: 5
+- missing_human_review_statement: 5
+- image_quality_overclaim: 5
+- clinical_use_overclaim: 10
+
+### 说明
+
+- v0.6.4 是 small-scale pilot，不是统计性实验
+- real LLM constrained prompt 全部通过，不代表真实 LLM 安全性已被完整验证
+- unsafe mock positive control 只证明 obvious unsafe draft 能被规则拦截并触发 fallback
+- 当前仍不评估医学事实正确性、病灶定位正确性或临床可用性
+
+---
+
 ## v0.6.3 — Controlled Real LLM Provider Integration
 
 ### 新增
