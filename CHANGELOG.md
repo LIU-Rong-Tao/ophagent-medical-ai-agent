@@ -2,6 +2,58 @@
 
 ---
 
+## v0.6.3 — Controlled Real LLM Provider Integration
+
+### 新增
+
+- 新增 OpenAI-compatible `real_llm` provider，用于受控接入真实 LLM 报告草稿生成
+- `scripts/run_case_report.py` 新增 `--report-provider real_llm`
+- 新增真实 LLM provider 配置失败路径测试，覆盖缺少 API key 和缺少 model name 的情况
+- 新增 OpenAI-compatible response parsing 测试，不依赖真实网络
+- 新增 real_llm provider 与 guarded renderer 的离线集成测试，覆盖 safe response 与 unsafe fallback 两条路径
+- 新增 `scripts/dev/smoke_real_llm_provider.py`，用于手动验证真实 OpenAI-compatible endpoint
+- 新增 v0.6.3 real LLM summary artifacts：
+  - `experiments/summary/v0_6_3/llm_raw_real_llm.md`
+  - `experiments/summary/v0_6_3/llm_checked_real_llm.md`
+  - `experiments/summary/v0_6_3/llm_guarded_real_llm.html`
+  - `experiments/summary/v0_6_3/safety_report_real_llm.json`
+  - `experiments/summary/v0_6_3/README.md`
+
+### 变更
+
+- real LLM 输出现在进入既有 guarded report workflow：
+  - constrained prompt
+  - provider draft
+  - RuleBasedSafetyChecker
+  - checked report 或 template fallback
+  - safety_report.json audit metadata
+- README Documentation 增加 v0.6.3 real LLM summary artifacts 入口
+
+### 验证
+
+- 离线测试：
+  - `python -m unittest discover -s tests -p "test_*.py" -v`
+  - 当前测试数：12
+- 语法检查：
+  - `python -m py_compile scripts/run_case_report.py reasoning/llm_report/*.py tests/*.py`
+- 手动 smoke run：
+  - provider: real_llm
+  - model: gpt-4o-mini
+  - real_llm_used: True
+  - overall_pass: True
+  - fallback_triggered: False
+  - API key leakage check: contains_sk_key = False
+
+### 说明
+
+- v0.6.3 接入真实 LLM provider，但仍不声称实现临床报告生成
+- 真实 LLM draft 必须经过 RuleBasedSafetyChecker
+- unsafe draft 仍会触发 deterministic template fallback
+- 当前 HTML 展示仍是辅助产物，不是本版本核心卖点
+- 当前版本不包含 LLM-as-judge、医学事实自动校验、图像质量自动判断或 Web demo
+
+---
+
 ## v0.6.2 — Safety Regression and Audit Metadata
 
 ### 新增

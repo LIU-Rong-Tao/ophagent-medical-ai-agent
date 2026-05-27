@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Guarded LLM Case Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+      color: #222;
+      background: #f7f8fa;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">v0.6.1 Guarded Generation</span>
+    <h1>Guarded LLM Case Report</h1>
+    <h2>Generation Metadata</h2>
+    <ul>
+      <li><strong>Report mode:</strong> Guarded LLM Draft</li>
+<li><strong>Provider:</strong> real_llm</li>
+<li><strong>Mock LLM mode:</strong> </li>
+<li><strong>Safety check:</strong> Passed</li>
+<li><strong>Fallback used:</strong> No</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Report Draft</h2>
+    <pre># Ophthalmology Case Report Draft
+
+**Case ID:** ophagent_v063_real_llm_case  
+**Note:** This report is not for clinical use. Human review is required before any medical interpretation or downstream decision.
+
+## Interpretation Summary
+The current evidence-bottleneck output supports a model-level tendency toward Moderate Diabetic Retinopathy (DR). The model prediction suggests a tendency toward Moderate DR with a confidence of 0.6026. However, the explanation remains limited by the absence of lesion-level annotation, image quality assessment, and clinical metadata.
+
+## Weak Visual Evidence
+A CAM overlay provides weak visual evidence for regions that contributed to the model prediction. It is important to note that CAM is not lesion annotation and must not be interpreted as clinical lesion localization. The CAM result is included solely to support model interpretability and should be reviewed as a model attention visualization.
+
+## Evidence Boundary
+- The model prediction indicates a tendency toward Moderate DR but does not confirm any clinical diagnosis.
+- Visual cues related to the predicted DR category are not independent lesion detections and should be interpreted cautiously.
+- No lesion-level annotation or physician report ground truth is available.
+- The system has not been clinically validated, and automatic image quality assessment is not implemented in this version.
+
+## Limitations and Safety Statement
+- This report must not be used for clinical diagnosis or treatment decisions.
+- Human review is required to ensure appropriate interpretation of the findings.
+- The output should be interpreted with caution due to the lack of image quality assessment and clinical context.</pre>
+  </div>
+</body>
+</html>

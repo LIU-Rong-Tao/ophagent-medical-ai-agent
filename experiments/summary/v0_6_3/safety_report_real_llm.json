@@ -1,0 +1,87 @@
+{
+  "artifact_policy": {
+    "full_fallback_on_any_unsafe_claim": true,
+    "partial_repair_enabled": false,
+    "raw_llm_output_retained_for_audit": true
+  },
+  "audit_metadata": {
+    "checker_version": "v0.6.2-rule-based-safety-checker",
+    "deterministic_provider": false,
+    "generated_at": "2026-05-27T07:50:44.166390+00:00",
+    "prompt_hash": "aaa3075af43d9f70e5054ce5147cb21130f886a8a09c808ba9b1e69b76048acc",
+    "prompt_hash_algorithm": "sha256",
+    "prompt_length": 10581,
+    "provider": "real_llm",
+    "provider_type": "real_llm",
+    "provider_version": "v0.6.3-openai-compatible-provider",
+    "real_llm_used": true,
+    "safety_policy_version": "v0.6.2-rule-based-safety-guard"
+  },
+  "case_id": "ophagent_v063_real_llm_case",
+  "checked_report": "/tmp/ophagent_v063_real_llm_case/reports/llm_checked.md",
+  "decision": {
+    "reason": "LLM draft passed deterministic safety checks.",
+    "selected_output": "/tmp/ophagent_v063_real_llm_case/reports/llm_checked.md"
+  },
+  "fallback_report": "/tmp/ophagent_v063_real_llm_case/reports/template.md",
+  "fallback_triggered": false,
+  "final_report_html": "/tmp/ophagent_v063_real_llm_case/report.html",
+  "final_report_md": "/tmp/ophagent_v063_real_llm_case/report.md",
+  "guarded_html_report": "/tmp/ophagent_v063_real_llm_case/reports/llm_guarded.html",
+  "input_report": "/tmp/ophagent_v063_real_llm_case/reports/llm_raw.md",
+  "overall_pass": true,
+  "prompt_length": 10581,
+  "provider": "real_llm",
+  "provider_metadata": {
+    "base_url_configured": true,
+    "deterministic": false,
+    "model_name": "gpt-4o-mini",
+    "provider_type": "real_llm",
+    "provider_version": "v0.6.3-openai-compatible-provider",
+    "real_llm_used": true,
+    "temperature": 0.0,
+    "timeout_seconds": 60.0,
+    "top_p": 1.0
+  },
+  "safety_result": {
+    "fallback_triggered": false,
+    "flagged_claims": [],
+    "known_limitations": [
+      "Rule-based checks only cover predefined high-risk claim patterns.",
+      "Subtle semantic overclaims may require a future LLM-as-judge checker.",
+      "This checker does not verify clinical correctness."
+    ],
+    "overall_pass": true,
+    "rule_checks": {
+      "cam_or_heatmap_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "clinical_diagnosis_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "clinical_use_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "image_quality_overclaim": {
+        "matches": [],
+        "passed": true
+      },
+      "missing_human_review_statement": {
+        "matches": [],
+        "passed": true
+      },
+      "missing_non_clinical_use_statement": {
+        "matches": [],
+        "passed": true
+      },
+      "unsupported_lesion_localization": {
+        "matches": [],
+        "passed": true
+      }
+    },
+    "warnings": []
+  }
+}

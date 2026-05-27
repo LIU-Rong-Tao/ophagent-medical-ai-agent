@@ -11,12 +11,15 @@
 
 from __future__ import annotations
 
+import os
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Any, Literal
 
 
 MockLLMMode = Literal["safe", "unsafe_diagnosis", "unsafe_cam", "unsafe_mixed"]
-ReportProviderName = Literal["template", "mock_llm"]
+ReportProviderName = Literal["template", "mock_llm", "real_llm"]
 
 
 @dataclass(frozen=True)
@@ -231,6 +234,106 @@ This report can be used as a clinical reference.
 """
 
 
+class RealLLMProvider:
+    """OpenAI-compatible 真实 LLM Provider。
+
+    该 Provider 通过环境变量读取配置，并调用 OpenAI-compatible chat completions 接口。
+
+    注意：
+        - API key 不应写入代码、日志或 safety_report.json。
+        - 真实 LLM 输出仍必须经过 RuleBasedSafetyChecker。
+        - 本 Provider 只负责生成 draft，不负责安全判断。
+    """
+
+    name = "real_llm"
+
+    def __init__(self) -> None:
+        """从环境变量读取真实 LLM 配置。"""
+        self.api_key = os.getenv("OPHAGENT_LLM_API_KEY")
+        self.base_url = os.getenv("OPHAGENT_LLM_BASE_URL", "https://api.openai.com/v1")
+        self.model = os.getenv("OPHAGENT_LLM_MODEL")
+        self.temperature = float(os.getenv("OPHAGENT_LLM_TEMPERATURE", "0"))
+        self.top_p = float(os.getenv("OPHAGENT_LLM_TOP_P", "1"))
+        self.timeout_seconds = float(os.getenv("OPHAGENT_LLM_TIMEOUT_SECONDS", "60"))
+
+    def generate(self, prompt: str, case_data: dict[str, Any] | None = None) -> ReportProviderResult:
+        """调用 OpenAI-compatible chat completions 接口生成报告草稿。
+
+        Args:
+            prompt: 受约束 prompt。
+            case_data: 病例结构化数据。当前真实 LLM Provider 不直接使用该字段。
+
+        Returns:
+            ReportProviderResult: 真实 LLM 输出及其审计元信息。
+
+        Raises:
+            RuntimeError: 当 API key 或 model 未配置，或远程调用失败时抛出。
+        """
+        if not self.api_key:
+            raise RuntimeError("OPHAGENT_LLM_API_KEY is not set.")
+
+        if not self.model:
+            raise RuntimeError("OPHAGENT_LLM_MODEL is not set.")
+
+        endpoint = self.base_url.rstrip("/") + "/chat/completions"
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a cautious medical report drafting assistant. "
+                        "You must follow the user's evidence boundary exactly."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+        }
+
+        request = urllib.request.Request(
+            endpoint,
+            data=__import__("json").dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                response_data = __import__("json").loads(response.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Real LLM provider request failed: {exc}") from exc
+
+        try:
+            text = response_data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError("Real LLM provider returned an unexpected response format.") from exc
+
+        return ReportProviderResult(
+            provider=self.name,
+            text=text,
+            metadata={
+                "deterministic": False,
+                "provider_type": "real_llm",
+                "provider_version": "v0.6.3-openai-compatible-provider",
+                "real_llm_used": True,
+                "model_name": self.model,
+                "base_url_configured": bool(self.base_url),
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "timeout_seconds": self.timeout_seconds,
+            },
+        )
+
+
 def get_report_provider(
     provider_name: ReportProviderName,
     mock_llm_mode: MockLLMMode = "safe",
@@ -238,7 +341,7 @@ def get_report_provider(
     """根据名称创建报告生成 Provider。
 
     Args:
-        provider_name: Provider 名称，目前支持 "template" 和 "mock_llm"。
+        provider_name: Provider 名称，目前支持 "template"、"mock_llm" 和 "real_llm"。
         mock_llm_mode: 当 provider_name 为 "mock_llm" 时使用的 Mock 输出模式。
 
     Returns:
@@ -252,5 +355,8 @@ def get_report_provider(
 
     if provider_name == "mock_llm":
         return MockLLMProvider(mode=mock_llm_mode)
+
+    if provider_name == "real_llm":
+        return RealLLMProvider()
 
     raise ValueError(f"Unsupported report provider: {provider_name}")

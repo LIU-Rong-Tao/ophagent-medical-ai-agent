@@ -114,11 +114,12 @@ def parse_args():
         "--report-provider",
         type=str,
         default="template",
-        choices=["template", "mock_llm"],
+        choices=["template", "mock_llm", "real_llm"],
         help=(
             "Report generation provider. "
             "'template' keeps the v0.6.0 deterministic report path; "
-            "'mock_llm' enables the v0.6.1 guarded mock LLM renderer."
+            "'mock_llm' enables the v0.6.1 guarded mock LLM renderer; "
+            "'real_llm' enables the v0.6.3 controlled real LLM provider."
         ),
     )
     parser.add_argument(
@@ -1162,14 +1163,16 @@ def main():
     report_html = render_report_html(findings_data, validation=validation)
     (output_dir / "report.html").write_text(report_html, encoding="utf-8")
 
-    if args.report_provider == "mock_llm":
+    if args.report_provider in {"mock_llm", "real_llm"}:
         render_result = render_guarded_report(
             case_dir=output_dir,
-            provider_name="mock_llm",
+            provider_name=args.report_provider,
             mock_llm_mode=args.mock_llm_mode,
         )
         metadata["report_provider"] = args.report_provider
-        metadata["mock_llm_mode"] = args.mock_llm_mode
+        metadata["mock_llm_mode"] = (
+            args.mock_llm_mode if args.report_provider == "mock_llm" else None
+        )
         metadata["guarded_report"] = {
             "safety_passed": render_result.safety_passed,
             "fallback_triggered": render_result.fallback_triggered,
