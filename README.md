@@ -293,6 +293,7 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | [v0.6.2 Safety Rule Boundaries](docs/safety/llm_report_safety_rule_boundaries.md) | RuleBasedSafetyChecker 覆盖范围、漏检风险与误杀风险 |
 | [v0.6.3 Real LLM Provider Design](notes/v0.6.3_controlled_real_llm_provider_design.md) | v0.6.3 controlled real LLM provider 接入设计 |
 | [v0.6.3 Real LLM Summary Artifacts](experiments/summary/v0_6_3/README.md) | v0.6.3 real LLM summary run 与 safety trace 展示 |
+| [v0.6.4 Safety Probe Summary](experiments/summary/v0_6_4/README.md) | 5-case real LLM safety probe 与 unsafe mock positive control |
 | [Example Case Report](experiments/case_reports/d9bbdc33db83/report.md) | 示例病例报告草稿 |
 | [Example Validation](experiments/case_reports/d9bbdc33db83/validation.json) | 声明级别验证结果 |
 | [v0.5.3 README Archive](docs/v0_5_3_readme_archive.md) | 旧版 benchmark-oriented README 归档 |
@@ -309,7 +310,7 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | v0.6.1 | Guarded LLM report drafting with safety trace | Completed |
 | v0.6.2 | Safety regression tests and audit metadata | Completed |
 | v0.6.3 | Controlled real LLM provider integration | Completed |
-| v0.6.4 | Real LLM safety probe on a small case set | Planned |
+| v0.6.4 | Real LLM safety probe on a small case set | Completed |
 | v0.6.5 | Integrated showcase / demo polish | Planned |
 | v0.7.0 | Knowledge grounding / RAG | Planned |
 | v0.8.0 | LoRA report verbalization adapter | Planned |
