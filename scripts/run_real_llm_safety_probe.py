@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -55,6 +56,21 @@ def read_manifest(path: Path) -> list[dict[str, str]]:
         raise ValueError(f"No valid cases found in manifest: {path}")
 
     return rows
+
+
+def redact_sensitive_text(text: str) -> str:
+    """Redact API keys and authorization-like values before writing probe outputs."""
+    patterns = [
+        r"sk-proj-[A-Za-z0-9_\-]+",
+        r"sk-[A-Za-z0-9_\-]+",
+        r"Bearer\\s+[^\\s'\"]+",
+        r"OPHAGENT_LLM_API_KEY=[^\\s'\"]+",
+    ]
+
+    redacted = text
+    for pattern in patterns:
+        redacted = re.sub(pattern, "[REDACTED_SECRET]", redacted)
+    return redacted
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -176,7 +192,7 @@ def run_probe(args: argparse.Namespace) -> None:
 
             except Exception as exc:  # noqa: BLE001 - probe should continue across cases
                 row["status"] = "error"
-                row["error"] = str(exc)
+                row["error"] = redact_sensitive_text(str(exc))
                 api_failure_count += 1
 
             case_rows.append(row)
@@ -201,6 +217,8 @@ def run_probe(args: argparse.Namespace) -> None:
     table_path = output_dir / "safety_probe_table.md"
 
     results_text = json.dumps(result, ensure_ascii=False, indent=2)
+    if "sk-" in results_text or "Bearer " in results_text:
+        raise RuntimeError("Sensitive token-like text detected in probe results; aborting write.")
     results_path.write_text(results_text, encoding="utf-8")
     write_markdown_table(case_rows, table_path)
 
