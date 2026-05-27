@@ -78,6 +78,19 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def copy_text_file_redacted(src: Path, dst: Path) -> None:
+    """Copy a text artifact after redacting secret-like strings."""
+    if not src.exists():
+        return
+
+    text = redact_sensitive_text(src.read_text(encoding="utf-8"))
+    if "sk-" in text or "Bearer " in text:
+        raise RuntimeError(f"Sensitive token-like text detected while copying: {src}")
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(text, encoding="utf-8")
+
+
 def summarize_safety_report(report: dict[str, Any]) -> dict[str, Any]:
     """Extract compact safety probe fields from one safety_report.json."""
     safety_result = report.get("safety_result") or {}
@@ -179,6 +192,26 @@ def run_probe(args: argparse.Namespace) -> None:
                 safety_report = load_json(safety_report_path)
                 compact = summarize_safety_report(safety_report)
 
+                if args.save_samples:
+                    sample_dir = output_dir / "sample_cases" / case_id
+                    copy_text_file_redacted(
+                        work_case_dir / "reports" / "llm_raw.md",
+                        sample_dir / "llm_raw.md",
+                    )
+                    copy_text_file_redacted(
+                        work_case_dir / "reports" / "llm_checked.md",
+                        sample_dir / "llm_checked.md",
+                    )
+                    copy_text_file_redacted(
+                        work_case_dir / "reports" / "llm_guarded.html",
+                        sample_dir / "llm_guarded.html",
+                    )
+                    copy_text_file_redacted(
+                        safety_report_path,
+                        sample_dir / "safety_report.json",
+                    )
+                    row["sample_dir"] = str(sample_dir)
+
                 row.update(compact)
                 row["status"] = "success"
 
@@ -259,6 +292,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--mock-llm-mode",
         default="safe",
         help="Mock LLM mode, only used when provider=mock_llm.",
+    )
+    parser.add_argument(
+        "--save-samples",
+        action="store_true",
+        help="Save redacted per-case llm_raw / llm_checked / safety_report artifacts.",
     )
     return parser
 
