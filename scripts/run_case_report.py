@@ -1177,6 +1177,8 @@ def main():
         }
         write_json(output_dir / "metadata.json", metadata)
         print("[INFO] Guarded LLM report renderer enabled.")
+        print(f"[INFO] Safety passed: {render_result.safety_passed}")
+        print(f"[INFO] Fallback triggered: {render_result.fallback_triggered}")
         print(f"[INFO] Safety report: {render_result.safety_report_path}")
     else:
         metadata["report_provider"] = "template"
