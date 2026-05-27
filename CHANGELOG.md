@@ -2,6 +2,29 @@
 
 ---
 
+## v0.6.2 — Safety Regression and Audit Metadata
+
+### 新增
+
+- 新增 `tests/test_llm_report_safety_checker.py`，使用 Python 标准库 `unittest` 覆盖 `RuleBasedSafetyChecker` 的核心行为，不额外引入 pytest 依赖
+- 新增安全草稿、临床诊断越权、CAM / heatmap 夸大、图像质量夸大、临床用途夸大、缺少非临床用途声明、缺少人工审核声明等 7 类回归测试
+- 为 deterministic template provider 和 mock LLM provider 增加 `provider_version` 元数据
+- 为 `safety_report.json` 增加 `audit_metadata`，包括 `generated_at`、`prompt_hash`、`provider_version`、`checker_version`、`safety_policy_version` 和 deterministic provider metadata
+- 新增 `docs/safety/llm_report_safety_rule_boundaries.md`，说明 `RuleBasedSafetyChecker` 的覆盖范围、已知 false negative / false positive 风险和后续扩展方向
+- 新增 `notes/v0.6.2_safety_regression_audit_plan.md`，记录 v0.6.2 的 safety regression 与 audit metadata 计划
+
+### 变更
+
+- README Roadmap 调整为先完成 safety regression tests 与 audit metadata，再推进 controlled real LLM provider integration
+
+### 说明
+
+- v0.6.2 仍不接入真实 LLM API
+- `RuleBasedSafetyChecker` 仍是确定性的 rule-based safety guard，不是完整 hallucination detector，也不是 clinical safety verifier
+- 真实 LLM provider、LLM-as-judge、医学事实校验和图像质量评估保留到后续版本
+
+---
+
 ## v0.6.1 — Guarded LLM Report Drafting with Explicit Safety Trace
 
 ### 新增
