@@ -303,8 +303,9 @@ v0.5.3 引入统一 CAM adapter，使不同 backbone 可以通过统一接口生
 | v0.5.x | Benchmark + CAM adapter | Completed |
 | v0.6.0 | Evidence-bottleneck case report prototype | Completed |
 | v0.6.1 | Guarded LLM report drafting with safety trace | Current |
-| v0.6.2 | Real LLM provider integration | Planned |
-| v0.6.3 | Demo and deployment | Planned |
+| v0.6.2 | Safety regression tests and audit metadata | Planned |
+| v0.6.3 | Controlled real LLM provider integration | Planned |
+| v0.6.4 | Demo and deployment | Planned |
 | v0.7.0 | Knowledge grounding / RAG | Planned |
 | v0.8.0 | LoRA report verbalization adapter | Planned |
 
