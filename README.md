@@ -162,9 +162,23 @@ v0.6.0 / v0.6.1 的重点不是“把分类结果拼成报告”，而是围绕�
 
 ## Quick Start
 
+### 运行前说明
+
+本仓库不随代码发布训练好的 `.pth` checkpoint。`*.pth` 文件通常体积较大，已被 `.gitignore` 忽略。
+
+因此，下面的 Quick Start 命令适用于已经在本地完成训练、并拥有对应 checkpoint 的环境。示例中使用的是作者本地实验路径：
+
+- `experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth`
+- `experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/configs/class_to_idx.json`
+
+如果你只是浏览项目结构、报告产物和 v0.6.1 safety trace，不需要重新运行模型，可以直接查看：
+
+- `experiments/case_reports/d9bbdc33db83/`
+- `experiments/summary/v0_6_1/`
+
 ### v0.6.0 默认模板报告路径
 
-运行单张眼底图像 case report pipeline：
+在已有本地 checkpoint 的前提下，运行单张眼底图像 case report pipeline：
 
     python scripts/run_case_report.py \
       --image demo_samples/cmoderatedr/d9bbdc33db83.png \
