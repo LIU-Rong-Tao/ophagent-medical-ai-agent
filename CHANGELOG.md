@@ -2,28 +2,62 @@
 
 ---
 
-## v0.6.5 — Integrated Showcase for Hospital-side Demonstration
+## v0.6.5 — Integrated Showcase + Demo Risk Case Table
 
 ### 新增
 
-- 新增 `experiments/summary/v0_6_5/`，作为医院线下展示前的集成展示入口
-- 新增 `integrated_showcase.html`，整合输入图像、模型预测、CAM 弱证据、findings、validation、real LLM guarded draft、unsafe mock 拦截示例和 v0.6.4 safety probe 结果
-- 新增 `pipeline_overview.md`，说明 OphAgent 的模型输出审计链路
-- 新增 `raw_vs_guarded_example.md`，展示 unsafe raw draft 如何被 safety checker 标记并触发 fallback
+- 新增 `experiments/summary/v0_6_5/`，作为医院线下展示前的集成展示入口。
+- 新增 `integrated_showcase.html`，将展示顺序调整为：
+  - 项目定位
+  - 核心价值：普通模型输出 → OphAgent 审计后的复核优先级
+  - 15-case demo risk table
+  - 典型高风险样本深度分析
+  - 系统工作流
+  - 安全审计示例
+  - 线下对接第一步
+  - 当前系统不声称
+- 新增 `scripts/build_demo_risk_case_table.py`，用于从 `demo_samples` 构建 15 张样本的风险样本表。
+- 新增风险样本表产物：
+  - `demo_risk_case_table.csv`
+  - `demo_risk_case_table.md`
+  - `demo_risk_case_table_cn.md`
+  - `demo_risk_case_summary.json`
+- 新增 `high_priority_case_analysis.md`，对一个 high-priority 样本进行中文深度分析。
+- 新增 `pipeline_overview.md` 和 `raw_vs_guarded_example.md`，用于说明模型输出审计和安全模板切换逻辑。
+
+### 结果
+
+15 张 demo samples 风险样本表：
+
+- total_cases: 15
+- correct_count: 11
+- incorrect_count: 4
+- accuracy_on_demo_samples: 0.7333
+- high_priority_human_review: 3
+- human_review_recommended: 3
+- routine_review: 9
+
+主要风险类型：
+
+- severe_underestimate: 3
+- adjacent_grade_confusion: 3
+- low_margin_uncertain: 2
+- low_conf_correct: 2
 
 ### 变更
 
-- 将 v0.6.x 的展示重点从“报告生成”调整为“模型输出审计与失败样本发现原型”
-- 强调 CAM 只是 weak model attention evidence，不是病灶定位
-- 强调 report draft 是 research/demo draft，不是临床报告
+- 将 v0.6.5 从单纯 artifact 汇总调整为“模型输出审计与失败样本发现”的医院展示版本。
+- 根 README 的 Documentation 区域收敛为少量核心入口，避免 v0.6.x 小版本链接过散。
+- CAM / heatmap 不再作为核心展示证据，只保留为弱参考说明；当前展示重点转向 risk table 和人工复核优先级。
+- 医院线下对接部分不再直接提出数据需求，而是强调先了解项目现状、账号权限、现有系统和团队分工。
 
 ### 说明
 
-- v0.6.5 不新增模型训练
-- v0.6.5 不新增 safety rule
-- v0.6.5 不接入 RAG、LoRA 或 SFT
-- v0.6.5 主要服务于医院线下交流前的展示收口
-- 当前系统不证明临床安全性、医学事实正确性或临床可用性
+- v0.6.5 不新增模型训练。
+- v0.6.5 不新增 safety rule。
+- v0.6.5 不接入 RAG、LoRA 或 SFT。
+- demo risk table 使用 `demo_samples` 的目录名作为 weak label，仅用于展示模型输出审计流程。
+- 该版本不证明临床安全性、医学事实正确性或临床可用性。
 
 ---
 
