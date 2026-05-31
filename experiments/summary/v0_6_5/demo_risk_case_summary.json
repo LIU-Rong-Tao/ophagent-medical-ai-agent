@@ -1,0 +1,26 @@
+{
+  "version": "v0.6.5",
+  "summary_type": "demo_risk_case_table",
+  "total_cases": 15,
+  "correct_count": 11,
+  "incorrect_count": 4,
+  "accuracy_on_demo_samples": 0.7333333333333333,
+  "risk_type_counts": {
+    "adjacent_grade_confusion": 3,
+    "low_conf_correct": 2,
+    "low_margin_uncertain": 2,
+    "review_not_prioritized": 9,
+    "severe_underestimate": 3
+  },
+  "recommended_action_counts": {
+    "high_priority_human_review": 3,
+    "human_review_recommended": 3,
+    "routine_review": 9
+  },
+  "important_limitations": [
+    "demo_samples 数量较小，且属于展示样本，不是正式验证集",
+    "目录名被用作 weak label，仅用于演示样本级审查流程",
+    "该结果不是临床验证结果，也不能代表真实临床性能",
+    "risk tags 是启发式规则，仅用于医院线下展示前的风险样本发现演示"
+  ]
+}
