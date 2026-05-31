@@ -2,6 +2,31 @@
 
 ---
 
+## v0.6.5 — Integrated Showcase for Hospital-side Demonstration
+
+### 新增
+
+- 新增 `experiments/summary/v0_6_5/`，作为医院线下展示前的集成展示入口
+- 新增 `integrated_showcase.html`，整合输入图像、模型预测、CAM 弱证据、findings、validation、real LLM guarded draft、unsafe mock 拦截示例和 v0.6.4 safety probe 结果
+- 新增 `pipeline_overview.md`，说明 OphAgent 的模型输出审计链路
+- 新增 `raw_vs_guarded_example.md`，展示 unsafe raw draft 如何被 safety checker 标记并触发 fallback
+
+### 变更
+
+- 将 v0.6.x 的展示重点从“报告生成”调整为“模型输出审计与失败样本发现原型”
+- 强调 CAM 只是 weak model attention evidence，不是病灶定位
+- 强调 report draft 是 research/demo draft，不是临床报告
+
+### 说明
+
+- v0.6.5 不新增模型训练
+- v0.6.5 不新增 safety rule
+- v0.6.5 不接入 RAG、LoRA 或 SFT
+- v0.6.5 主要服务于医院线下交流前的展示收口
+- 当前系统不证明临床安全性、医学事实正确性或临床可用性
+
+---
+
 ## v0.6.4 — Real LLM Safety Probe on Small Case Set
 
 ### 新增
