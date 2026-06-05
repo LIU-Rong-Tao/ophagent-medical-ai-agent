@@ -2,6 +2,19 @@
 
 ---
 
+## v0.6.6 - 无真实标签预审风险排序
+
+- 新增无真实标签预审风险排序流程：排序阶段不使用真实标签，只根据模型输出信号生成复核优先级。
+- 将模型输出审计拆分为两个阶段：
+  - 预审排序阶段：仅使用模型输出概率、置信度、Top-1/Top-2 margin、entropy 和类别严重程度关系；
+  - 后验验证阶段：使用真实标签验证排序是否更容易发现错误样本和重症低估样本。
+- 新增 `scripts/build_pre_review_risk_table.py`，用于生成预审风险分数、风险等级、复核优先级和风险原因说明。
+- 新增 `scripts/evaluate_pre_review_ranking.py`，用于评估 Top-K 错误富集率、重症低估召回率和不同风险组真实错误率。
+- 在 APTOS2019 test split 上完成 6 个 backbone / 配置的预审排序验证，包括 ConvNeXt-Tiny、Swin-Tiny、ViT-B、ViT-L 和 RETFound。
+- 实验结果显示，所有测试 backbone 的 Top 10% / Top 20% / Top 30% 风险队列 enrichment ratio 均大于 1，说明预审排序优于随机抽样。
+- 实验结果显示，所有测试 backbone 的 low-risk 组错误率均低于整体测试集错误率，说明当前规则具备一定低风险排除能力。
+- v0.6.6 将 OphAgent 从“事后错误审计展示”推进到“无真实标签预审复核优先级生成”，更接近真实系统接入场景。
+
 ## v0.6.5 — Integrated Showcase + Demo Risk Case Table
 
 ### 新增
