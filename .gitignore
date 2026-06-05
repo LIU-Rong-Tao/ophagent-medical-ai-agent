@@ -168,3 +168,17 @@ celerybeat.pid
 *.rdb
 *.aof
 *.pid*.pth
+
+# Local-only v0.6.6 sensitive artifacts
+/scripts/build_pre_review_risk_table.py
+/scripts/evaluate_pre_review_ranking.py
+/scripts/run_pre_review_risk_ranking_benchmark.py
+/experiments/summary/v0_6_6/full_test_backbones/
+/experiments/summary/v0_6_6/convnext_tiny_test/
+/experiments/summary/v0_6_6/pre_review_risk_table.csv
+/experiments/summary/v0_6_6/pre_review_risk_table.md
+/experiments/summary/v0_6_6/ranking_eval_metrics.json
+/experiments/summary/v0_6_6/ranking_eval_report.md
+/experiments/summary/v0_6_6/v0_6_6_showcase_standalone.html
+/experiments/summary/v0_6_6/figure_v066_pre_review_ranking_summary.png
+/notes/v0.6.6_pre_review_risk_ranking_design.md

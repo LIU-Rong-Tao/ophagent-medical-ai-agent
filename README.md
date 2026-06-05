@@ -1,30 +1,11 @@
 # OphAgent
 
-## v0.6.6：无真实标签预审风险排序
+## v0.6.6：预审风险排序内部验证
 
-OphAgent v0.6.6 将模型输出审计从“事后错误分析”推进到“无真实标签预审风险排序”。
+OphAgent v0.6.6 已完成无真实标签预审风险排序方向的内部实验验证。该方向用于探索：在真实标签未知时，如何根据模型推理输出生成人工复核优先级队列。
 
-该版本在排序阶段不使用真实标签，只根据模型输出概率、置信度、Top-1/Top-2 margin、entropy 和类别严重程度关系生成复核优先级；真实标签仅在后验验证阶段用于评估排序是否更容易发现错误样本和重症低估样本。
+当前公开仓库仅保留方向性说明；完整实验脚本、规则实现、逐 backbone 结果、评估表格和 standalone 展示页暂不公开。后续如进入正式协作，将根据实际模型输出接口和数据格式进行适配交付。
 
-核心结果位于：
-
-- `experiments/summary/v0_6_6/README.md`
-- `experiments/summary/v0_6_6/full_test_backbones/backbone_pre_review_ranking_summary.md`
-
-一键复现实验：
-
-```bash
-python scripts/run_pre_review_risk_ranking_benchmark.py --skip-existing
-```
-
-主要发现：
-
-- 在 APTOS2019 test split 上覆盖 6 个 backbone / 配置。
-- 所有 backbone 的 Top 10% / Top 20% / Top 30% 风险队列 enrichment ratio 均大于 1。
-- 所有 backbone 的 low-risk 组错误率均低于整体错误率。
-- ConvNeXt-Tiny 上，仅复核 Top 20% 风险样本即可覆盖 66.15% 的重症低估案例。
-
-该版本说明 OphAgent 可以在不知道真实标签的情况下，基于模型输出生成复核候选队列，更接近真实系统接入场景。
 
 ## 眼科 AI 模型输出审计与失败样本发现原型
 
@@ -50,22 +31,10 @@ OphAgent 是一个面向眼科医学影像的 AI workflow 项目。项目最初�
 
 ---
 
-## 当前主结果：v0.6.6 Pre-review Risk Ranking
+## 当前公开展示：v0.6.5 Integrated Showcase
 
-v0.6.6 是当前推荐技术结果入口；v0.6.5 保留为医院线下展示入口。
+v0.6.5 保留为当前公开展示入口；v0.6.6 为内部验证方向，完整实验产物暂不公开。
 
-v0.6.6 核心结果：
-
-    experiments/summary/v0_6_6/README.md
-    experiments/summary/v0_6_6/full_test_backbones/backbone_pre_review_ranking_summary.md
-
-v0.6.5 展示页：
-
-    experiments/summary/v0_6_5/integrated_showcase.html
-
-v0.6.5 对应说明：
-
-    experiments/summary/v0_6_5/README.md
 
 v0.6.5 的重点不是把已有 JSON / HTML 文件放到一起，而是展示一个更实际的问题：
 
@@ -282,7 +251,6 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 
 | 页面 | 内容 |
 |---|---|
-| [v0.6.6 Pre-review Risk Ranking](experiments/summary/v0_6_6/README.md) | 当前主技术结果：无真实标签预审风险排序、Top-K 错误富集、重症低估召回 |
 | [v0.6.5 Integrated Showcase](experiments/summary/v0_6_5/README.md) | 医院线下展示入口：risk table、高风险样本、模型输出审计、线下对接策略 |
 | [v0.6.4 Safety Probe Summary](experiments/summary/v0_6_4/README.md) | 5-case real LLM safety probe 与 unsafe mock positive control |
 | [v0.6.3 Real LLM Provider Design](notes/v0.6.3_controlled_real_llm_provider_design.md) | OpenAI-compatible real LLM provider 接入设计 |
@@ -316,4 +284,3 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 - demo risk table 不是临床验证集结果。
 - v0.6.x 的 rule-based safety checker 不是完整 hallucination detector。
 - 所有输出都需要人工审核。
-
