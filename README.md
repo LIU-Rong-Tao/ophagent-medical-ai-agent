@@ -1,8 +1,34 @@
 # OphAgent
 
+## v0.6.6：无真实标签预审风险排序
+
+OphAgent v0.6.6 将模型输出审计从“事后错误分析”推进到“无真实标签预审风险排序”。
+
+该版本在排序阶段不使用真实标签，只根据模型输出概率、置信度、Top-1/Top-2 margin、entropy 和类别严重程度关系生成复核优先级；真实标签仅在后验验证阶段用于评估排序是否更容易发现错误样本和重症低估样本。
+
+核心结果位于：
+
+- `experiments/summary/v0_6_6/README.md`
+- `experiments/summary/v0_6_6/full_test_backbones/backbone_pre_review_ranking_summary.md`
+
+一键复现实验：
+
+```bash
+python scripts/run_pre_review_risk_ranking_benchmark.py --skip-existing
+```
+
+主要发现：
+
+- 在 APTOS2019 test split 上覆盖 6 个 backbone / 配置。
+- 所有 backbone 的 Top 10% / Top 20% / Top 30% 风险队列 enrichment ratio 均大于 1。
+- 所有 backbone 的 low-risk 组错误率均低于整体错误率。
+- ConvNeXt-Tiny 上，仅复核 Top 20% 风险样本即可覆盖 66.15% 的重症低估案例。
+
+该版本说明 OphAgent 可以在不知道真实标签的情况下，基于模型输出生成复核候选队列，更接近真实系统接入场景。
+
 ## 眼科 AI 模型输出审计与失败样本发现原型
 
-OphAgent 是一个面向眼科医学影像的 AI workflow 项目。项目最初从 APTOS2019 糖尿病视网膜病变分级 benchmark、CAM 可解释性分析和病例报告草稿生成出发，当前 v0.6.5 已收敛为一个更适合医院线下交流的展示版本：
+OphAgent 是一个面向眼科医学影像的 AI workflow 项目。项目最初从 APTOS2019 糖尿病视网膜病变分级 benchmark、CAM 可解释性分析和病例报告草稿生成出发，在 v0.6.5 收敛为医院线下交流展示版本，并在 v0.6.6 进一步推进到无真实标签预审风险排序：
 
     普通模型预测结果
     → 模型输出审计
@@ -24,15 +50,20 @@ OphAgent 是一个面向眼科医学影像的 AI workflow 项目。项目最初�
 
 ---
 
-## 当前主展示：v0.6.5 Integrated Showcase
+## 当前主结果：v0.6.6 Pre-review Risk Ranking
 
-v0.6.5 是当前推荐展示入口。
+v0.6.6 是当前推荐技术结果入口；v0.6.5 保留为医院线下展示入口。
 
-核心展示页：
+v0.6.6 核心结果：
+
+    experiments/summary/v0_6_6/README.md
+    experiments/summary/v0_6_6/full_test_backbones/backbone_pre_review_ranking_summary.md
+
+v0.6.5 展示页：
 
     experiments/summary/v0_6_5/integrated_showcase.html
 
-对应说明：
+v0.6.5 对应说明：
 
     experiments/summary/v0_6_5/README.md
 
@@ -182,7 +213,7 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 
 ## Quick Start
 
-### 1. 查看当前主展示
+### 1. 查看医院展示入口
 
 推荐直接查看 v0.6.5 展示页：
 
@@ -241,7 +272,8 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 | `scripts/run_case_report.py` | 单病例 evidence-bottleneck pipeline |
 | `scripts/run_real_llm_safety_probe.py` | 批量 guarded report safety probe |
 | `scripts/build_demo_risk_case_table.py` | v0.6.5 demo risk table 构建脚本 |
-| `experiments/summary/v0_6_5/` | 当前主展示入口 |
+| `experiments/summary/v0_6_6/` | 当前主技术结果入口：无真实标签预审风险排序 |
+| `experiments/summary/v0_6_5/` | 医院线下展示入口 |
 | `experiments/case_reports/` | 单病例 artifact 示例 |
 
 ---
@@ -250,6 +282,7 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 
 | 页面 | 内容 |
 |---|---|
+| [v0.6.6 Pre-review Risk Ranking](experiments/summary/v0_6_6/README.md) | 当前主技术结果：无真实标签预审风险排序、Top-K 错误富集、重症低估召回 |
 | [v0.6.5 Integrated Showcase](experiments/summary/v0_6_5/README.md) | 医院线下展示入口：risk table、高风险样本、模型输出审计、线下对接策略 |
 | [v0.6.4 Safety Probe Summary](experiments/summary/v0_6_4/README.md) | 5-case real LLM safety probe 与 unsafe mock positive control |
 | [v0.6.3 Real LLM Provider Design](notes/v0.6.3_controlled_real_llm_provider_design.md) | OpenAI-compatible real LLM provider 接入设计 |
@@ -265,7 +298,7 @@ OphAgent 的报告草稿链路不是为了生成临床报告，而是为了验�
 | v0.5.x | Benchmark + CAM adapter | Completed |
 | v0.6.0-v0.6.4 | Evidence-bottleneck report + guarded LLM + safety probe | Completed |
 | v0.6.5 | Integrated showcase + demo risk case table | Completed |
-| v0.6.6 | Hospital-side workflow preparation / cleanup | Planned |
+| v0.6.6 | Label-free pre-review risk ranking + post-hoc validation | Completed |
 | v0.7.0 | Evidence grounding / VQA evaluation | Planned |
 | v0.8.0 | Lesion concept / report verbalization adapter | Planned |
 

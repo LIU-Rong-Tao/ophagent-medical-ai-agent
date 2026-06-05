@@ -1,0 +1,85 @@
+{
+  "total_n": 1100,
+  "total_errors": 200,
+  "total_error_rate": 0.18181818181818182,
+  "total_severe_underestimate": 58,
+  "top_k": [
+    {
+      "k": 10,
+      "review_fraction": 0.00909090909090909,
+      "error_count": 6,
+      "error_rate": 0.6,
+      "enrichment_ratio": 3.3,
+      "severe_underestimate_count": 5,
+      "severe_underestimate_recall": 0.08620689655172414
+    },
+    {
+      "k": 20,
+      "review_fraction": 0.01818181818181818,
+      "error_count": 9,
+      "error_rate": 0.45,
+      "enrichment_ratio": 2.475,
+      "severe_underestimate_count": 6,
+      "severe_underestimate_recall": 0.10344827586206896
+    },
+    {
+      "k": 50,
+      "review_fraction": 0.045454545454545456,
+      "error_count": 22,
+      "error_rate": 0.44,
+      "enrichment_ratio": 2.42,
+      "severe_underestimate_count": 14,
+      "severe_underestimate_recall": 0.2413793103448276
+    },
+    {
+      "k": 110,
+      "review_fraction": 0.1,
+      "error_count": 53,
+      "error_rate": 0.4818181818181818,
+      "enrichment_ratio": 2.65,
+      "severe_underestimate_count": 23,
+      "severe_underestimate_recall": 0.39655172413793105
+    },
+    {
+      "k": 220,
+      "review_fraction": 0.2,
+      "error_count": 103,
+      "error_rate": 0.4681818181818182,
+      "enrichment_ratio": 2.575,
+      "severe_underestimate_count": 32,
+      "severe_underestimate_recall": 0.5517241379310345
+    },
+    {
+      "k": 330,
+      "review_fraction": 0.3,
+      "error_count": 146,
+      "error_rate": 0.44242424242424244,
+      "enrichment_ratio": 2.4333333333333336,
+      "severe_underestimate_count": 36,
+      "severe_underestimate_recall": 0.6206896551724138
+    }
+  ],
+  "risk_group": [
+    {
+      "risk_level": "high",
+      "n": 53,
+      "error_count": 24,
+      "error_rate": 0.4528301886792453,
+      "severe_underestimate_count": 16
+    },
+    {
+      "risk_level": "medium",
+      "n": 75,
+      "error_count": 36,
+      "error_rate": 0.48,
+      "severe_underestimate_count": 12
+    },
+    {
+      "risk_level": "low",
+      "n": 972,
+      "error_count": 140,
+      "error_rate": 0.1440329218106996,
+      "severe_underestimate_count": 30
+    }
+  ]
+}
