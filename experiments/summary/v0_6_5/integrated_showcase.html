@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>OphAgent v0.6.5 医院线下展示版</title>
+  <title>OphAgent v0.6.5 展示版</title>
   <style>
     body {
       font-family: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
@@ -155,15 +155,64 @@
       color: #444;
       margin-top: 6px;
     }
+    /* 强制保留打印时的背景和颜色 */
+@media print {
+  body {
+    background: #f7f7f7 !important;
+    margin: 0;
+    padding: 10px;
+  }
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+  .warn {
+    background: #fff7e6 !important;
+    border-left: 4px solid #f0c36d;
+  }
+  .good {
+    background: #f0fff4 !important;
+    border-left: 4px solid #9ad3aa;
+  }
+  .bad {
+    background: #fff0f0 !important;
+    border-left: 4px solid #e0a0a0;
+  }
+  .info {
+    background: #f2f7ff !important;
+    border-left: 4px solid #aac7f2;
+  }
+  .tag, .tag-high, .tag-medium {
+    background: #f0f0f0 !important;
+    border: 1px solid #ccc;
+    color: #000 !important;
+  }
+  table {
+    break-inside: avoid;
+  }
+  tr.high {
+    background: #f9f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  tr.medium {
+    background: #faf8e6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
   </style>
 </head>
 
 <body>
 <div class="container">
 
-  <h1>OphAgent v0.6.5 医院线下展示版</h1>
+  <h1>OphAgent v0.6.5 展示版</h1>
   <p class="small">
-    面向线下交流的展示页：重点不是“自动生成报告”，而是展示 OphAgent 如何把眼科 AI 模型输出转化为可审计、可复核、可排序的风险样本。
+    展示 OphAgent 如何把眼科 AI 模型输出转化为可审计、可复核、可排序的风险样本。（本展示基于公开数据集验证，真实数据适配需线下沟通确认。）
   </p>
 
   <div class="card warn">
@@ -172,7 +221,7 @@
       <strong>OphAgent 是一个眼科 AI 模型输出审计工具，目标是帮助发现“模型自信但错误”“重症被低估”“决策边界模糊”等高风险样本。</strong>
     </p>
     <p>
-      它不是临床诊断系统，也不是自动医学报告生成系统。当前更适合作为真实医院场景接入前的模型输出复核与失败样本发现原型。
+      <strong>与贵团队的合作切入点：</strong>伏羲慧眼2.0已有模型和数据底座，OphAgent可作为外部审计模块，帮助发现真实数据上的高风险样本。
     </p>
     <span class="tag">高风险样本发现</span>
     <span class="tag">模型输出审计</span>
@@ -184,7 +233,7 @@
   <div class="card bad">
     <h2>2. 核心价值：把模型输出变成复核优先级</h2>
     <p>
-      普通分类模型只给出一个预测结果，但医生和研究团队更关心的是：
+      普通分类模型只给出一个预测结果，但临床更关心的是：
       <strong>这个结果能不能信？哪些样本应该优先复核？</strong>
     </p>
 
@@ -512,19 +561,16 @@
 
   <div class="card good">
     <h2>7. 线下对接第一步：先了解项目现状和协作入口</h2>
-    <p>
-      当前阶段不直接提出数据需求，也不预设对方已有接口或固定流程。更合适的做法是先到现场了解项目当前进度、团队分工和可参与环节。
-    </p>
     <ol>
-      <li><strong>项目现状：</strong>距离上次对接已经过去一段时间，先了解贵团队目前重点推进到哪一步，近期最需要补的是评测、部署、数据整理，还是报告/多模态方向。</li>
-      <li><strong>现有系统：</strong>了解目前是否已有模型平台、测试环境、演示系统或内部工具，以及这些系统现在主要由谁维护。</li>
+      <li><strong>项目现状：</strong>距离上次对接已经过去一段时间，先了解贵团队目前重点推进到哪一步，近期最需要补的是指标提升、评测、部署、数据整理，还是报告/多模态方向。</li>
+      <li><strong>现有系统：</strong>了解目前已有模型平台、测试环境、演示系统或内部工具。</li>
       <li><strong>账号权限：</strong>确认我是否可以开通必要的账号、服务器、虚拟机或测试环境权限，方便后续在现场直接配合工作。</li>
-      <li><strong>团队分工：</strong>了解技术负责人、数据接口负责人、服务器/平台负责人分别是谁，避免后续沟通绕圈。</li>
-      <li><strong>可切入问题：</strong>先听取贵团队当前最实际的问题，再判断 OphAgent 更适合接在模型评测、失败样本筛查、复核辅助，还是报告草稿审计环节。</li>
+      <li><strong>团队分工：</strong>技术负责人、数据接口人、服务器/平台管理员分别是谁？后续我配合哪位老师对接？</li>
+      <li><strong>可切入问题：</strong>我想先听听贵团队当前最实际、最头疼的问题是什么，再判断 OphAgent 更适合接在模型评测、失败样本筛查、复核辅助，还是报告草稿审计环节。</li>
     </ol>
     <p>
       <strong>第一阶段目标：</strong>
-      不是一上来要数据，也不是立刻改系统，而是先恢复线下协作，摸清当前项目进度和权限边界，找到一个我可以实际参与的小切入点。
+      找到一个我们可以实际参与的小切入点，进行交付然后推动进一步合作。
     </p>
   </div>
 
