@@ -29,8 +29,8 @@
 | 4 | 222f3ee3a1e8 | Moderate DR | 0.4813 | Proliferative DR | 0.3787 | 0.1026 | 0.6777 | 0.4680 | 8 | high | low_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 5 | e93394175a19 | Moderate DR | 0.4246 | Proliferative DR | 0.3340 | 0.0906 | 0.6695 | 0.5748 | 8 | high | low_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 6 | cd3fd04d72f5 | Moderate DR | 0.4723 | Proliferative DR | 0.3689 | 0.1034 | 0.6343 | 0.5267 | 8 | high | low_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
-| 7 | 76cfe8967f7d | Moderate DR | 0.3221 | Mild DR | 0.3068 | 0.0153 | 0.8366 | 0.2876 | 7 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal |
-| 8 | 6253f23229b1 | Moderate DR | 0.3221 | Mild DR | 0.3068 | 0.0153 | 0.8366 | 0.2876 | 7 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal |
+| 7 | 6253f23229b1 | Moderate DR | 0.3221 | Mild DR | 0.3068 | 0.0153 | 0.8366 | 0.2876 | 7 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal |
+| 8 | 76cfe8967f7d | Moderate DR | 0.3221 | Mild DR | 0.3068 | 0.0153 | 0.8366 | 0.2876 | 7 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal |
 | 9 | 3fa4f4d77177 | Moderate DR | 0.4969 | Severe DR | 0.2807 | 0.2161 | 0.6932 | 0.4792 | 7 | high | moderate_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 10 | 1dfbede13143 | Moderate DR | 0.4553 | Severe DR | 0.2919 | 0.1634 | 0.6851 | 0.5363 | 7 | high | moderate_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 11 | 9b32e8ef0ca0 | Moderate DR | 0.5432 | Severe DR | 0.2552 | 0.2879 | 0.6824 | 0.4211 | 7 | high | moderate_margin_boundary;moderate_entropy;potential_severe_undergrading_signal;second_choice_more_severe |

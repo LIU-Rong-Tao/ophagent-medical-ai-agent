@@ -23,8 +23,8 @@
 
 | review_priority_rank | case_id | pred_label | confidence | top2_label | top2_confidence | margin | entropy_norm | severe_prob_mass | pre_review_risk_score | pre_review_risk_level | risk_reasons |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 76cfe8967f7d | Moderate DR | 0.3172 | Severe DR | 0.2897 | 0.0275 | 0.8635 | 0.4051 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
-| 2 | 6253f23229b1 | Moderate DR | 0.3172 | Severe DR | 0.2897 | 0.0275 | 0.8635 | 0.4051 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
+| 1 | 6253f23229b1 | Moderate DR | 0.3172 | Severe DR | 0.2897 | 0.0275 | 0.8635 | 0.4051 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
+| 2 | 76cfe8967f7d | Moderate DR | 0.3172 | Severe DR | 0.2897 | 0.0275 | 0.8635 | 0.4051 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 3 | 7e0598cc88a0 | Mild DR | 0.3486 | Proliferative DR | 0.3452 | 0.0035 | 0.8428 | 0.4017 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 4 | fce93caa4758 | Mild DR | 0.3552 | Moderate DR | 0.2802 | 0.0750 | 0.8292 | 0.3511 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |
 | 5 | 6c3745a222da | Moderate DR | 0.4240 | Proliferative DR | 0.3338 | 0.0903 | 0.8164 | 0.4337 | 9 | high | low_margin_boundary;high_entropy;potential_severe_undergrading_signal;second_choice_more_severe |

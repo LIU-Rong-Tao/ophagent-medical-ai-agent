@@ -68,8 +68,8 @@
 | 43 | 79540be95177 | Moderate DR | 0.6970 | Severe DR | 0.1575 | 0.5395 | 0.5186 | 0.3011 | 4 | medium | potential_severe_undergrading_signal;weak_second_choice_more_severe |
 | 44 | 15cd5f52d300 | Moderate DR | 0.6990 | Proliferative DR | 0.1811 | 0.5179 | 0.5100 | 0.2999 | 4 | medium | potential_severe_undergrading_signal;weak_second_choice_more_severe |
 | 45 | cb0cc98d7e35 | Mild DR | 0.6051 | Moderate DR | 0.3697 | 0.2353 | 0.4893 | 0.0098 | 4 | medium | moderate_margin_boundary;second_choice_more_severe;confident_but_close_decision |
-| 46 | 76cfe8967f7d | Moderate DR | 0.7310 | Severe DR | 0.2107 | 0.5203 | 0.4857 | 0.2367 | 4 | medium | weak_severe_undergrading_signal;second_choice_more_severe |
-| 47 | 6253f23229b1 | Moderate DR | 0.7310 | Severe DR | 0.2107 | 0.5203 | 0.4857 | 0.2367 | 4 | medium | weak_severe_undergrading_signal;second_choice_more_severe |
+| 46 | 6253f23229b1 | Moderate DR | 0.7310 | Severe DR | 0.2107 | 0.5203 | 0.4857 | 0.2367 | 4 | medium | weak_severe_undergrading_signal;second_choice_more_severe |
+| 47 | 76cfe8967f7d | Moderate DR | 0.7310 | Severe DR | 0.2107 | 0.5203 | 0.4857 | 0.2367 | 4 | medium | weak_severe_undergrading_signal;second_choice_more_severe |
 | 48 | dd19428c3d29 | Mild DR | 0.4937 | Moderate DR | 0.4905 | 0.0032 | 0.4829 | 0.0146 | 4 | medium | low_margin_boundary;second_choice_more_severe |
 | 49 | d8cdb7d7283a | Mild DR | 0.5128 | Moderate DR | 0.4751 | 0.0376 | 0.4723 | 0.0111 | 4 | medium | low_margin_boundary;second_choice_more_severe |
 | 50 | 1632c4311fc9 | Mild DR | 0.5474 | Moderate DR | 0.4400 | 0.1074 | 0.4719 | 0.0089 | 4 | medium | low_margin_boundary;second_choice_more_severe |

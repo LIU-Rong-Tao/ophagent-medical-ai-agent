@@ -328,8 +328,8 @@ def build_pre_review_table(df: pd.DataFrame) -> pd.DataFrame:
 
     out["pre_review_risk_level"] = out["pre_review_risk_score"].map(level)
     out = out.sort_values(
-        by=["pre_review_risk_score", "entropy_norm", "confidence"],
-        ascending=[False, False, False],
+        by=["pre_review_risk_score", "entropy_norm", "confidence", "case_id"],
+        ascending=[False, False, False, True],
         na_position="last",
     ).reset_index(drop=True)
     out["review_priority_rank"] = np.arange(1, len(out) + 1)
