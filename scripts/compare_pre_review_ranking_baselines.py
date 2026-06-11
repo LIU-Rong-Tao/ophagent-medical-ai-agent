@@ -9,8 +9,8 @@ Internal v0.6.6 analysis.
 Methods:
 - random_expected: theoretical random review baseline
 - random_mc_1000: Monte Carlo random review baseline, mean/std over repeated random sampling
-- confidence_only: low confidence first
-- margin_only: small top1-top2 margin first
+- confidence_only: 1-MSP baseline, low confidence first; score = 1 - max softmax probability
+- margin_only: 1-margin baseline, small top1-top2 margin first
 - entropy_only: high entropy first
 - ophagent_combined: existing OphAgent combined rule
 
@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 
 
@@ -41,6 +42,76 @@ def infer_true_label_from_path(image_path: str) -> str:
         if p in DIR_TO_LABEL:
             return DIR_TO_LABEL[p]
     raise ValueError(f"Cannot infer true label from image_path: {image_path}")
+
+
+def ranking_score(df_ranked: pd.DataFrame, method: str) -> pd.Series:
+    """生成连续风险分数：数值越大，越优先复核。"""
+    if method == "confidence_only":
+        return -df_ranked["confidence"].astype(float)
+
+    if method == "margin_only":
+        return -df_ranked["margin"].astype(float)
+
+    if method == "entropy_only":
+        entropy_col = "entropy_norm" if "entropy_norm" in df_ranked.columns else "entropy"
+        return df_ranked[entropy_col].astype(float)
+
+    if method == "uncertainty_rank_fusion":
+        if "_uncertainty_fusion_rank" in df_ranked.columns:
+            return -df_ranked["_uncertainty_fusion_rank"].astype(float)
+
+        entropy_col = "entropy_norm" if "entropy_norm" in df_ranked.columns else "entropy"
+        rank_confidence = df_ranked["confidence"].rank(method="average", ascending=True)
+        rank_margin = df_ranked["margin"].rank(method="average", ascending=True)
+        rank_entropy = df_ranked[entropy_col].rank(method="average", ascending=False)
+        fusion_rank = (rank_confidence + rank_margin + rank_entropy) / 3.0
+        return -fusion_rank.astype(float)
+
+    if method == "ophagent_combined":
+        if "review_priority_rank" in df_ranked.columns:
+            return -df_ranked["review_priority_rank"].astype(float)
+        return df_ranked["pre_review_risk_score"].astype(float)
+
+    raise ValueError(f"Unknown ranking method for score: {method}")
+
+
+def auroc_error(y_true: pd.Series, score: pd.Series) -> Optional[float]:
+    """二分类 AUROC；正类为错误样本。"""
+    y = y_true.astype(int).to_numpy()
+    x = score.astype(float).to_numpy()
+    mask = np.isfinite(x)
+    y = y[mask]
+    x = x[mask]
+
+    n_pos = int(y.sum())
+    n_neg = int(len(y) - n_pos)
+    if n_pos == 0 or n_neg == 0:
+        return None
+
+    ranks = pd.Series(x).rank(method="average", ascending=True).to_numpy()
+    pos_rank_sum = float(ranks[y == 1].sum())
+    auc = (pos_rank_sum - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
+    return float(auc)
+
+
+def aupr_error(y_true: pd.Series, score: pd.Series) -> Optional[float]:
+    """Average Precision；正类为错误样本。"""
+    y = y_true.astype(int).to_numpy()
+    x = score.astype(float).to_numpy()
+    mask = np.isfinite(x)
+    y = y[mask]
+    x = x[mask]
+
+    n_pos = int(y.sum())
+    if n_pos == 0:
+        return None
+
+    order = np.argsort(-x, kind="mergesort")
+    y_sorted = y[order]
+    tp = np.cumsum(y_sorted)
+    rank = np.arange(1, len(y_sorted) + 1)
+    precision = tp / rank
+    return float((precision * y_sorted).sum() / n_pos)
 
 
 def rank_dataframe(df: pd.DataFrame, method: str) -> pd.DataFrame:
@@ -83,15 +154,18 @@ def rank_dataframe(df: pd.DataFrame, method: str) -> pd.DataFrame:
     raise ValueError(f"Unknown deterministic ranking method: {method}")
 
 
-def evaluate_ranked(df_ranked: pd.DataFrame, fractions: List[float]) -> Dict[str, float]:
+def evaluate_ranked(df_ranked: pd.DataFrame, fractions: List[float], method: str) -> Dict[str, float]:
     total_n = len(df_ranked)
     total_errors = int(df_ranked["is_error"].sum())
     overall_error_rate = total_errors / total_n if total_n else 0.0
 
+    score = ranking_score(df_ranked, method)
     out: Dict[str, float] = {
         "total_n": total_n,
         "total_errors": total_errors,
         "overall_error_rate": overall_error_rate,
+        "auroc_error": auroc_error(df_ranked["is_error"], score),
+        "aupr_error": aupr_error(df_ranked["is_error"], score),
     }
 
     for frac in fractions:
@@ -126,6 +200,8 @@ def evaluate_random_expected(df: pd.DataFrame, fractions: List[float]) -> Dict[s
         "total_n": total_n,
         "total_errors": total_errors,
         "overall_error_rate": overall_error_rate,
+        "auroc_error": 0.5 if total_errors not in (0, total_n) else None,
+        "aupr_error": overall_error_rate,
     }
 
     for frac in fractions:
@@ -158,6 +234,8 @@ def evaluate_random_mc(
         "total_n": total_n,
         "total_errors": total_errors,
         "overall_error_rate": overall_error_rate,
+        "auroc_error": 0.5 if total_errors not in (0, total_n) else None,
+        "aupr_error": overall_error_rate,
     }
 
     for frac in fractions:
@@ -252,7 +330,7 @@ def process_one_table(path: Path, fractions: List[float], n_random_runs: int) ->
             "backbone": backbone,
             "ranking_method": method,
         }
-        row.update(evaluate_ranked(ranked, fractions))
+        row.update(evaluate_ranked(ranked, fractions, method))
         rows.append(row)
 
     return rows
@@ -292,7 +370,7 @@ def main() -> None:
         all_rows.extend(
             process_one_table(
                 p,
-                fractions=[0.1, 0.2, 0.3],
+                fractions=[0.05, 0.1, 0.2, 0.3],
                 n_random_runs=args.n_random_runs,
             )
         )
@@ -300,6 +378,9 @@ def main() -> None:
     out = pd.DataFrame(all_rows)
 
     rounded = out.copy()
+    rounded["ranking_method"] = rounded["ranking_method"].replace({
+        "confidence_only": "confidence_only_1msp",
+    })
     for c in rounded.columns:
         if rounded[c].dtype.kind in "fc":
             rounded[c] = rounded[c].round(4)
@@ -313,6 +394,12 @@ def main() -> None:
         "backbone",
         "ranking_method",
         "overall_error_rate",
+        "auroc_error",
+        "aupr_error",
+        "top5_error_count",
+        "top5_error_rate",
+        "top5_enrichment_ratio",
+        "top5_error_recall",
         "top20_error_count",
         "top20_error_count_std",
         "top20_random_expected_error_count",
