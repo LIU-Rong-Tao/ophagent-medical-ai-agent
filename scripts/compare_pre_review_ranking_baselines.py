@@ -114,6 +114,38 @@ def aupr_error(y_true: pd.Series, score: pd.Series) -> Optional[float]:
     return float((precision * y_sorted).sum() / n_pos)
 
 
+
+def risk_coverage_curve(df_ranked: pd.DataFrame, backbone: str, method: str) -> pd.DataFrame:
+    """基于 general is_error 计算 Risk-Coverage 曲线。"""
+    total_n = len(df_ranked)
+    rows = []
+
+    for reviewed_n in range(total_n + 1):
+        retained = df_ranked.iloc[reviewed_n:]
+        retained_n = len(retained)
+        retained_errors = int(retained["is_error"].sum()) if retained_n else 0
+
+        rows.append({
+            "backbone": backbone,
+            "ranking_method": method,
+            "reviewed_n": reviewed_n,
+            "review_fraction": reviewed_n / total_n if total_n else 0.0,
+            "coverage": retained_n / total_n if total_n else 0.0,
+            "selective_risk": retained_errors / retained_n if retained_n else 0.0,
+            "retained_n": retained_n,
+            "retained_errors": retained_errors,
+        })
+
+    return pd.DataFrame(rows)
+
+
+def aurc_from_curve(curve: pd.DataFrame) -> float:
+    """AURC：selective_risk-coverage 曲线下面积，越低越好。"""
+    d = curve.sort_values("coverage")
+    return float(np.trapz(d["selective_risk"].to_numpy(), d["coverage"].to_numpy()))
+
+
+
 def rank_dataframe(df: pd.DataFrame, method: str) -> pd.DataFrame:
     d = df.copy()
 
@@ -154,18 +186,20 @@ def rank_dataframe(df: pd.DataFrame, method: str) -> pd.DataFrame:
     raise ValueError(f"Unknown deterministic ranking method: {method}")
 
 
-def evaluate_ranked(df_ranked: pd.DataFrame, fractions: List[float], method: str) -> Dict[str, float]:
+def evaluate_ranked(df_ranked: pd.DataFrame, fractions: List[float], method: str, backbone: str) -> Dict[str, float]:
     total_n = len(df_ranked)
     total_errors = int(df_ranked["is_error"].sum())
     overall_error_rate = total_errors / total_n if total_n else 0.0
 
     score = ranking_score(df_ranked, method)
+    curve = risk_coverage_curve(df_ranked, backbone, method)
     out: Dict[str, float] = {
         "total_n": total_n,
         "total_errors": total_errors,
         "overall_error_rate": overall_error_rate,
         "auroc_error": auroc_error(df_ranked["is_error"], score),
         "aupr_error": aupr_error(df_ranked["is_error"], score),
+        "aurc": aurc_from_curve(curve),
     }
 
     for frac in fractions:
@@ -202,6 +236,7 @@ def evaluate_random_expected(df: pd.DataFrame, fractions: List[float]) -> Dict[s
         "overall_error_rate": overall_error_rate,
         "auroc_error": 0.5 if total_errors not in (0, total_n) else None,
         "aupr_error": overall_error_rate,
+        "aurc": overall_error_rate,
     }
 
     for frac in fractions:
@@ -236,6 +271,7 @@ def evaluate_random_mc(
         "overall_error_rate": overall_error_rate,
         "auroc_error": 0.5 if total_errors not in (0, total_n) else None,
         "aupr_error": overall_error_rate,
+        "aurc": overall_error_rate,
     }
 
     for frac in fractions:
@@ -290,7 +326,7 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join(lines) + "\n"
 
 
-def process_one_table(path: Path, fractions: List[float], n_random_runs: int) -> List[Dict[str, object]]:
+def process_one_table(path: Path, fractions: List[float], n_random_runs: int) -> tuple[List[Dict[str, object]], List[pd.DataFrame]]:
     backbone = path.parent.name
     df = pd.read_csv(path)
 
@@ -303,6 +339,7 @@ def process_one_table(path: Path, fractions: List[float], n_random_runs: int) ->
     df["is_error"] = df["true_label"] != df["pred_label"]
 
     rows: List[Dict[str, object]] = []
+    curves: List[pd.DataFrame] = []
 
     random_expected = {
         "backbone": backbone,
@@ -330,10 +367,11 @@ def process_one_table(path: Path, fractions: List[float], n_random_runs: int) ->
             "backbone": backbone,
             "ranking_method": method,
         }
-        row.update(evaluate_ranked(ranked, fractions, method))
+        row.update(evaluate_ranked(ranked, fractions, method, backbone))
         rows.append(row)
+        curves.append(risk_coverage_curve(ranked, backbone, method))
 
-    return rows
+    return rows, curves
 
 
 def main() -> None:
@@ -365,15 +403,16 @@ def main() -> None:
         raise SystemExit(f"No pre_review_risk_table.csv found under: {root}")
 
     all_rows = []
+    all_curves = []
     for p in paths:
         print(f"[PROCESS] {p}")
-        all_rows.extend(
-            process_one_table(
-                p,
-                fractions=[0.05, 0.1, 0.2, 0.3],
-                n_random_runs=args.n_random_runs,
-            )
+        rows, curves = process_one_table(
+            p,
+            fractions=[0.05, 0.1, 0.2, 0.3],
+            n_random_runs=args.n_random_runs,
         )
+        all_rows.extend(rows)
+        all_curves.extend(curves)
 
     out = pd.DataFrame(all_rows)
 
@@ -387,8 +426,15 @@ def main() -> None:
 
     csv_path = output_dir / "baseline_ranking_comparison.csv"
     md_path = output_dir / "baseline_ranking_comparison.md"
+    curve_path = output_dir / "risk_coverage_curve.csv"
 
     rounded.to_csv(csv_path, index=False)
+    if all_curves:
+        curve_df = pd.concat(all_curves, ignore_index=True)
+        curve_df["ranking_method"] = curve_df["ranking_method"].replace({
+            "confidence_only": "confidence_only_1msp",
+        })
+        curve_df.to_csv(curve_path, index=False)
 
     compact_cols = [
         "backbone",
@@ -396,6 +442,7 @@ def main() -> None:
         "overall_error_rate",
         "auroc_error",
         "aupr_error",
+        "aurc",
         "top5_error_count",
         "top5_error_rate",
         "top5_enrichment_ratio",
@@ -413,6 +460,7 @@ def main() -> None:
 
     print(f"[OK] saved: {csv_path}")
     print(f"[OK] saved: {md_path}")
+    print(f"[OK] saved: {curve_path}")
 
     print("\n[TOP20 SUMMARY]")
     print(rounded[compact_cols].to_string(index=False))
