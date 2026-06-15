@@ -1,0 +1,7 @@
+event,definition,clinical_meaning
+general_error,pred_grade != true_grade,整体分类错误
+any_undergrading,pred_grade < true_grade,任意程度低估
+large_undergrading,true_grade - pred_grade >= 2,跨两级及以上低估
+referable_dr_miss,true_grade >= 2 and pred_grade < 2,可转诊 DR 被预测为非转诊级别
+vision_threatening_dr_miss,true_grade >= 3 and pred_grade < 3,重症或增殖期 DR 被低估到非重症
+high_confidence_vision_threatening_miss,vision_threatening_dr_miss and confidence >= 0.7,高置信重症低估

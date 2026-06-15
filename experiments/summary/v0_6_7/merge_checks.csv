@@ -1,0 +1,7 @@
+backbone,n,pred_grade_mismatch_with_source
+convnext_tiny,1100,0
+swin_tiny,1100,0
+vit_b_imagenet,1100,0
+vit_b_official_like,1100,0
+vit_l_official_like,1100,0
+retfound_official_like,1100,0
