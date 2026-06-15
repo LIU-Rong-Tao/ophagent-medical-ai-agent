@@ -4,7 +4,7 @@
 """
 Compare OphAgent pre-review ranking against uncertainty baselines.
 
-Internal v0.6.6 analysis.
+v0.6.6 public freeze analysis.
 
 Methods:
 - random_expected: theoretical random review baseline

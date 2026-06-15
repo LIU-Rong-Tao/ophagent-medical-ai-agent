@@ -49,6 +49,13 @@ v0.6.6 已完成以下内容：
 - `experiments/summary/v0_6_6/full_test_backbones/baseline_ranking_comparison.md`
 - `experiments/summary/v0_6_6/full_test_backbones/risk_coverage_curve.csv`
 
+说明：
+
+- CSV 为完整逐样本结果；
+- Markdown 表格仅作为部分 backbone 的人工阅读预览，不作为完整结果清单；
+- 公开结果中的图像路径已脱敏为文件名，避免暴露本地绝对路径或类别目录。
+
+
 ## 3. 当前结论
 
 模型输出信号能够支持低侵入式错误富集和选择性复核分析。
