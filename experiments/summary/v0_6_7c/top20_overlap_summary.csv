@@ -1,0 +1,13 @@
+clinical_event,backbone,best_method,baseline_method,event_total,best_captured,baseline_captured,both_captured,best_only_captured,baseline_only_captured,missed_by_both
+large_undergrading,convnext_tiny,expected_gap_only,ophagent_combined,50,42,31,28,14,3,5
+large_undergrading,retfound_official_like,expected_gap_only,ophagent_combined,37,26,21,19,7,2,9
+large_undergrading,swin_tiny,expected_gap_only,ophagent_combined,37,24,19,16,8,3,10
+large_undergrading,vit_b_imagenet,expected_gap_only,ophagent_combined,43,27,25,24,3,1,15
+large_undergrading,vit_b_official_like,expected_gap_only,ophagent_combined,55,43,36,33,10,3,9
+large_undergrading,vit_l_official_like,expected_gap_only,ophagent_combined,41,15,24,9,6,15,11
+vision_threatening_dr_miss,convnext_tiny,gated_severe_prob_mass_only,ophagent_combined,65,49,43,39,10,4,12
+vision_threatening_dr_miss,retfound_official_like,gated_severe_prob_mass_only,ophagent_combined,60,48,42,40,8,2,10
+vision_threatening_dr_miss,swin_tiny,gated_severe_prob_mass_only,ophagent_combined,62,47,29,29,18,0,15
+vision_threatening_dr_miss,vit_b_imagenet,gated_severe_prob_mass_only,ophagent_combined,58,43,32,28,15,4,11
+vision_threatening_dr_miss,vit_b_official_like,gated_severe_prob_mass_only,ophagent_combined,84,68,54,52,16,2,14
+vision_threatening_dr_miss,vit_l_official_like,gated_severe_prob_mass_only,ophagent_combined,62,43,41,38,5,3,16
