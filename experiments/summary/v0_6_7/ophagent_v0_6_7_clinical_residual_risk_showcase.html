@@ -1,0 +1,1597 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OphAgent v0.6.7 展示版：临床风险感知的自动放行区残余风险审计</title>
+<style>
+:root {
+  --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#64748b; --border:#dbe3ef;
+  --blue:#2563eb; --blue-soft:#eff6ff; --green:#16a34a; --green-soft:#ecfdf5;
+  --amber:#d97706; --amber-soft:#fffbeb; --red:#dc2626; --red-soft:#fef2f2;
+  --purple:#7c3aed; --purple-soft:#f5f3ff; --slate:#0f172a;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:30px;
+  font-family: Arial, "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  line-height:1.65; color:var(--text);
+  background:radial-gradient(circle at 0 0,#e0f2fe 0,transparent 30%),var(--bg);
+}
+.container { max-width:1280px; margin:auto; }
+h1 { font-size:34px; margin:0 0 10px; letter-spacing:-.4px; }
+h2 { margin:0 0 12px; font-size:23px; }
+h3 { margin:0 0 8px; font-size:18px; }
+p { margin:8px 0; }
+ul,ol { margin-top:8px; }
+.small { color:var(--muted); font-size:13px; }
+.hero {
+  background:linear-gradient(135deg,#0f172a,#1d4ed8); color:white;
+  border-radius:20px; padding:28px; margin-bottom:18px;
+  box-shadow:0 16px 40px rgba(15,23,42,.18);
+}
+.hero .small { color:#dbeafe; }
+.card {
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:20px; margin:16px 0; box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.info { background:var(--blue-soft); border-color:#bfdbfe; }
+.good { background:var(--green-soft); border-color:#bbf7d0; }
+.warn { background:var(--amber-soft); border-color:#fde68a; }
+.bad { background:var(--red-soft); border-color:#fecaca; }
+.purple { background:var(--purple-soft); border-color:#ddd6fe; }
+.quote {
+  border-left:5px solid var(--blue); background:#f8fafc;
+  padding:12px 14px; border-radius:10px; margin:12px 0; font-weight:700;
+}
+.plain {
+  background:#fff; border:1px solid var(--border); border-radius:12px;
+  padding:12px 14px; margin:10px 0;
+}
+.metric-row { display:flex; flex-wrap:wrap; gap:12px; margin:14px 0 4px; }
+.metric {
+  flex:1; min-width:170px; background:white; border:1px solid var(--border);
+  border-radius:14px; padding:12px 14px;
+}
+.metric strong { display:block; font-size:24px; line-height:1.1; margin-bottom:5px; color:#0f172a; }
+.tag {
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  background:#e0e7ff; color:#3730a3; font-size:12px; margin:2px; font-weight:700;
+}
+table { width:100%; border-collapse:collapse; margin-top:12px; font-size:13px; background:white; }
+th,td { border:1px solid var(--border); padding:8px 10px; vertical-align:top; }
+th { background:#f1f5f9; font-weight:700; color:#0f172a; }
+tr.highlight { background:#fff7ed; font-weight:600; }
+tr.combined-row { background:#eff6ff; font-weight:600; }
+code {
+  background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
+  padding:1px 5px; font-family:Consolas, Monaco, monospace; font-size:.95em;
+}
+.summary-line {
+  font-weight:700; color:#0f172a; background:#fff; border:1px solid var(--border);
+  padding:10px 12px; border-radius:12px; margin:10px 0;
+}
+.flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+.flow span { background:white; border:1px solid var(--border); border-radius:12px; padding:9px 12px; font-weight:700; }
+.arrow { color:var(--muted); font-weight:900; }
+.two-col-list { columns:2; column-gap:28px; }
+.footer { color:var(--muted); font-size:13px; margin:28px 0 6px; text-align:center; }
+@media (max-width:900px) {
+  body { padding:16px; }
+  .grid,.grid3 { grid-template-columns:1fr; }
+  h1 { font-size:26px; }
+  .two-col-list { columns:1; }
+}
+@media print {
+  body { background:white!important; padding:8px; }
+  .hero { background:#0f172a!important; color:white!important; box-shadow:none; }
+  .card { break-inside:avoid; page-break-inside:avoid; box-shadow:none; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<section class="hero">
+  <h1>OphAgent v0.6.7 展示版：临床风险感知的自动放行区残余风险审计</h1>
+  <p>
+    英文对应：<strong>clinical-risk-aware release-side residual risk audit</strong>。
+    本展示关注模型输出之后的复核排序和残余风险，不把 OphAgent 包装成新诊断模型。
+  </p>
+  <p class="small">
+    汇报人：刘荣滔｜眼科医学图像 / 模型输出审计｜数据口径：v0.6.7-clinical-residual-risk 分支，commit 8383295；数值来自 v067_showcase_exact_numbers.csv。
+  </p>
+  <span class="tag">排序阶段无真实标签</span>
+  <span class="tag">固定复核预算</span>
+  <span class="tag">医生复核负担</span>
+  <span class="tag">自动放行区残余风险</span>
+</section>
+
+<section class="card warn">
+  <h2>1. 指标含义：排序信号与临床审计术语</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>基础排序信号</h3>
+      <p><strong>confidence 置信度：</strong>模型对 Top1 预测类别的概率。越低通常越不确定。</p>
+      <p><strong>margin 决策边界距离：</strong>Top1 概率减 Top2 概率。差值越小，说明两个类别越接近。</p>
+      <p><strong>entropy 熵：</strong>输出概率分布的分散程度。越高表示模型越犹豫。</p>
+      <p><strong>rank fusion 排序融合：</strong>把多个不确定性排序合在一起，降低单一指标偶然性。</p>
+    </div>
+    <div class="card">
+      <h3>临床审计术语</h3>
+      <p><strong>临床风险感知 clinical-risk-aware：</strong>按错误的临床危险程度评价，不只看预测是否正确。</p>
+      <p><strong>自动放行区 release-side：</strong>没有进入医生复核队列、系统暂时放行的样本。</p>
+      <p><strong>残余风险 residual risk：</strong>复核一部分样本之后，自动放行区里仍然存在的危险错误。</p>
+      <p><strong>审计 audit：</strong>检查模型输出和复核策略的安全边界，不等同于临床诊断。</p>
+    </div>
+  </div>
+  <div class="quote">
+    这些指标共同服务一个问题：医生只能看一部分样本时，系统先把谁排上去；剩下没看的部分里，还漏了哪些危险病例。
+  </div>
+</section>
+
+<section class="card info">
+  <h2>2. 从 v0.6.6 到 v0.6.7：问题变细了</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>v0.6.6：总体错误的选择性复核评估</h3>
+      <ul>
+        <li>主要看 general error，也就是所有错分。</li>
+        <li>排序阶段只允许使用模型输出信号，不看真实标签。</li>
+        <li>confidence、margin、entropy、rank fusion 是很强的通用不确定性基线。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>v0.6.7：危险错误的残余风险审计</h3>
+      <ul>
+        <li>继续遵守无标签排序原则。</li>
+        <li>后验评估时，把错误拆成更有临床方向感的几类。</li>
+        <li>重点看大幅低估、威胁视力级 DR 漏检，以及复核后自动放行区的残余风险。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<section class="card good">
+  <h2>3. 数据与模型配置</h2>
+  <p>
+    本实验使用 APTOS2019 五分类 DR 测试集。每个模型配置在同一批 1100 个测试样本上输出预测概率，
+    OphAgent 只读取这些输出概率与排序字段，生成无真实标签的复核优先级；真实标签只在后验评估阶段用于统计错误类型。
+  </p>
+
+  <div class="metric-row">
+    <div class="metric"><strong>APTOS2019</strong>公开 DR 五分类数据</div>
+    <div class="metric"><strong>1100</strong>每个模型配置的测试样本</div>
+    <div class="metric"><strong>6</strong>backbone / model configs</div>
+    <div class="metric"><strong>6600</strong>后验合并后的 case 行数</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>模型配置</th>
+        <th>在本实验中的作用</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ConvNeXt-Tiny</td>
+        <td>通用 CNN/ConvNeXt 系列 baseline，用于观察风险排序在卷积模型输出上的表现。</td>
+      </tr>
+      <tr>
+        <td>Swin-Tiny</td>
+        <td>通用视觉 Transformer baseline，用于比较窗口注意力结构下的输出不确定性。</td>
+      </tr>
+      <tr>
+        <td>ViT-B ImageNet</td>
+        <td>ImageNet 预训练 ViT-B baseline，用于对比通用预训练特征。</td>
+      </tr>
+      <tr>
+        <td>ViT-B official-like</td>
+        <td>官方风格训练配置的 ViT-B 结果，用于增加不同训练配置下的稳健性观察。</td>
+      </tr>
+      <tr>
+        <td>ViT-L official-like</td>
+        <td>更大规模 ViT 配置，用于观察模型容量变化下的风险排序表现。</td>
+      </tr>
+      <tr>
+        <td>RETFound official-like</td>
+        <td>眼科预训练模型配置之一。这里不单独包装成亮点，只作为 6 个模型配置中的一个对照来源。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="summary-line">
+    本页只交代数据和模型配置，不把 RETFound 单独作为主要贡献点。v0.6.7 的重点是
+    “同一套后验审计协议能否比较不同模型输出下的危险错误富集和自动放行区残余风险”。
+  </p>
+
+  <p>
+    数据检查已经完成，包括排序表与后验标签表的样本匹配检查；这里不把检查项当实验结论展示。
+  </p>
+</section>
+
+
+
+<section class="card">
+  <h2>4. Clinical-risk proxy：五个后验风险事件的依据与边界</h2>
+
+  <div class="plain">
+    这些定义不是临床指南终点，也不是最终医院规则；它们是在 APTOS 五分类 DR 标签条件下构造的
+    <strong>grade-based clinical-risk proxies（基于分级标签的临床风险代理指标）</strong>。
+    当前公共数据没有 DME、治疗需求、图像质量、医生 urgency tier 等信息，所以 referable DR 和
+    vision-threatening DR 都是 grade-only proxy。医院真实数据阶段应由医生定义 clinical risk table /
+    clinical cost matrix 进行替换或校准。
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>指标</th>
+        <th>当前操作性定义</th>
+        <th>依据</th>
+        <th>边界与汇报口径</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>general_error<br>总体错误</td>
+        <td><code>pred_grade != true_grade</code></td>
+        <td>
+          标准分类错分定义，用于机器学习后验评估；不需要临床指南背书。
+        </td>
+        <td>
+          只回答“预测是否错分”，不区分错误方向和临床危险程度。
+        </td>
+      </tr>
+
+      <tr class="highlight">
+        <td>large_undergrading<br>大幅低估 / 跨级低估</td>
+        <td><code>true_grade - pred_grade >= 2</code></td>
+        <td>
+          ICDR 将 DR 分为 no、mild、moderate、severe NPDR、PDR 等有序严重程度层级；
+          WESDR 也讨论了 1-step / 2-step progression 对后续 PDR 风险的预测意义。
+        </td>
+        <td>
+          这是工程化危险低估 proxy，不是指南标准终点。它用于体现“跨两级低估”比普通相邻错分更值得复核。
+        </td>
+      </tr>
+
+      <tr>
+        <td>referable_dr_miss<br>可转诊 DR 漏检</td>
+        <td><code>true_grade >= 2 and pred_grade &lt; 2</code></td>
+        <td>
+          Referable DR 常定义为 more than mild NPDR and/or macular edema。
+          在 APTOS 五分类中，grade ≥2 对应 Moderate DR or worse。
+        </td>
+        <td>
+          APTOS 没有 DME 标签，所以这里评估的是 grade-only referable DR miss，
+          不是完整临床 RDR 终点。
+        </td>
+      </tr>
+
+      <tr class="highlight">
+        <td>vision_threatening_dr_miss<br>威胁视力级 DR 漏检 / 重症低估</td>
+        <td><code>true_grade >= 3 and pred_grade &lt; 3</code></td>
+        <td>
+          CDC VEHSS 将 vision-threatening DR 定义为 severe NPDR、PDR 或 DME。
+          在 APTOS 五分类中，grade ≥3 对应 Severe DR / Proliferative DR。
+        </td>
+        <td>
+          当前定义没有纳入 DME，因此是 grade-only VTDR proxy。
+          它适合用于公共数据上的后验审计，不能写成完整临床 VTDR 终点。
+        </td>
+      </tr>
+
+      <tr>
+        <td>high_confidence_VTDR_miss<br>高置信重症漏检<br><span class="small">CSV: high_confidence_vision_threatening_miss</span></td>
+        <td><code>VTDR miss and confidence >= 0.7</code></td>
+        <td>
+          神经网络校准研究指出，模型置信度不一定等于真实正确概率；高置信错误是安全审计中需要关注的盲区。
+        </td>
+        <td>
+          <code>0.7</code> 是探索性阈值，不是临床标准。后续应做 0.6 / 0.7 / 0.8 敏感性分析，
+          或由医生和医院模型校准结果共同确定阈值。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="plain">
+    关键参考：
+    <a href="https://pubmed.ncbi.nlm.nih.gov/13129861/" target="_blank">Wilkinson et al., <em>Ophthalmology</em>, 2003, ICDR severity scale</a>；
+    <a href="https://jamanetwork.com/journals/jamaophthalmology/fullarticle/1668203" target="_blank">Abràmoff et al., <em>JAMA Ophthalmology</em>, 2013, referable DR</a>；
+    <a href="https://www.cdc.gov/vision-health-data/prevalence-estimates/dr-prevalence.html" target="_blank">CDC VEHSS, vision-threatening DR definition</a>；
+    <a href="https://jamanetwork.com/journals/jamaophthalmology/fullarticle/265978" target="_blank">Klein et al., <em>Archives of Ophthalmology</em>, 2001, 1-step / 2-step progression</a>；
+    <a href="https://arxiv.org/abs/1706.04599" target="_blank">Guo et al., <em>ICML</em>, 2017, neural network calibration</a>。
+  </div>
+
+  <p class="summary-line">
+    展示口径：这些 clinical-risk proxy 让公共 DR 五分类数据可以支撑第一阶段审计实验；
+    医院阶段要用医生定义的 dangerous pair、urgency tier 或 clinical cost matrix 替代当前规则化 proxy。
+  </p>
+</section>
+
+
+<section class="card">
+  <h2>5. 各 backbone 的危险错误底数表</h2>
+  <div class="plain">
+    这张表提供后续计算的分母。每个 backbone 有 1100 个样本，general_error 是所有错分数量；
+    后面几列是在所有预测结果中进一步筛出的危险错误 proxy。
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Backbone</th>
+        <th>general_error<br>总体错分</th>
+        <th>large_undergrading<br>大幅低估</th>
+        <th>referable_dr_miss<br>可转诊漏检</th>
+        <th>vision_threatening_dr_miss<br>重症漏检</th>
+        <th>high_confidence_VTDR_miss<br>高置信重症漏检<br><span class="small">CSV: high_confidence_vision_threatening_miss</span></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>ConvNeXt-Tiny</td>
+          <td>205</td>
+          <td>50</td>
+          <td>77</td>
+          <td>65</td>
+          <td>14</td>
+        </tr>
+
+        <tr>
+          <td>Swin-Tiny</td>
+          <td>188</td>
+          <td>37</td>
+          <td>38</td>
+          <td>62</td>
+          <td>50</td>
+        </tr>
+
+        <tr>
+          <td>ViT-B ImageNet</td>
+          <td>200</td>
+          <td>43</td>
+          <td>41</td>
+          <td>58</td>
+          <td>37</td>
+        </tr>
+
+        <tr>
+          <td>ViT-B official-like</td>
+          <td>221</td>
+          <td>55</td>
+          <td>34</td>
+          <td>84</td>
+          <td>12</td>
+        </tr>
+
+        <tr>
+          <td>ViT-L official-like</td>
+          <td>219</td>
+          <td>41</td>
+          <td>34</td>
+          <td>62</td>
+          <td>5</td>
+        </tr>
+
+        <tr>
+          <td>RETFound official-like</td>
+          <td>216</td>
+          <td>37</td>
+          <td>37</td>
+          <td>60</td>
+          <td>2</td>
+        </tr></tbody>
+  </table>
+  <p class="summary-line">
+    总数来自 6 个 backbone 相加：general_error = 1249，
+    large_undergrading = 263，
+    vision_threatening_dr_miss = 391。
+    因此后面出现的 156/263、241/391，分母分别就是这两类危险错误的总数。
+  </p>
+</section>
+
+<section class="card info">
+  <h2>6. 排序方法：强基线和 combined 到底差在哪</h2>
+  <table>
+    <thead><tr><th>方法</th><th>使用信号</th><th>更容易抓到的错误</th><th>局限</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>confidence_only</td>
+        <td>只看最高类别概率。置信度越低，越优先复核。</td>
+        <td>模型自己明显不确定的样本。</td>
+        <td>如果模型高置信地把重症说轻，可能排不上来。</td>
+      </tr>
+      <tr>
+        <td>margin_only</td>
+        <td>看 Top1 和 Top2 概率差。差值越小，越接近决策边界。</td>
+        <td>类别边界模糊、相邻等级混淆。</td>
+        <td>不直接关心 Top2 是不是更严重。</td>
+      </tr>
+      <tr>
+        <td>entropy_only</td>
+        <td>看输出分布是否分散。entropy 越高，越不确定。</td>
+        <td>整体分布不集中的错误。</td>
+        <td>对“低熵但方向危险”的错分不一定敏感。</td>
+      </tr>
+      <tr>
+        <td>uncertainty_rank_fusion</td>
+        <td>融合 confidence、margin、entropy 的排序。</td>
+        <td>更稳的通用不确定性错误。</td>
+        <td>仍然主要服务于总体错误富集。</td>
+      </tr>
+      <tr class="combined-row">
+        <td>OphAgent combined</td>
+        <td>在不确定性信号基础上加入 top2 是否更严重、严重类别概率质量、潜在低估信号等规则。</td>
+        <td>更偏向抓“把严重病例说轻”的方向性危险错误。</td>
+        <td>不是通用最优错误检测器；是否优于简单 severity-aware baseline 后续还要继续补。</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card purple">
+  <h2>7. 总体错误富集：combined 有效果，但强基线更强</h2>
+  <p>
+    这一页只看 general_error。这里所有错分都算在一起，通用不确定性分数更占优势。
+    Top20% 预算下，combined 捕获 559 / 1249 个总体错误，
+    lift 为 2.25×；但 recall 低于最强非 combined 方法
+    决策边界基线 margin_only。
+  </p>
+  <div class="metric-row">
+    <div class="metric"><strong>52.0%</strong>Top20% 最强非 combined recall</div>
+    <div class="metric"><strong>45.1%</strong>Top20% combined recall</div>
+    <div class="metric"><strong>2.25×</strong>Top20% combined lift</div>
+    <div class="metric"><strong>559/1249</strong>combined 捕获 / 总体错误</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>预算</th><th>方法</th><th>Recall@K</th><th>Lift</th><th>自动放行区残余率</th>
+        <th>每复核100例抓到</th><th>NNR</th><th>捕获/总数</th><th>残余数</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr class="combined-row">
+          <td>5%</td>
+          <td>OphAgent combined 规则</td>
+          <td>12.7%</td>
+          <td>2.54×</td>
+          <td>17.4%</td>
+          <td>47.88</td>
+          <td>2.10</td>
+          <td>158/1249</td>
+          <td>1091</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>16.2%</td>
+          <td>3.25×</td>
+          <td>16.7%</td>
+          <td>61.52</td>
+          <td>1.64</td>
+          <td>203/1249</td>
+          <td>1046</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>15.8%</td>
+          <td>3.17×</td>
+          <td>16.8%</td>
+          <td>60.00</td>
+          <td>1.69</td>
+          <td>198/1249</td>
+          <td>1051</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>熵基线 entropy_only</td>
+          <td>13.8%</td>
+          <td>2.76×</td>
+          <td>17.2%</td>
+          <td>52.42</td>
+          <td>1.96</td>
+          <td>173/1249</td>
+          <td>1076</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>16.5%</td>
+          <td>3.29×</td>
+          <td>16.6%</td>
+          <td>62.42</td>
+          <td>1.62</td>
+          <td>206/1249</td>
+          <td>1043</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>10%</td>
+          <td>OphAgent combined 规则</td>
+          <td>24.1%</td>
+          <td>2.41×</td>
+          <td>16.0%</td>
+          <td>45.45</td>
+          <td>2.21</td>
+          <td>300/1249</td>
+          <td>949</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>29.8%</td>
+          <td>2.97×</td>
+          <td>14.8%</td>
+          <td>56.21</td>
+          <td>1.78</td>
+          <td>371/1249</td>
+          <td>878</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>30.0%</td>
+          <td>3.00×</td>
+          <td>14.7%</td>
+          <td>56.67</td>
+          <td>1.77</td>
+          <td>374/1249</td>
+          <td>875</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>熵基线 entropy_only</td>
+          <td>26.3%</td>
+          <td>2.63×</td>
+          <td>15.5%</td>
+          <td>49.70</td>
+          <td>2.03</td>
+          <td>328/1249</td>
+          <td>921</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>29.6%</td>
+          <td>2.96×</td>
+          <td>14.8%</td>
+          <td>55.91</td>
+          <td>1.79</td>
+          <td>369/1249</td>
+          <td>880</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>20%</td>
+          <td>OphAgent combined 规则</td>
+          <td>45.1%</td>
+          <td>2.25×</td>
+          <td>13.1%</td>
+          <td>42.35</td>
+          <td>2.39</td>
+          <td>559/1249</td>
+          <td>690</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>51.9%</td>
+          <td>2.59×</td>
+          <td>11.4%</td>
+          <td>49.02</td>
+          <td>2.05</td>
+          <td>647/1249</td>
+          <td>602</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>52.0%</td>
+          <td>2.60×</td>
+          <td>11.4%</td>
+          <td>49.17</td>
+          <td>2.04</td>
+          <td>649/1249</td>
+          <td>600</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>熵基线 entropy_only</td>
+          <td>49.6%</td>
+          <td>2.48×</td>
+          <td>12.0%</td>
+          <td>46.67</td>
+          <td>2.16</td>
+          <td>616/1249</td>
+          <td>633</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>51.7%</td>
+          <td>2.58×</td>
+          <td>11.5%</td>
+          <td>48.79</td>
+          <td>2.05</td>
+          <td>644/1249</td>
+          <td>605</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>30%</td>
+          <td>OphAgent combined 规则</td>
+          <td>63.4%</td>
+          <td>2.11×</td>
+          <td>10.0%</td>
+          <td>39.75</td>
+          <td>2.55</td>
+          <td>787/1249</td>
+          <td>462</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>69.5%</td>
+          <td>2.32×</td>
+          <td>8.3%</td>
+          <td>43.74</td>
+          <td>2.29</td>
+          <td>866/1249</td>
+          <td>383</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>69.7%</td>
+          <td>2.32×</td>
+          <td>8.2%</td>
+          <td>43.89</td>
+          <td>2.28</td>
+          <td>869/1249</td>
+          <td>380</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>熵基线 entropy_only</td>
+          <td>68.6%</td>
+          <td>2.29×</td>
+          <td>8.6%</td>
+          <td>43.13</td>
+          <td>2.33</td>
+          <td>854/1249</td>
+          <td>395</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>69.6%</td>
+          <td>2.32×</td>
+          <td>8.3%</td>
+          <td>43.79</td>
+          <td>2.29</td>
+          <td>867/1249</td>
+          <td>382</td>
+        </tr></tbody>
+  </table>
+  <p class="summary-line">
+    这页的结论：combined 不是总体错误最强排序器，但它并不是接近随机；它的价值需要放到后面的危险低估指标里看。
+  </p>
+</section>
+
+<section class="card good">
+  <h2>8. 大幅低估：combined 对跨级低估更敏感</h2>
+  <p>
+    large_undergrading 只统计真实等级比预测等级高至少 2 级的错误。
+    Top20% 预算下，combined 捕获 156 / 263 个大幅低估样本，
+    recall 为 58.7%，比最佳非 combined 方法
+    熵基线 entropy_only 高 9.6%。
+  </p>
+  <div class="plain">
+    58.7% 不算“已经解决问题”的高召回。更准确的说法是：
+    只复核 20% 样本时，它抓到了接近六成的大幅低估，约为随机复核的 2.94 倍；
+    同时仍有 107 个大幅低估残留在自动放行区。这个残余数不能回避，正是 v0.6.7 要审计的问题。
+  </div>
+  <div class="metric-row">
+    <div class="metric"><strong>58.7%</strong>Top20% combined recall</div>
+    <div class="metric"><strong>9.6%</strong>相比最佳非 combined 提升</div>
+    <div class="metric"><strong>156/263</strong>捕获 / 大幅低估总数</div>
+    <div class="metric"><strong>107</strong>Top20% 后残余数</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>预算</th><th>方法</th><th>Recall@K</th><th>Lift</th><th>自动放行区残余率</th>
+        <th>每复核100例抓到</th><th>NNR</th><th>捕获/总数</th><th>残余数</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr class="combined-row">
+          <td>5%</td>
+          <td>OphAgent combined 规则</td>
+          <td>24.3%</td>
+          <td>4.87×</td>
+          <td>3.2%</td>
+          <td>19.39</td>
+          <td>5.35</td>
+          <td>64/263</td>
+          <td>199</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>16.3%</td>
+          <td>3.27×</td>
+          <td>3.5%</td>
+          <td>13.33</td>
+          <td>8.95</td>
+          <td>44/263</td>
+          <td>219</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>13.5%</td>
+          <td>2.70×</td>
+          <td>3.6%</td>
+          <td>10.91</td>
+          <td>10.27</td>
+          <td>36/263</td>
+          <td>227</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>熵基线 entropy_only</td>
+          <td>12.9%</td>
+          <td>2.57×</td>
+          <td>3.6%</td>
+          <td>10.61</td>
+          <td>11.23</td>
+          <td>35/263</td>
+          <td>228</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>16.9%</td>
+          <td>3.37×</td>
+          <td>3.5%</td>
+          <td>13.64</td>
+          <td>8.71</td>
+          <td>45/263</td>
+          <td>218</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>10%</td>
+          <td>OphAgent combined 规则</td>
+          <td>39.0%</td>
+          <td>3.90×</td>
+          <td>2.7%</td>
+          <td>15.76</td>
+          <td>6.77</td>
+          <td>104/263</td>
+          <td>159</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>25.2%</td>
+          <td>2.52×</td>
+          <td>3.3%</td>
+          <td>10.15</td>
+          <td>11.39</td>
+          <td>67/263</td>
+          <td>196</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>23.2%</td>
+          <td>2.32×</td>
+          <td>3.4%</td>
+          <td>9.39</td>
+          <td>12.73</td>
+          <td>62/263</td>
+          <td>201</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>熵基线 entropy_only</td>
+          <td>28.3%</td>
+          <td>2.83×</td>
+          <td>3.2%</td>
+          <td>11.36</td>
+          <td>9.49</td>
+          <td>75/263</td>
+          <td>188</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>26.5%</td>
+          <td>2.65×</td>
+          <td>3.2%</td>
+          <td>10.61</td>
+          <td>10.28</td>
+          <td>70/263</td>
+          <td>193</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>20%</td>
+          <td>OphAgent combined 规则</td>
+          <td>58.7%</td>
+          <td>2.94×</td>
+          <td>2.0%</td>
+          <td>11.82</td>
+          <td>8.87</td>
+          <td>156/263</td>
+          <td>107</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>46.4%</td>
+          <td>2.32×</td>
+          <td>2.6%</td>
+          <td>9.32</td>
+          <td>11.19</td>
+          <td>123/263</td>
+          <td>140</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>46.1%</td>
+          <td>2.30×</td>
+          <td>2.7%</td>
+          <td>9.24</td>
+          <td>11.23</td>
+          <td>122/263</td>
+          <td>141</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>熵基线 entropy_only</td>
+          <td>49.1%</td>
+          <td>2.46×</td>
+          <td>2.5%</td>
+          <td>9.85</td>
+          <td>10.58</td>
+          <td>130/263</td>
+          <td>133</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>45.9%</td>
+          <td>2.30×</td>
+          <td>2.7%</td>
+          <td>9.24</td>
+          <td>11.36</td>
+          <td>122/263</td>
+          <td>141</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>30%</td>
+          <td>OphAgent combined 规则</td>
+          <td>72.2%</td>
+          <td>2.41×</td>
+          <td>1.5%</td>
+          <td>9.70</td>
+          <td>10.89</td>
+          <td>192/263</td>
+          <td>71</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>66.4%</td>
+          <td>2.21×</td>
+          <td>1.9%</td>
+          <td>8.89</td>
+          <td>11.72</td>
+          <td>176/263</td>
+          <td>87</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>65.9%</td>
+          <td>2.20×</td>
+          <td>1.9%</td>
+          <td>8.84</td>
+          <td>11.82</td>
+          <td>175/263</td>
+          <td>88</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>熵基线 entropy_only</td>
+          <td>66.4%</td>
+          <td>2.21×</td>
+          <td>1.9%</td>
+          <td>8.84</td>
+          <td>11.69</td>
+          <td>175/263</td>
+          <td>88</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>66.5%</td>
+          <td>2.22×</td>
+          <td>1.9%</td>
+          <td>8.89</td>
+          <td>11.69</td>
+          <td>176/263</td>
+          <td>87</td>
+        </tr></tbody>
+  </table>
+</section>
+
+<section class="card good">
+  <h2>9. 威胁视力级 DR 漏检：combined 更稳定地抓重症低估</h2>
+  <p>
+    vision_threatening_dr_miss 只统计真实为 Severe / Proliferative DR，却被模型预测到 3 级以下的错误。
+    Top20% 预算下，combined 捕获 241 / 391 个重症漏检样本，
+    recall 为 61.4%，比最佳非 combined 方法
+    决策边界基线 margin_only 高 14.6%。
+  </p>
+  <div class="plain">
+    61.4% 也不是可以宣称“安全放行”的结果。
+    它说明 combined 在 Top20% 预算下对重症漏检有更高富集能力，Top20% 下约为随机复核的 3.07 倍；
+    但仍有 150 个重症漏检残留。这恰好说明：这个模块是审计残余风险，不是证明系统已经没有临床风险。
+  </div>
+  <div class="metric-row">
+    <div class="metric"><strong>61.4%</strong>Top20% combined recall</div>
+    <div class="metric"><strong>14.6%</strong>相比最佳非 combined 提升</div>
+    <div class="metric"><strong>241/391</strong>捕获 / 重症漏检总数</div>
+    <div class="metric"><strong>150</strong>Top20% 后残余数</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>预算</th><th>方法</th><th>Recall@K</th><th>Lift</th><th>自动放行区残余率</th>
+        <th>每复核100例抓到</th><th>NNR</th><th>捕获/总数</th><th>残余数</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr class="combined-row">
+          <td>5%</td>
+          <td>OphAgent combined 规则</td>
+          <td>26.2%</td>
+          <td>5.23×</td>
+          <td>4.6%</td>
+          <td>30.61</td>
+          <td>3.37</td>
+          <td>101/391</td>
+          <td>290</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>15.6%</td>
+          <td>3.12×</td>
+          <td>5.3%</td>
+          <td>18.48</td>
+          <td>6.19</td>
+          <td>61/391</td>
+          <td>330</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>12.5%</td>
+          <td>2.50×</td>
+          <td>5.5%</td>
+          <td>14.85</td>
+          <td>7.18</td>
+          <td>49/391</td>
+          <td>342</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>熵基线 entropy_only</td>
+          <td>10.7%</td>
+          <td>2.14×</td>
+          <td>5.6%</td>
+          <td>12.73</td>
+          <td>9.75</td>
+          <td>42/391</td>
+          <td>349</td>
+        </tr>
+
+        <tr class="">
+          <td>5%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>15.5%</td>
+          <td>3.09×</td>
+          <td>5.3%</td>
+          <td>18.18</td>
+          <td>6.30</td>
+          <td>60/391</td>
+          <td>331</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>10%</td>
+          <td>OphAgent combined 规则</td>
+          <td>40.5%</td>
+          <td>4.05×</td>
+          <td>3.9%</td>
+          <td>23.94</td>
+          <td>4.30</td>
+          <td>158/391</td>
+          <td>233</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>24.6%</td>
+          <td>2.46×</td>
+          <td>5.0%</td>
+          <td>14.55</td>
+          <td>7.85</td>
+          <td>96/391</td>
+          <td>295</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>24.2%</td>
+          <td>2.42×</td>
+          <td>5.0%</td>
+          <td>14.39</td>
+          <td>7.75</td>
+          <td>95/391</td>
+          <td>296</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>熵基线 entropy_only</td>
+          <td>23.3%</td>
+          <td>2.33×</td>
+          <td>5.1%</td>
+          <td>13.64</td>
+          <td>7.85</td>
+          <td>90/391</td>
+          <td>301</td>
+        </tr>
+
+        <tr class="">
+          <td>10%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>24.1%</td>
+          <td>2.41×</td>
+          <td>5.0%</td>
+          <td>14.09</td>
+          <td>7.91</td>
+          <td>93/391</td>
+          <td>298</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>20%</td>
+          <td>OphAgent combined 规则</td>
+          <td>61.4%</td>
+          <td>3.07×</td>
+          <td>2.8%</td>
+          <td>18.26</td>
+          <td>5.71</td>
+          <td>241/391</td>
+          <td>150</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>46.3%</td>
+          <td>2.31×</td>
+          <td>4.0%</td>
+          <td>13.71</td>
+          <td>7.49</td>
+          <td>181/391</td>
+          <td>210</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>46.8%</td>
+          <td>2.34×</td>
+          <td>3.9%</td>
+          <td>13.86</td>
+          <td>7.42</td>
+          <td>183/391</td>
+          <td>208</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>熵基线 entropy_only</td>
+          <td>45.1%</td>
+          <td>2.25×</td>
+          <td>4.1%</td>
+          <td>13.26</td>
+          <td>7.77</td>
+          <td>175/391</td>
+          <td>216</td>
+        </tr>
+
+        <tr class="">
+          <td>20%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>46.2%</td>
+          <td>2.31×</td>
+          <td>4.0%</td>
+          <td>13.64</td>
+          <td>7.51</td>
+          <td>180/391</td>
+          <td>211</td>
+        </tr>
+
+        <tr class="combined-row">
+          <td>30%</td>
+          <td>OphAgent combined 规则</td>
+          <td>74.6%</td>
+          <td>2.49×</td>
+          <td>2.1%</td>
+          <td>14.80</td>
+          <td>7.06</td>
+          <td>293/391</td>
+          <td>98</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>置信度基线 confidence_only</td>
+          <td>66.0%</td>
+          <td>2.20×</td>
+          <td>2.9%</td>
+          <td>13.03</td>
+          <td>7.84</td>
+          <td>258/391</td>
+          <td>133</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>决策边界基线 margin_only</td>
+          <td>66.5%</td>
+          <td>2.22×</td>
+          <td>2.8%</td>
+          <td>13.18</td>
+          <td>7.79</td>
+          <td>261/391</td>
+          <td>130</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>熵基线 entropy_only</td>
+          <td>64.3%</td>
+          <td>2.14×</td>
+          <td>3.0%</td>
+          <td>12.68</td>
+          <td>8.18</td>
+          <td>251/391</td>
+          <td>140</td>
+        </tr>
+
+        <tr class="">
+          <td>30%</td>
+          <td>不确定性排序融合 uncertainty_rank_fusion</td>
+          <td>65.5%</td>
+          <td>2.18×</td>
+          <td>2.9%</td>
+          <td>12.93</td>
+          <td>7.90</td>
+          <td>256/391</td>
+          <td>135</td>
+        </tr></tbody>
+  </table>
+</section>
+
+<section class="card warn">
+  <h2>9.1 补充风险类型：保留为病例分析入口</h2>
+  <p>
+    除了大幅低估和威胁视力级 DR 漏检，v0.6.7 还统计了两个补充风险类型：
+    <strong>referable_dr_miss</strong> 和 <strong>high_confidence_VTDR_miss</strong>。
+    这两个指标有临床意义，但本展示不把它们作为主结论展开大表对比。
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>补充风险类型</th>
+        <th>定义与含义</th>
+        <th>当前展示口径</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>referable_dr_miss<br>可转诊 DR 漏检</td>
+        <td>
+          关注真实达到可转诊等级的 DR 是否被模型预测到 No DR / Mild DR。
+          这类错误临床意义明确，因为它可能导致本应转诊或重点随访的病例被低优先级处理。
+        </td>
+        <td>
+          当前结果显示最优排序方法比较分散，说明不同危险错误类型可能需要不同排序信号。
+          因此这里作为补充风险类型保留，不作为 combined 的主要优势结论。
+        </td>
+      </tr>
+      <tr>
+        <td>high_confidence_VTDR_miss<br>高置信重症漏检<br><span class="small">CSV: high_confidence_vision_threatening_miss</span></td>
+        <td>
+          关注模型在较高置信度下仍然漏掉威胁视力级 DR 的情况。
+          这类样本可以帮助观察传统不确定性排序的盲区。
+        </td>
+        <td>
+          由于部分 backbone 中事件数较少，本版本将其作为补充病例分析入口。
+          后续更适合结合医生复核，单独分析这些“模型看起来很确定但实际很危险”的样本。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="summary-line">
+    主展示仍聚焦三条主线：general_error 用来说明强基线很强；large_undergrading 和
+    vision_threatening_dr_miss 用来说明 combined 对方向敏感危险低估更稳定；
+    referable_dr_miss 和 high_confidence_VTDR_miss 作为后续医生风险表和病例复核的补充入口。
+  </p>
+</section>
+
+
+
+<section class="card warn">
+  <h2>10. 复核负担：抓得多，还要看医生看了多少</h2>
+  <p>
+    选择性复核不能只报告 recall。临床工作流里，医生时间有限，同样的捕获率如果需要更多复核，就会影响可用性。
+    这不是本项目临时编出来的指标方向，selective classification 文献长期讨论 risk-coverage，
+    近年的 release-side risk / conformal triage 工作也明确要求同时看 review burden 和放行区事件风险。
+  </p>
+  <div class="grid3">
+    <div class="card">
+      <h3>捕获收益</h3>
+      <p><code>Recall@K</code> 和 <code>captured</code></p>
+      <p>固定预算内抓到多少危险错误。</p>
+    </div>
+    <div class="card">
+      <h3>复核效率</h3>
+      <p><code>dangerous_errors_per_100_reviewed</code> 和 <code>NNR</code></p>
+      <p>每复核 100 例能抓到多少危险错误；平均看几例才能抓到 1 个。</p>
+    </div>
+    <div class="card">
+      <h3>放行风险</h3>
+      <p><code>residual_rate</code> 和 <code>residual_count</code></p>
+      <p>没进入复核区的样本里还剩多少危险错误。</p>
+    </div>
+  </div>
+  <div class="quote">
+    汇报时可以说：复核策略不是只追求“抓得多”，还要说明医生要看多少，以及没看的那部分还剩多少危险病例。
+  </div>
+</section>
+
+
+<section class="card info">
+  <h2>11. 指标来源：这些评价语境不是临时发明</h2>
+  <p>
+    这一页只做“来源交代”，不做长篇综述。OphAgent v0.6.7 没有把 confidence、margin、entropy、risk-coverage 或 review burden 包装成原创指标。
+    其中 confidence / MSP 有经典基线来源；margin 和 entropy 属于常见 uncertainty scoring functions，用作强基线对照。
+    本项目的工作重点是把选择性预测和不确定性评估语境，落到眼科 DR 分级模型输出审计里。
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>概念</th>
+        <th>代表性来源</th>
+        <th>来源状态</th>
+        <th>在 OphAgent v0.6.7 中的作用</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>confidence / MSP<br>置信度 / 最大 softmax 概率</td>
+        <td>
+          <a href="https://arxiv.org/abs/1610.02136" target="_blank">
+            Hendrycks &amp; Gimpel, A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks
+          </a>
+        </td>
+        <td>ICLR 2017；arXiv 2016 版可查</td>
+        <td>支撑最大 softmax 概率作为错误检测 / OOD 检测基础强基线；margin、entropy 作为常见不确定性分数在本项目中并列作强基线对照。</td>
+      </tr>
+      <tr>
+        <td>selective classification / reject option<br>选择性分类 / 拒判机制</td>
+        <td>
+          <a href="https://papers.neurips.cc/paper/7073-selective-classification-for-deep-neural-networks" target="_blank">
+            Geifman &amp; El-Yaniv, Selective Classification for Deep Neural Networks
+          </a>
+        </td>
+        <td>NeurIPS / NIPS 2017</td>
+        <td>支撑“低置信样本拒判 / 交给人工复核”的问题设定。</td>
+      </tr>
+      <tr>
+        <td>risk-coverage 评价</td>
+        <td>
+          <a href="https://openreview.net/forum?id=2TktDpGqNM&noteId=MJx9cPynNy" target="_blank">
+            Traub et al., Overcoming Common Flaws in the Evaluation of Selective Classification Systems
+          </a>
+        </td>
+        <td>NeurIPS 2024</td>
+        <td>作为选择性分类评价背景，提醒不能只看单点 coverage / recall；本项目未实现 AUGRC，不把它写成本项目指标。</td>
+      </tr>
+      <tr>
+        <td>clinical deferral / review burden<br>临床延迟决策 / 复核成本</td>
+        <td>
+          <a href="https://www.nature.com/articles/s41598-026-40637-w" target="_blank">
+            Kwon &amp; Kim, Conformal selective prediction with cost aware deferral for safe clinical triage under distribution shift
+          </a>
+        </td>
+        <td>Scientific Reports 2026</td>
+        <td>支撑“复核策略要考虑临床成本和医生负担”的工作流视角。</td>
+      </tr>
+      <tr>
+        <td>release-side residual risk<br>自动放行区残余风险</td>
+        <td>
+          <a href="https://arxiv.org/abs/2605.20956" target="_blank">
+            Li et al., A Deployment Audit of Release-Side Risk in Conformal Triage under Prevalence Shift
+          </a>
+        </td>
+        <td>arXiv 2026 preprint；未写成正式发表</td>
+        <td>支撑“不能只看复核率，还要看自动放行区是否残留事件阳性病例”的审计视角。</td>
+      </tr>
+      <tr>
+        <td>DR uncertainty<br>糖尿病视网膜病变不确定性评估</td>
+        <td>
+          <a href="https://research.aalto.fi/en/publications/uncertainty-aware-deep-learning-methods-for-robust-diabetic-retin/" target="_blank">
+            Jaskari et al., Uncertainty-aware deep learning methods for robust diabetic retinopathy classification
+          </a>
+        </td>
+        <td>IEEE Access 2022</td>
+        <td>支撑 DR 五分类场景中 uncertainty 与 classifier risk 的关系。</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="quote">
+    本项目的增量不在于重新提出这些指标，而在于把它们组织成一个眼科 DR 分级的 post-hoc audit 流程：
+    排序阶段不使用真实标签，后验阶段区分 general error 与大幅低估、威胁视力级 DR 漏检等方向敏感 clinical-risk proxy，
+    并同时报告医生复核负担和自动放行区残余风险。
+  </div>
+</section>
+
+
+<section class="card bad">
+  <h2>12. 自动放行区残余风险：漏网样本具体是谁</h2>
+  <p>
+    假设医生只能复核 Top 5%。在 ConvNeXt 的 1100 张图里，Top 5% 大约是前 55 张。
+    下面这些样本在某个排序方法下没有进入前 55，但后验标签显示它们属于大幅低估，因此会留在自动放行区。
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>方法</th><th>预算</th><th>危险事件</th><th>backbone</th><th>case_id</th>
+        <th>真实</th><th>预测</th><th>置信度</th><th>排序位置</th><th>为什么没进复核区</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>置信度基线 confidence_only</td>
+          <td>5%</td>
+          <td>large_undergrading</td>
+          <td>convnext_tiny</td>
+          <td>6efa36d59ada</td>
+          <td>Severe DR</td>
+          <td>Mild DR</td>
+          <td>0.460</td>
+          <td>57 / 1100</td>
+          <td>Top5% 只复核前 55 例；该样本排第 57，刚好落到自动放行区。</td>
+        </tr>
+
+        <tr>
+          <td>置信度基线 confidence_only</td>
+          <td>5%</td>
+          <td>large_undergrading</td>
+          <td>convnext_tiny</td>
+          <td>21d18b022429</td>
+          <td>Proliferative DR</td>
+          <td>Mild DR</td>
+          <td>0.472</td>
+          <td>70 / 1100</td>
+          <td>confidence_only 只看低置信度，该样本置信度不够低，因此没进前 55。</td>
+        </tr>
+
+        <tr>
+          <td>置信度基线 confidence_only</td>
+          <td>5%</td>
+          <td>large_undergrading</td>
+          <td>convnext_tiny</td>
+          <td>3b185ac445d0</td>
+          <td>Proliferative DR</td>
+          <td>Moderate DR</td>
+          <td>0.481</td>
+          <td>88 / 1100</td>
+          <td>该方法没有显式利用严重等级信号，所以这类重症低估可能排得不够靠前。</td>
+        </tr></tbody>
+  </table>
+  <p class="summary-line">
+    这一页的作用是把“残余风险”落到病例层面：不仅知道某个方法漏了多少，还能看到漏的是哪类病人、排序卡在哪里、可能是预算太紧还是方法没有利用严重程度信号。
+  </p>
+</section>
+
+<section class="card info">
+  <h2>13. 结果解释：combined 的价值在危险低估</h2>
+  <p>
+    总体错误上，OphAgent combined 不如最强的不确定性基线。这说明它不能被描述为“通用最优错误检测器”。
+  </p>
+  <p>
+    评估目标换成大幅低估和威胁视力级 DR 漏检后，combined 的表现更稳定。
+    这和它的规则设计一致：它不只看模型是否不确定，还看严重等级相关的信号，
+    因而更容易抓到“把严重病例说轻”的样本。
+  </p>
+  <div class="quote">
+    合理结论：combined 不是整体错误最强排序器，但更适合作为方向敏感危险错误的预审规则。残余数仍然很多，所以这个版本的价值是审计和排序，不是证明自动放行已经安全。
+  </div>
+</section>
+
+<section class="card good">
+  <h2>14. 最终 takeaway</h2>
+  <ol>
+    <li>v0.6.6 建立无泄露 selective review 评估协议，排序阶段无真实标签。</li>
+    <li>general error 上，强基线更强；combined 有错误富集能力，但不能包装成通用最优排序器。</li>
+    <li>v0.6.7 把评价目标推进到大幅低估、威胁视力级 DR 漏检和自动放行区残余风险。</li>
+    <li>当前仍是 APTOS proxy。医院阶段需要医生定义 dangerous pair / urgency tier，才能形成更扎实的医学 AI 审计研究。</li>
+  </ol>
+</section>
+
+
+
+<section class="card">
+  <h2>15. 后续拓展：不是固定顺序，而是两条推进路径</h2>
+  <p>
+    后续路线不应该写成唯一线性流程。实际推进取决于医院数据和模型输出能不能先接上。
+    如果和医学科学院对接顺利，优先级应当从“真实模型输出接入”开始；公共 DR 数据更多是前期方法验证和展示样板。
+  </p>
+
+  <div class="grid">
+    <div class="card good">
+      <h3>路径 A：医院对接顺利时，优先真实模型输出</h3>
+      <div class="flow">
+        <span>接入医院真实模型输出</span><b class="arrow">→</b>
+        <span>跑基础审计指标</span><b class="arrow">→</b>
+        <span>定位高风险/残余风险样本</span><b class="arrow">→</b>
+        <span>扩展到更多眼病类型</span>
+      </div>
+      <p>
+        这条路径更贴近真实落地。先不强求医生马上给完整临床风险表，
+        可以先用现有模型输出做低侵入审计：看 confidence、margin、entropy、top2 等信号能不能发现边界样本、
+        高风险放行样本和模型不稳定样本。
+      </p>
+      <p>
+        如果初步结果能让医生看到价值，再进一步请医生定义 dangerous pair、urgency tier 或 clinical cost matrix，
+        最后把医生反馈沉淀成版本化规则。
+      </p>
+    </div>
+
+    <div class="card info">
+      <h3>路径 B：医院数据未接入前，公共数据继续做方法样板</h3>
+      <div class="flow">
+        <span>公共 DR 数据验证框架</span><b class="arrow">→</b>
+        <span>形成可解释展示</span><b class="arrow">→</b>
+        <span>准备医生讨论模板</span><b class="arrow">→</b>
+        <span>迁移到医院数据</span>
+      </div>
+      <p>
+        这条路径适合医院数据暂时没打通时使用。APTOS 上的 clinical-risk proxy 不能当真实临床结论，
+        但可以证明审计框架已经能跑通：无标签排序、固定复核预算、危险错误捕获、自动放行区残余风险。
+      </p>
+    </div>
+  </div>
+
+  <div class="card warn">
+    <h3>医生临床风险表的位置：不一定一开始就完整定义</h3>
+    <p>
+      医生定义临床风险表是后续升级的关键环节，但它未必是第一步。
+      更现实的节奏是：先接医院真实模型输出，拿一批具体样本和初步审计结果给医生看；
+      医生在真实 case 上指出哪些错误更危险，再逐步形成风险表。
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>阶段</th>
+          <th>主要目标</th>
+          <th>医生参与方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>初步接入</td>
+          <td>读取医院模型输出，生成边界样本、高不确定样本、疑似危险放行样本。</td>
+          <td>医生先看样例是否有临床意义。</td>
+        </tr>
+        <tr>
+          <td>初步验证</td>
+          <td>在真实数据上验证审计表能否帮助发现模型弱点。</td>
+          <td>医生标注或复核部分样本，确认错误类型。</td>
+        </tr>
+        <tr>
+          <td>风险表形成</td>
+          <td>把医生反馈整理成 dangerous pair、urgency tier、clinical cost matrix。</td>
+          <td>医生定义哪些错分必须优先复核，哪些可低优先级处理。</td>
+        </tr>
+        <tr>
+          <td>版本化迭代</td>
+          <td>固定规则版本，评估下一批数据；避免把当前真实标签泄露进当前排序。</td>
+          <td>医生反馈用于下一版本规则更新，而不是当前批次调参。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quote">
+    更稳的汇报口径：后续路线不必固定成单线流程。若医院真实模型输出能先接入，就先做低侵入审计和多病种扩展；
+    若初步效果得到医生认可，再推动医生定义临床风险表，并将反馈沉淀为版本化迭代机制。
+  </div>
+
+  <p class="summary-line">
+    最终目标可以概括为：在医院现有模型旁边接入一个低侵入审计层，
+    帮医生更早看到需要优先复核的样本，并持续暴露自动放行区中可能残留的危险错误。
+  </p>
+</section>
+
+
+
+<div class="footer">
+  数据口径：v067_showcase_exact_numbers.csv；本 HTML 仅用于研究展示，不构成临床诊断或医疗建议。
+</div>
+
+</div>
+</body>
+</html>
