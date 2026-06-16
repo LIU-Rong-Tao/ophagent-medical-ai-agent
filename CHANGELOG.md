@@ -2,6 +2,58 @@
 
 ---
 
+## v0.6.7c - 排序信号机制分析
+
+- 新增统一排序方法比较：不确定性基线、`ophagent_combined`、严重程度感知基线。
+- 新增多复核预算评估：Top5% 到 Top50%。
+- 新增 Top20% overlap analysis 和 residual profile。
+- 新增结果目录：`experiments/summary/v0_6_7c/`
+- 新增脚本：`scripts/analyze_v067c_ranking_signal_mechanism.py`
+
+核心结果：
+
+- `general_error` 更适合 `margin_only`。
+- `large_undergrading` 更适合 `expected_gap_only`。
+- `vision_threatening_dr_miss` 更适合 `gated_severe_prob_mass_only`。
+
+结论：`ophagent_combined` 是有效的初版透明审计规则，但不是所有危险错误类型上的最优规则；不同 clinical dangerous events 需要不同 post-hoc risk signals。
+
+---
+
+## v0.6.7b - 严重程度感知信号消融
+
+- 新增 severity-aware baseline ablation。
+- 新增脚本：`scripts/analyze_v067_severity_aware_baselines.py`
+- 新增结果目录：`experiments/summary/v0_6_7b/`
+- 比较 `ophagent_combined`、`expected_gap_only`、`gated_severe_prob_mass_only` 等单信号基线。
+
+核心结果：
+
+- `large_undergrading` 中，`expected_gap_only` 优于 `ophagent_combined`。
+- `vision_threatening_dr_miss` 中，`gated_severe_prob_mass_only` 优于 `ophagent_combined`。
+
+结论：v0.6.7b 拆解了 combined 的优势来源，危险低估样本的主要富集能力可以由更简单的严重程度感知信号解释。
+
+---
+
+## v0.6.7 - 临床残余风险审计
+
+- 新增 clinical-risk proxy 分析。
+- 新增 review burden 和 release-side residual risk 分析。
+- 新增脚本：`scripts/evaluate_clinical_residual_risk.py`
+- 新增结果目录：`experiments/summary/v0_6_7/`
+
+跨 6 个 backbone 汇总：
+
+- `general_error`：1249
+- `large_undergrading`：263
+- `vision_threatening_dr_miss`：391
+- `high_confidence_vision_threatening_miss`：120
+
+结论：v0.6.7 将 OphAgent 从普通失败样本发现推进到临床风险代理指标下的残余风险审计。clinical-risk proxy 仍基于 APTOS 五分类标签构造，不等价于真实临床终点。
+
+---
+
 ## v0.6.6 - 预审风险排序技术验证
 
 - 完成无真实标签预审风险排序方向的技术验证。
