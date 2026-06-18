@@ -578,7 +578,7 @@ def overlap_for_comparison(
         for group_name, ids in groups.items():
             if not ids:
                 continue
-            ids_df = pd.DataFrame(list(ids), columns=id_cols)
+            ids_df = pd.DataFrame(sorted(ids), columns=id_cols)
             merged = ids_df.merge(g, on=id_cols, how="left")
             merged["target"] = target
             merged["capture_group"] = group_name

@@ -46,7 +46,7 @@ v0.6.8b 包含四类分析：
 | `large_undergrading`         | `expected_gap_only`           | 大幅低估更依赖期望严重等级与预测等级之间的偏差          |
 | `vision_threatening_dr_miss` | `gated_severe_prob_mass_only` | 重症漏检更依赖低预测等级下的 Severe / PDR 概率质量 |
 
-这说明：不同危险错误类型需要不同排序信号，不能简单指望一个通用风险分数解决所有问题。
+这说明：在当前 APTOS 多骨干预测记录上，不同 grade-based risk proxy 对应的最优排序信号不同，不能简单指望一个通用风险分数解决所有问题。
 
 ---
 
@@ -160,8 +160,8 @@ APTOS2019 糖尿病视网膜病变分级代表性结果：
 
 | 版本     | 方向                                            |
 | ------ | --------------------------------------------- |
-| v0.6.9 | 协议冻结与外部 DR 数据 precheck |
-| v0.7.0 | 真实数据 evidence grounding / VQA evaluation      |
+| v0.7.0 | 外部 DR 验证协议冻结与数据预检查 |
+| v0.7.0 | 外部 DR 验证协议冻结与数据预检查 |
 | v0.8.0 | lesion concept / report verbalization adapter |
 
 ---

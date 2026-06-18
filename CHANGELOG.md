@@ -1,14 +1,10 @@
 # CHANGELOG
 
-## v0.6.8c - 根 README / CHANGELOG 口径同步
-
-- 同步根目录 `README.md` 的项目主页口径。
-- 将当前稳定研究节点更新为 v0.6.8b。
-- 补充 v0.6.8 / v0.6.8b 的结果目录和脚本入口。
-- 说明当前主线已从继续堆模型转向协议冻结与外部数据验证前检查。
 
 ## v0.6.8b - 稳健性与机制审计
 
+- 同步根目录 `README.md` 和 `CHANGELOG.md` 的项目主页口径。
+- 将当前稳定研究节点更新为 v0.6.8b。
 - 新增结果目录：`experiments/summary/v0_6_8b/`
 - 新增 paired image-key clustered bootstrap。
 - 新增 Top20% 捕获重叠分析。
