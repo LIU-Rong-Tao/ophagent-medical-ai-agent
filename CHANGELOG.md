@@ -1,3 +1,31 @@
+# CHANGELOG
+
+## v0.6.8c - 根 README / CHANGELOG 口径同步
+
+- 同步根目录 `README.md` 的项目主页口径。
+- 将当前稳定研究节点更新为 v0.6.8b。
+- 补充 v0.6.8 / v0.6.8b 的结果目录和脚本入口。
+- 说明当前主线已从继续堆模型转向协议冻结与外部数据验证前检查。
+
+## v0.6.8b - 稳健性与机制审计
+
+- 新增结果目录：`experiments/summary/v0_6_8b/`
+- 新增 paired image-key clustered bootstrap。
+- 新增 Top20% 捕获重叠分析。
+- 新增 Logistic 系数稳定性分析。
+- 新增 repeated split sensitivity。
+- 修正并冻结正式 bootstrap 评价口径：pooled-backbone training，per-backbone test reporting。
+- 结论：`learned_logistic` 有竞争力，但没有稳定超过事件特异性 severity-aware signal。对 `large_undergrading`，`expected_gap_only` 更稳；对 `vision_threatening_dr_miss`，`gated_severe_prob_mass_only` 更稳。
+
+## v0.6.8 - 学习型复核分数
+
+- 新增脚本：`scripts/analyze_v068_learned_deferral_score.py`
+- 新增结果目录：`experiments/summary/v0_6_8/`
+- 使用 L2 Logistic Regression 构建 supervised learned review score。
+- 使用 `decision_function` 作为 learned deferral score，不解释为校准概率。
+- 采用 grouped cross-validation，并以 `image_key` 作为分组单位。
+- 结论：learned score 有竞争力，但不能替代最强事件特异性规则。
+
 # 更新日志
 
 ---

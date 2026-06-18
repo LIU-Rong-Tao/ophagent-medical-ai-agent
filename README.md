@@ -17,21 +17,24 @@ OphAgent 是一个面向眼科医学影像的 AI 工作流项目。
 
 ---
 
-## 当前稳定节点：v0.6.7c
+## 当前稳定节点：v0.6.8b
 
-v0.6.7c 已完成“排序信号机制分析”。
+v0.6.8b 已完成 learned deferral score 的稳健性与机制审计。
 
-阶段性结论：
+当前结论：
 
-```
-OphAgent 的价值不是提出一个固定手工风险分数，
-而是建立一个模型输出后的临床风险审计框架：
-根据不同危险错误类型选择合适的输出后风险信号，
-在有限复核预算下优先富集高风险样本，
-并显式报告自动放行区残余危险错误。
-```
+- `learned_logistic` 是有竞争力的监督式复核排序基线；
+- 但它没有稳定超过事件特异性的 severity-aware signal；
+- 对 `large_undergrading`，`expected_gap_only` 仍是 Top20% 预算下更稳的主信号；
+- 对 `vision_threatening_dr_miss`，`gated_severe_prob_mass_only` 仍是 Top20% 预算下更稳的主信号；
+- OphAgent 当前主线应从继续堆模型转向协议冻结和外部数据验证前检查。
 
----
+v0.6.8b 包含四类分析：
+
+- paired image-key clustered bootstrap；
+- Top20% 捕获重叠分析；
+- Logistic 系数稳定性分析；
+- repeated split sensitivity。
 
 ## 核心发现
 
@@ -51,7 +54,9 @@ OphAgent 的价值不是提出一个固定手工风险分数，
 
 | 版本            | 重点                                     | 状态       |
 | ------------- | -------------------------------------- | -------- |
-| v0.6.7c       | 排序信号机制分析                               | 当前稳定研究节点 |
+| v0.6.8b       | 稳健性与机制审计：bootstrap / overlap / coefficients / repeated split | 当前稳定研究节点 |
+| v0.6.8        | 学习型复核分数：learned deferral score              | 已完成      |
+| v0.6.7c       | 排序信号机制分析                               | 已完成      |
 | v0.6.7b       | 严重程度感知信号消融                             | 已完成      |
 | v0.6.7        | 临床残余风险审计                               | 已完成      |
 | v0.6.6        | 无真实标签预审风险排序                            | 已完成      |
@@ -65,6 +70,11 @@ OphAgent 的价值不是提出一个固定手工风险分数，
 
 | 路径                                                  | 内容                |
 | --------------------------------------------------- | ----------------- |
+| `experiments/summary/v0_6_8b/`                     | 当前主结果：稳健性与机制审计       |
+| `experiments/summary/v0_6_8b/README.md`            | v0.6.8b 结果说明与输出文件索引     |
+| `experiments/summary/v0_6_8b/robustness_mechanism_key_findings.md` | v0.6.8b 中文关键发现 |
+| `experiments/summary/v0_6_8/`                      | 学习型复核分数实验               |
+| `experiments/summary/v0_6_8/learned_deferral_key_findings.md` | v0.6.8 中文关键发现 |
 | `experiments/summary/v0_6_7c/`                      | 当前主结果：排序信号机制分析    |
 | `experiments/summary/v0_6_7c/README.md`             | v0.6.7c 结果说明与复现入口 |
 | `experiments/summary/v0_6_7c/v067c_key_findings.md` | v0.6.7c 中文结果解释    |
@@ -101,6 +111,10 @@ python scripts/evaluate_clinical_residual_risk.py
 
 | 脚本                                                  | 作用                                  |
 | --------------------------------------------------- | ----------------------------------- |
+| `scripts/analyze_v068b_robustness_mechanism.py`    | v0.6.8b bootstrap 与捕获重叠分析              |
+| `scripts/analyze_v068b_logistic_coefficients.py`   | v0.6.8b Logistic 系数稳定性分析               |
+| `scripts/analyze_v068b_repeated_split_sensitivity.py` | v0.6.8b repeated split sensitivity 分析       |
+| `scripts/analyze_v068_learned_deferral_score.py`   | v0.6.8 学习型复核分数分析                     |
 | `scripts/analyze_v067c_ranking_signal_mechanism.py` | v0.6.7c 排序信号机制分析                    |
 | `scripts/analyze_v067_severity_aware_baselines.py`  | v0.6.7b 严重程度感知信号消融                  |
 | `scripts/evaluate_clinical_residual_risk.py`        | v0.6.7 临床残余风险审计                     |
@@ -146,7 +160,7 @@ APTOS2019 糖尿病视网膜病变分级代表性结果：
 
 | 版本     | 方向                                            |
 | ------ | --------------------------------------------- |
-| v0.6.8 | 学习型复核分数 / learned deferral score              |
+| v0.6.9 | 协议冻结与外部 DR 数据 precheck |
 | v0.7.0 | 真实数据 evidence grounding / VQA evaluation      |
 | v0.8.0 | lesion concept / report verbalization adapter |
 
