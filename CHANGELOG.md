@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.7.1 - External DR Direct Inference and Review Ranking
+
+- 新增 `scripts/run_v071_external_dr_direct_inference.py`，使用 v0.7.0 冻结的 APTOS-trained checkpoints 对 IDRiD_data / MESSIDOR2 test split 进行 direct external inference。
+- 新增 `scripts/evaluate_v071_external_dr_review_ranking.py`，在外部推理结果上评估 Top10% / Top20% / Top30% 复核排序效果。
+- 新增 `experiments/summary/v0_7_1/`，保存外部直接推理结果、分类迁移指标、混淆矩阵、复核排序指标、复核排序表格与关键发现。
+- 新增 `notes/v0.7.1_external_dr_direct_inference_and_review_ranking.md`，记录 v0.7.1 的冻结协议、事件定义、主要发现与解释边界。
+- 主要发现：外部分类迁移存在域迁移压力；在此前提下，`gated_severe_prob_mass_only` 对 `vision_threatening_dr_miss` 显示稳定外部错误富集能力；`expected_gap_only` 对 `large_undergrading` 有一定富集能力但稳定性较弱。
+- 解释边界：v0.7.1 是 external frozen-checkpoint error enrichment / residual risk analysis，不是外部数据重训，也不是 clinical deployment validation。
+
+
 
 ## v0.6.8b - 稳健性与机制审计
 

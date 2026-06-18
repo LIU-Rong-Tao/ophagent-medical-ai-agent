@@ -175,3 +175,22 @@ APTOS2019 糖尿病视网膜病变分级代表性结果：
 * clinical-risk proxy 不是真实临床终点。
 * 当前 APTOS 实验结果不等价于真实医院部署验证。
 * 所有输出都需要人工审核。
+
+## 当前实验节点：v0.7.1 外部 DR 直接推理与复核排序
+
+v0.7.1 在 v0.7.0 external DR protocol freeze 的基础上，使用 APTOS-trained frozen checkpoints 直接推理 IDRiD_data / MESSIDOR2 test split，并评估复核排序信号在外部数据上的危险错误富集能力。
+
+主要产物：
+
+- `scripts/run_v071_external_dr_direct_inference.py`
+- `scripts/evaluate_v071_external_dr_review_ranking.py`
+- `experiments/summary/v0_7_1/`
+- `notes/v0.7.1_external_dr_direct_inference_and_review_ranking.md`
+
+当前结论：
+
+- 外部分类迁移存在明显域迁移压力，尤其 MESSIDOR2 上多模型预测分布偏向 0 类。
+- 在此前提下，`gated_severe_prob_mass_only` 对 `vision_threatening_dr_miss` 显示稳定外部错误富集能力。
+- `expected_gap_only` 对 `large_undergrading` 有一定富集能力，但外部稳定性弱于 vision-threatening miss 目标。
+- v0.7.1 应解释为 external frozen-checkpoint error enrichment / residual risk analysis，不应解释为 clinical deployment validation。
+
