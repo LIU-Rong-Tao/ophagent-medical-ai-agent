@@ -10,7 +10,7 @@
 - 主要结果：
   - IDRiD_data：Δ event recall = +0.3385，95% CI [0.2195, 0.4742]。
   - MESSIDOR2：Δ event recall = +0.6268，95% CI [0.5003, 0.7369]。
-- 记录 protocol deviation：原 v0.7.0 协议计划保留外部 `learned_logistic` secondary baseline，但当前 v0.7.1/v0.7.1b 尚未实现该外部 baseline；本版本 primary gate-only comparison 不受影响。
+- 记录 protocol deviation：原 v0.7.0 协议计划保留外部 `learned_logistic` 监督式 baseline，但当前 v0.7.1/v0.7.1b 尚未实现该外部 baseline；本版本 primary gate-only comparison 不受影响。
 
 ## v0.7.1 - External DR direct inference and review ranking
 
@@ -49,7 +49,7 @@
 - 采用 grouped cross-validation，并以 `image_key` 作为分组单位。
 - 结论：learned score 有竞争力，但不能替代最强事件特异性规则。
 
-# 更新日志
+---
 
 ---
 

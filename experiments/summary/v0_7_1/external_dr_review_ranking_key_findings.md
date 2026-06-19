@@ -46,9 +46,9 @@ Top20% 结果显示，gated_severe_prob_mass_only 在两个外部数据集上均
 
 - IDRiD_data：event recall 约 0.3750–0.6957，enrichment ratio 约 1.84–3.41。
 - MESSIDOR2：event recall 约 0.7586–0.8889，enrichment ratio 约 3.76–4.41。
-- MESSIDOR2 上 low-risk NPV 约 0.9833–0.9929，说明 Top20% 复核后自动放行区残余 vision-threatening miss 较少。
+- MESSIDOR2 上 low-risk NPV 约 0.9833–0.9929，说明 Top20% 复核后未进入优先复核区残余 vision-threatening miss 较少。
 
-结论：即使外部分类迁移存在压力，gated_severe_prob_mass_only 仍能在外部 DR 数据上稳定富集 vision-threatening miss。这是 v0.7.1 最强的外部错误富集证据。
+结论：即使外部分类迁移存在压力，gated_severe_prob_mass_only 仍能在外部 DR 数据上观察到排序趋势 vision-threatening miss。这是 v0.7.1 当前外部压力测试中较明确的排序趋势。
 
 ## 主要结论
 

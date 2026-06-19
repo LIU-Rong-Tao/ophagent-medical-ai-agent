@@ -16,7 +16,7 @@ v0.7.1b 用于补全 v0.7.1 的证据链，不开启新方向。
 - 定义：`true_grade >= 3 and pred_grade < 3`
 - Budget：Top20%
 - Method：`gated_severe_prob_mass_only`
-- Comparator：`random_gate_only`
+- Comparator：`random_gate_only_expected`
 - Bootstrap：2000 次 image-clustered bootstrap
 - 随机基线：2000 次 gate-only random sampling
 - 聚类单位：unique image，同一图像的 6 个 backbone 记录一起重采样
@@ -30,7 +30,7 @@ v0.7.1b 用于补全 v0.7.1 的证据链，不开启新方向。
 
 ## Primary result
 
-Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only` 显示明确增量。
+Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only_expected` 显示明确增量。
 
 | dataset | Δ event recall | 95% CI | win rate | residual event count reduction | residual event rate reduction |
 |---|---:|---:|---:|---:|---:|
@@ -47,7 +47,7 @@ Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only`
 
 根据预先冻结的判断规则，本版本结果属于：
 
-**强证据**
+**预冻结 Go/No-Go 规则下的强证据**
 
 原因：
 
@@ -83,7 +83,7 @@ Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only`
 
 不要使用：
 
-- 自动放行区
+- 未进入优先复核区
 
 病例页必须标注：
 
@@ -100,3 +100,8 @@ v0.7.1b 已经完成首次线下对接前最关键的统计证据补全。
 3. 准备线下讲稿和备用 PDF；
 4. 不再机械开启 v0.7.1c/d；
 5. 是否进入 v0.7.2，需要在线下对接和 go/no-go 审查后再决定。
+
+## Comparator 口径说明
+
+- `random_gate_only`：2000 次随机抽样，用于估计 gate-only baseline 的随机分布。
+- `random_gate_only_expected`：primary bootstrap 中使用的期望对照，避免每次 bootstrap 又叠加随机抽样噪声。

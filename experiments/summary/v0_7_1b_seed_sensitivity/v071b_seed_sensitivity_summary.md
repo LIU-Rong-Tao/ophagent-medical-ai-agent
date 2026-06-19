@@ -11,7 +11,7 @@ v0.7.1b 主分析使用固定随机种子 `seed=42`。为了确认 random gate-o
 - Target：VTDR miss
 - Budget：Top20%
 - Method：`gated_severe_prob_mass_only`
-- Comparator：`random_gate_only`
+- Comparator：`random_gate_only_expected`
 - Metric：`mean_delta_event_recall`
 - 解释：`gated_severe_prob_mass_only - random_gate_only`
 
@@ -45,3 +45,8 @@ v0.7.1b 主分析使用固定随机种子 `seed=42`。为了确认 random gate-o
 > 不同随机种子证明临床有效性。
 
 本结果仍限于公共数据集回顾性 grade-based proxy、当前六个 frozen APTOS backbones 和 image-level external stress test。
+
+## Comparator 口径说明
+
+- `random_gate_only`：2000 次随机抽样，用于估计 gate-only baseline 的随机分布。
+- `random_gate_only_expected`：primary bootstrap 中使用的期望对照，避免每次 bootstrap 又叠加随机抽样噪声。

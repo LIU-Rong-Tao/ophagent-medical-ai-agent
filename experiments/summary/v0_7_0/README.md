@@ -57,7 +57,7 @@ RETFound-MAE-CFP initialized ViT-L under the OphAgent official-like unified trai
 
 ## Protocol deviation: learned_logistic external baseline
 
-v0.7.0 原协议计划保留 `learned_logistic` 作为外部 secondary baseline。
+v0.7.0 原协议计划保留 `learned_logistic` 作为外部预设监督式 baseline（非 primary comparator）。
 
 当前 v0.7.1/v0.7.1b 已完成 primary gate-only comparison，但尚未实现 APTOS-frozen `learned_logistic` 的外部推理。因此，外部 `learned_logistic` 记录为预设监督式 baseline（非 primary comparator）缺失 / protocol deviation。
 

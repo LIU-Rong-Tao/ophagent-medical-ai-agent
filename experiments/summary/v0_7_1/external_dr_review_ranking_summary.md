@@ -2,7 +2,7 @@
 
 ## 版本定位
 
-本结果基于 v0.7.1 frozen checkpoint direct external inference 输出，评估外部 DR 数据上的危险错误富集与自动放行区残余风险。
+本结果基于 v0.7.1 frozen checkpoint direct external inference 输出，评估外部 DR 数据上的危险错误富集与未进入优先复核区残余风险。
 
 本阶段不使用 IDRiD_data / MESSIDOR2 train 或 val 训练，不根据外部结果重新选择 primary target、ranking signal 或 review budget。
 

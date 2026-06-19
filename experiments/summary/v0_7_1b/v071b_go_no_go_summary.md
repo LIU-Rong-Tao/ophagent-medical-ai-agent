@@ -7,7 +7,7 @@
 - Image identifier column: `image_key`
 - Target: `VTDR miss = true_grade >= 3 and pred_grade < 3`
 - Primary budget: Top20%
-- Primary comparison: `gated_severe_prob_mass_only` vs `random_gate_only`
+- Primary comparison: `gated_severe_prob_mass_only` vs `random_gate_only_expected`
 
 ## 数据集与事件规模
 
@@ -25,13 +25,13 @@
 
 ## Go/No-Go 判断
 
-- 结论等级：**强证据**
+- 结论等级：**预冻结 Go/No-Go 规则下的强证据**
 - 判断依据：两个外部数据集差值点估计均为正，MESSIDOR2 的 95% CI 不跨 0，IDRiD_data 方向一致。
 
 ## 展示措辞
 
 - 使用：**未进入优先复核区的残余危险事件**
-- 不使用：自动放行区
+- 不使用：安全放行、直接放行、自动化放行等表述
 - 病例页标注：公共数据集回顾性 grade-based proxy 示例，不是患者级临床判断。
 
 ## 边界
@@ -40,3 +40,8 @@
 - grade-based proxy，不是医生定义的患者级临床终点。
 - 外部数据未用于重新拟合、重新选特征或重新标准化。
 - 本结果不是临床部署验证。
+
+## Comparator 口径说明
+
+- `random_gate_only`：2000 次随机抽样，用于估计 gate-only baseline 的随机分布。
+- `random_gate_only_expected`：primary bootstrap 中使用的期望对照，避免每次 bootstrap 又叠加随机抽样噪声。
