@@ -34,7 +34,7 @@ v0.7.0 是外部 DR 验证前的协议冻结和数据预检版本。
   - `IDRiD_data/train/anoDR/IDRiD_118.png`
   - MD5：`7dc007745435fcba18b2d390312a40b4`
 - v0.7.1 外部直接推理只使用 IDRiD_data / MESSIDOR2 test split，不使用 IDRiD train split，因此该重复问题不阻塞 v0.7.1。
-- 如果后续进入目标域重训或微调，该重复样本必须显式排除。
+- 如果后续进入目标域重训或微调，应排除训练侧重复样本，或按 MD5 group 重新划分，确保重复图像不跨 split。
 
 ## Checkpoints
 
@@ -59,7 +59,7 @@ RETFound-MAE-CFP initialized ViT-L under the OphAgent official-like unified trai
 
 v0.7.0 原协议计划保留 `learned_logistic` 作为外部 secondary baseline。
 
-当前 v0.7.1/v0.7.1b 已完成 primary gate-only comparison，但尚未实现 APTOS-frozen `learned_logistic` 的外部推理。因此，外部 `learned_logistic` baseline 记录为 secondary baseline 缺失 / protocol deviation。
+当前 v0.7.1/v0.7.1b 已完成 primary gate-only comparison，但尚未实现 APTOS-frozen `learned_logistic` 的外部推理。因此，外部 `learned_logistic` 记录为预设监督式 baseline（非 primary comparator）缺失 / protocol deviation。
 
 该偏差不影响 v0.7.1b 的 primary comparison：
 

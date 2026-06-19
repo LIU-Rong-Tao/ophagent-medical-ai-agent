@@ -25,7 +25,7 @@
 - 新增 IDRiD_data / MESSIDOR2 外部数据预检、类别分布统计和 MD5 重叠审计。
 - 未发现 APTOS 与外部 test split 的 MD5 重叠。
 - 发现 IDRiD 内部 1 组 train/test MD5 重复且标签冲突，已记录 duplicate exclusion manifest。
-- 原协议计划保留外部 `learned_logistic` secondary baseline；截至 v0.7.1b，该 baseline 尚未实现，已作为 protocol deviation 记录。
+- 原协议计划保留外部 `learned_logistic` 监督式 baseline；截至 v0.7.1b，该 baseline 尚未实现，已作为 protocol deviation 记录。
 - 输出目录：`experiments/summary/v0_7_0/`。
 
 ## v0.6.8b - 稳健性与机制审计
