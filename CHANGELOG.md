@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.7.1b - External Review Ranking Protocol Completion
+
+- 新增 `scripts/evaluate_v071b_protocol_completion_ci.py`，补全 v0.7.1 外部复核排序的统计验证流程。
+- 新增 random gate-only baseline，用于检查 `gated_severe_prob_mass_only` 的增益是否超过单纯预测等级 gate。
+- 新增 image-clustered bootstrap CI，同一图像的 6 个 backbone 记录一起重采样。
+- 新增 seed sensitivity check，使用 seed=42 / 123 / 2026 / 3407 验证 Monte Carlo 稳定性。
+- 主比较固定为 VTDR miss / Top20% / `gated_severe_prob_mass_only` vs `random_gate_only`。
+- 主要结果：
+
+  * IDRiD_data：Δ event recall = +0.3385，95% CI [0.2195, 0.4742]。
+  * MESSIDOR2：Δ event recall = +0.6268，95% CI [0.5003, 0.7369]。
+- 结论：在当前冻结协议下，severe-class probability mass 相比 random gate-only 提供了额外的 VTDR miss 复核排序信息。
+- 更新 v0.7.1b 输出文件：
+
+  * `experiments/summary/v0_7_1b/`
+  * `experiments/summary/v0_7_1b_seed_sensitivity/`
+
+
+
 ## v0.7.1 - External DR Direct Inference and Review Ranking
 
 - 新增 `scripts/run_v071_external_dr_direct_inference.py`，使用 v0.7.0 冻结的 APTOS-trained checkpoints 对 IDRiD_data / MESSIDOR2 test split 进行 direct external inference。
