@@ -42,7 +42,7 @@ Top20% 结果显示，expected_gap_only 在 IDRiD_data / MESSIDOR2 上具有一�
 
 - gated_severe_prob_mass_only = P(grade 3) + P(grade 4), gated by pred_grade <= 2
 
-Top20% 结果显示，gated_severe_prob_mass_only 在两个外部数据集上均表现出稳定的重症漏检富集能力。
+Top20% 结果显示，gated_severe_prob_mass_only 在两个外部数据集上均表现出重症漏检排序趋势。
 
 - IDRiD_data：event recall 约 0.3750–0.6957，enrichment ratio 约 1.84–3.41。
 - MESSIDOR2：event recall 约 0.7586–0.8889，enrichment ratio 约 3.76–4.41。

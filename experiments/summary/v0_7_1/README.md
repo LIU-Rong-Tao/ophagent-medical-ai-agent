@@ -48,8 +48,14 @@ v0.7.1 使用 v0.7.0 冻结的 APTOS-trained checkpoints，直接在 IDRiD_data 
 在该背景下：
 
 - `expected_gap_only` 对 `large_undergrading` 有一定富集能力，但外部迁移不稳定。
-- `gated_severe_prob_mass_only` 对 `vision_threatening_dr_miss` 显示更稳定的外部富集能力，是 v0.7.1 最强结果。
+- `gated_severe_prob_mass_only` 对 `vision_threatening_dr_miss` 显示更明确的外部排序趋势，是 v0.7.1 最强结果。
 
 ## 解释边界
 
 本目录结果不能用于声称模型已完成临床泛化验证。若分类迁移不足，ranking 结果应作为 failure analysis 和 residual risk analysis，而不是 deployment validation。
+
+## v0.7.1b 后续补充说明
+
+v0.7.1 的排序结果是在 random gate-only 对照和 clustered CI 之前形成的外部压力测试结果。
+
+v0.7.1b 后续补充显示：在 Top20% 预算下，`gated_severe_prob_mass_only` 相比 `random_gate_only_expected`，为 VTDR miss 提供了额外排序信息。该结论限于当前公共数据集、grade-based proxy 和六个 frozen APTOS backbones。
