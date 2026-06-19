@@ -39,7 +39,7 @@ Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only_
 
 其中：
 
-- `Δ event recall = gated_severe_prob_mass_only - random_gate_only`
+- `Δ event recall = gated_severe_prob_mass_only - random_gate_only_expected`
 - `residual event count reduction` 为正，表示 gated 方法相比 random gate-only 少留下的残余危险事件数量；
 - `win rate` 表示 bootstrap 中 `Δ > 0` 的比例，不是临床成功概率。
 
