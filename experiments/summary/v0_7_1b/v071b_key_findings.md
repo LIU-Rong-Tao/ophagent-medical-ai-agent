@@ -32,7 +32,7 @@ v0.7.1b 用于补全 v0.7.1 的证据链，不开启新方向。
 
 Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only` 显示明确增量。
 
-| dataset | Δ event recall | 95% CI | win rate | Δ residual event count | Δ residual event rate |
+| dataset | Δ event recall | 95% CI | win rate | residual event count reduction | residual event rate reduction |
 |---|---:|---:|---:|---:|---:|
 | IDRiD_data | +0.3385 | [0.2195, 0.4742] | 1.0000 | +7.8787 | +0.0961 |
 | MESSIDOR2 | +0.6268 | [0.5003, 0.7369] | 1.0000 | +16.7396 | +0.0399 |
@@ -40,7 +40,7 @@ Top20% 复核预算下，`gated_severe_prob_mass_only` 相对 `random_gate_only`
 其中：
 
 - `Δ event recall = gated_severe_prob_mass_only - random_gate_only`
-- `Δ residual event count` 为正，表示 gated 方法相比 random gate-only 少留下的残余危险事件数量；
+- `residual event count reduction` 为正，表示 gated 方法相比 random gate-only 少留下的残余危险事件数量；
 - `win rate` 表示 bootstrap 中 `Δ > 0` 的比例，不是临床成功概率。
 
 ## Go / No-Go 判断

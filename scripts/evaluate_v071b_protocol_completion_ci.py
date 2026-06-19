@@ -538,12 +538,12 @@ def bootstrap_one_dataset(
         "ci95_low_delta_event_recall": low_recall,
         "ci95_high_delta_event_recall": high_recall,
         "win_rate_delta_gt_0": float(np.mean(recall > 0)),
-        "mean_delta_residual_event_count": mean_residual_count,
-        "ci95_low_delta_residual_event_count": low_residual_count,
-        "ci95_high_delta_residual_event_count": high_residual_count,
-        "mean_delta_residual_event_rate": mean_residual_rate,
-        "ci95_low_delta_residual_event_rate": low_residual_rate,
-        "ci95_high_delta_residual_event_rate": high_residual_rate,
+        "mean_residual_event_count_reduction": mean_residual_count,
+        "ci95_low_residual_event_count_reduction": low_residual_count,
+        "ci95_high_residual_event_count_reduction": high_residual_count,
+        "mean_residual_event_rate_reduction": mean_residual_rate,
+        "ci95_low_residual_event_rate_reduction": low_residual_rate,
+        "ci95_high_residual_event_rate_reduction": high_residual_rate,
     }
 
 
@@ -620,8 +620,8 @@ def decide_go_no_go(primary_ci: pd.DataFrame) -> Tuple[str, str]:
         )
 
     return (
-        "弱证据",
-        "两个数据集方向冲突，或相对 random gate-only 无明确增量，不能声称 severe-class probability mass 提供稳定额外排序信息。",
+        "不一致/证据不足",
+        "两个数据集方向冲突，或任一数据集点估计不为正，不能声称 severe-class probability mass 提供稳定额外排序信息。",
     )
 
 
@@ -657,12 +657,12 @@ def write_summary(
         "ci95_low_delta_event_recall",
         "ci95_high_delta_event_recall",
         "win_rate_delta_gt_0",
-        "mean_delta_residual_event_count",
-        "ci95_low_delta_residual_event_count",
-        "ci95_high_delta_residual_event_count",
-        "mean_delta_residual_event_rate",
-        "ci95_low_delta_residual_event_rate",
-        "ci95_high_delta_residual_event_rate",
+        "mean_residual_event_count_reduction",
+        "ci95_low_residual_event_count_reduction",
+        "ci95_high_residual_event_count_reduction",
+        "mean_residual_event_rate_reduction",
+        "ci95_low_residual_event_rate_reduction",
+        "ci95_high_residual_event_rate_reduction",
     ]
     lines.append(df_to_markdown(primary_ci[show_cols]))
     lines.append("")
