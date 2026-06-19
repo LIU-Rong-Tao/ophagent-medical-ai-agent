@@ -40,45 +40,8 @@ v0.7.1b 完成了外部 DR 数据上的复核排序协议补全。核心问题�
 - `Bootstrap win rate` 表示 bootstrap 中 `Δ recall > 0` 的比例。
 - `Mean residual count reduction / backbone` 是六个 backbone 的平均残余危险事件减少量，不是患者数。
 - random gate-only 的独立随机抽样用于估计 baseline 分布；primary bootstrap 比较使用 `random_gate_only_expected`。
-- `learned_logistic` 是 v0.6.8/v0.6.8b 的内部监督式基线；原 v0.7.0 协议计划保留其外部 baseline，但当前 v0.7.1/v0.7.1b 尚未实现外部 frozen learned_logistic 推理，属于 secondary baseline 缺失，不影响本轮 primary gate-only comparison。
+- `learned_logistic` 是 v0.6.8/v0.6.8b 的内部监督式基线；原 v0.7.0 协议计划保留其外部 baseline，但当前 v0.7.1/v0.7.1b 尚未实现外部 frozen learned_logistic 推理，属于预设监督式 baseline（非 primary comparator）缺失 / protocol deviation，不影响本轮 primary gate-only comparison。
 
-## Latest: v0.7.1b
-
-v0.7.1b 完成了外部 DR 数据上的复核排序协议补全。
-
-核心问题：
-
-> 在模型把病例预测成非重症时，输出概率里残留的重症概率，是否还能帮助我们把真正危险的漏检排到更前面？
-
-主实验设置：
-
-* 训练来源：APTOS2019 frozen checkpoints
-* 外部测试：IDRiD_data / MESSIDOR2
-* 目标事件：VTDR miss，`true_grade >= 3 and pred_grade < 3`
-* 复核预算：Top20%
-* 方法：`gated_severe_prob_mass_only`
-* 对照：`random_gate_only`
-* 统计：image-clustered bootstrap，同一图像的 6 个 backbone 记录一起重采样
-
-结果：
-
-| Dataset    | Δ recall |           95% CI | Win rate | Residual event count reduction |
-| ---------- | -------: | ---------------: | -------: | -----------------------------: |
-| IDRiD_data |  +0.3385 | [0.2195, 0.4742] |   1.0000 |                        +7.8787 |
-| MESSIDOR2  |  +0.6268 | [0.5003, 0.7369] |   1.0000 |                       +16.7396 |
-
-一句话解释：
-
-> 只知道“模型预测为非重症”还不够；在这些候选样本内部，重症概率质量仍然能继续排序危险漏检。
-
-随机种子敏感性检查：
-
-* seed=42 / 123 / 2026 / 3407
-* 两个外部数据集的 Δ recall 均稳定为正
-* CI 下界均大于 0
-* win rate 均为 1.0
-
----
 
 ## Run
 
