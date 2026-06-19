@@ -1,0 +1,10 @@
+dataset,split,split_exists,unexpected_class_dirs,n_unexpected_class_dirs,metadata_files_found,patient_or_eye_grouping_metadata_observed,analysis_unit,n_images,n_unreadable_images,min_width,min_height,median_width,median_height,observed_modes,observed_channels
+APTOS2019,train,True,,0,readme.txt,False,image_level_only,2048,0,256,256,256.0,256.0,RGB,3
+APTOS2019,val,True,,0,readme.txt,False,image_level_only,514,0,256,256,256.0,256.0,RGB,3
+APTOS2019,test,True,,0,readme.txt,False,image_level_only,1100,0,256,256,256.0,256.0,RGB,3
+IDRiD_data,train,True,,0,readme.txt,False,image_level_only,329,0,3408,3408,3416.0,3416.0,RGB,3
+IDRiD_data,val,True,,0,readme.txt,False,image_level_only,84,0,3412,3412,3416.0,3416.0,RGB,3
+IDRiD_data,test,True,,0,readme.txt,False,image_level_only,103,0,3412,3412,3416.0,3416.0,RGB,3
+MESSIDOR2,train,True,,0,readme.txt,False,image_level_only,972,0,904,904,1384.0,1384.0,RGB,3
+MESSIDOR2,val,True,,0,readme.txt,False,image_level_only,246,0,904,904,1384.0,1384.0,RGB,3
+MESSIDOR2,test,True,,0,readme.txt,False,image_level_only,526,0,904,904,1384.0,1384.0,RGB,3

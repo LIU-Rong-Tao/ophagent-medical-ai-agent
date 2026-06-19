@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## v0.7.1b - External review ranking protocol completion
+
+- 新增 `scripts/evaluate_v071b_protocol_completion_ci.py`，补全 v0.7.1 外部复核排序的统计验证流程。
+- 新增 random gate-only baseline，用于检查 `gated_severe_prob_mass_only` 的增益是否超过单纯预测等级 gate。
+- 新增 image-clustered bootstrap CI，同一图像的 6 个 backbone 记录一起重采样。
+- 新增 seed sensitivity check，使用 seed=42 / 123 / 2026 / 3407 验证 Monte Carlo 稳定性。
+- 主比较固定为 VTDR miss / Top20% / `gated_severe_prob_mass_only` vs `random_gate_only_expected`。
+- 主要结果：
+  - IDRiD_data：Δ event recall = +0.3385，95% CI [0.2195, 0.4742]。
+  - MESSIDOR2：Δ event recall = +0.6268，95% CI [0.5003, 0.7369]。
+- 记录 protocol deviation：原 v0.7.0 协议计划保留外部 `learned_logistic` secondary baseline，但当前 v0.7.1/v0.7.1b 尚未实现该外部 baseline；本版本 primary gate-only comparison 不受影响。
+
+## v0.7.1 - External DR direct inference and review ranking
+
+- 使用 APTOS-trained frozen checkpoints 直接推理 IDRiD_data / MESSIDOR2 test split。
+- 新增外部分类指标、混淆矩阵、逐样本预测表和复核排序评估。
+- 输出目录：`experiments/summary/v0_7_1/`。
+- 结果显示外部分类迁移存在明显压力；复核排序结果用于 v0.7.1b 的 gate-only 对照和 clustered CI 验证。
+
+## v0.7.0 - External DR protocol freeze and dataset precheck
+
+- 冻结外部 DR 验证前的目标事件、复核预算、排序信号和 checkpoint manifest。
+- 新增 IDRiD_data / MESSIDOR2 外部数据预检、类别分布统计和 MD5 重叠审计。
+- 未发现 APTOS 与外部 test split 的 MD5 重叠。
+- 发现 IDRiD 内部 1 组 train/test MD5 重复且标签冲突，已记录 duplicate exclusion manifest。
+- 原协议计划保留外部 `learned_logistic` 监督式 baseline；截至 v0.7.1b，该 baseline 尚未实现，已作为 protocol deviation 记录。
+- 输出目录：`experiments/summary/v0_7_0/`。
 
 ## v0.6.8b - 稳健性与机制审计
 
