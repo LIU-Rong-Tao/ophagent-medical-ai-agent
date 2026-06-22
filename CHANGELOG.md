@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.7.4 - Audit Demo case detail and checkpoint discovery
+
+- 新增六个 APTOS backbone 的 checkpoint / artifact 自动发现。
+- 新增病例复核详情弹窗，不增加第六页导航。
+- 新增复核容量 N、风险 Top N 和随机抽 N 对照，用于模拟科室动态复核工作量。
+- 新增病例队列筛选、搜索和每页 12 条分页。
+- 新增预审/后验数据隔离，默认临床详情不显示真实标签和后验事件。
+- 新增 generic multiclass 边界，非 DR CSV 不启用 VTDR miss、large undergrading、expected grade 等 DR 专属指标。
+- 新增 checkpoint discovery、case detail、容量抽样和协议边界相关测试。
+
+## v0.7.3 - Audit Demo clinical UI
+
+- 将 Streamlit demo 升级为五页 OphAgent Audit Demo。
+- 新增临床展示 / 研究审计双模式。
+- 默认展示临床病例卡与红黄绿复核队列。
+- 修复中文显示、数值遮挡、标签重叠和候选卡省略号问题。
+- 保留 v0.7.1b / v0.7.2 外部冻结研究证据展示。
+- 保留旧版入口 `app/demo_legacy_v0_4_2.py`。
+
+## v0.7.2 - Metric sensitivity audit
+
+- 新增 metric-sensitivity audit，用于检查预审排序结论是否依赖单一评价指标。
+- 固定事件目标为 grade-based VTDR miss proxy。
+- 比较 AURC、AUGRC、partial_AUGRC_70_90、Top20 event recall 等评价口径。
+- 主要结果：
+  - AURC：12/12 第一；
+  - AUGRC：12/12 第一；
+  - partial_AUGRC_70_90：12/12 第一；
+  - Top20 event recall：11/12 第一或并列第一。
+- 明确该结果表示跨评价口径的一致性，不等同于临床效用证明。
+
 ## v0.7.1b - External review ranking protocol completion
 
 - 新增 `scripts/evaluate_v071b_protocol_completion_ci.py`，补全 v0.7.1 外部复核排序的统计验证流程。
