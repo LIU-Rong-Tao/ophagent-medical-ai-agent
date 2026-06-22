@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import gc
 import json
 from pathlib import Path
 from typing import Any
@@ -20,6 +19,7 @@ from app.checkpoints import (
     select_preferred_artifacts,
     summarize_frozen_model_finding,
 )
+from app.inference import InferenceResult, run_single_image_inference
 from app.ui import (
     metric_card,
     page_header,
@@ -93,99 +93,46 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def load_registered_model(
-    artifact: ModelArtifact,
-):
-    import timm
-    import torch
+def resolve_display_result(
+    offline_result: dict[str, Any] | None,
+    online_result: InferenceResult | None,
+) -> dict[str, Any] | None:
+    """在线成功优先展示；在线失败时只保留真实离线记录。"""
 
-    if not artifact.can_attempt_load:
-        raise RuntimeError("当前模型产物不满足在线加载条件。")
-    assert artifact.checkpoint_path is not None
-    assert artifact.config_path is not None
-    assert artifact.class_to_idx_path is not None
-    cache_key = (
-        artifact.model_key,
-        str(artifact.checkpoint_path),
-        artifact.checkpoint_mtime_ns,
-    )
-    active = st.session_state.get("_ophagent_active_model")
-    if active and active.get("key") == cache_key:
-        return (
-            active["model"],
-            active["device"],
-            active["idx_to_class"],
-            active["image_size"],
+    if online_result is None:
+        return offline_result
+    if online_result.ok:
+        return online_result.to_display_payload()
+    return offline_result
+
+
+def clinical_source_status(
+    artifact,
+    *,
+    display_result: dict[str, Any] | None,
+    online_result: InferenceResult | None,
+) -> str:
+    """面向临床展示的简洁来源状态，不替代研究审计元数据。"""
+
+    if online_result is not None and online_result.ok:
+        protocol = (
+            "DR 五级审计已启用"
+            if artifact.protocol_id == "dr_icdr_5class_proxy_v1"
+            else "通用概率审计已启用"
         )
-    if active:
-        try:
-            active["model"].to("cpu")
-        except Exception:
-            pass
-        st.session_state.pop("_ophagent_active_model", None)
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-    config = load_json(artifact.config_path)
-    mapping = load_json(artifact.class_to_idx_path)
-    if not config or not mapping:
-        raise ValueError("checkpoint 配置或类别映射为空。")
-    model = timm.create_model(
-        artifact.loader_model_name,
-        pretrained=False,
-        num_classes=int(config["num_classes"]),
-        drop_path_rate=float(config.get("drop_path", 0.0)),
-    )
-    checkpoint = torch.load(
-        artifact.checkpoint_path,
-        map_location="cpu",
-        weights_only=True,
-    )
-    if isinstance(checkpoint, dict):
-        for key in ("model", "model_state_dict", "state_dict"):
-            if key in checkpoint and isinstance(checkpoint[key], dict):
-                checkpoint = checkpoint[key]
-                break
-    model.load_state_dict(checkpoint, strict=True)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device).eval()
-    idx_to_class = {int(index): name for name, index in mapping.items()}
-    image_size = int(config.get("image_size", 224))
-    st.session_state["_ophagent_active_model"] = {
-        "key": cache_key,
-        "model": model,
-        "device": device,
-        "idx_to_class": idx_to_class,
-        "image_size": image_size,
-    }
-    return model, device, idx_to_class, image_size
-
-
-def run_registered_inference(
-    image: Image.Image,
-    artifact: ModelArtifact,
-) -> dict[str, Any]:
-    import torch
-    import torch.nn.functional as functional
-
-    from agent.runner import build_transform
-
-    model, device, idx_to_class, image_size = load_registered_model(artifact)
-    tensor = build_transform(image_size)(image.convert("RGB")).unsqueeze(0).to(device)
-    with torch.no_grad():
-        probabilities = functional.softmax(model(tensor), dim=1)[0].cpu().tolist()
-    display_labels = [
-        RAW_TO_DISPLAY.get(idx_to_class[index], idx_to_class[index])
-        for index in range(len(probabilities))
-    ]
-    pred_grade = int(max(range(len(probabilities)), key=probabilities.__getitem__))
-    return {
-        "labels": display_labels,
-        "probabilities": probabilities,
-        "pred_grade": pred_grade,
-        "source": f"{artifact.display_name} 在线 checkpoint 推理",
-    }
+        return (
+            f"当前结果来源：{artifact.display_name} 在线推理｜"
+            f"本会话加载成功｜{protocol}"
+        )
+    if online_result is not None:
+        return (
+            "在线推理未完成｜"
+            f"失败阶段：{online_result.stage}｜"
+            "未使用教学概率或模型回退"
+        )
+    if display_result is not None:
+        return "当前结果来源：冻结 prediction record｜本会话未运行模型"
+    return "当前尚未生成模型结果｜未使用教学概率或模型回退"
 
 
 def offline_result_for(
@@ -270,17 +217,6 @@ def render() -> None:
         st.info(
             "当前模型缺少在线权重和离线 prediction record，相关模块将显示空状态。"
         )
-    load_state = st.session_state.get("_ophagent_model_load_state", {}).get(
-        selected_model
-    )
-    if load_state == "verified":
-        st.success("本会话加载验证成功。")
-    elif isinstance(load_state, str) and load_state.startswith("failed:"):
-        st.error(
-            "加载失败，已保留离线预测展示；错误摘要："
-            + load_state.removeprefix("failed:")
-        )
-
     input_mode = st.radio(
         "病例来源",
         ["仓库样例", "上传图像"],
@@ -318,33 +254,35 @@ def render() -> None:
         disabled=not artifact.can_attempt_load,
         help="自动发现阶段不加载模型；只有点击后才尝试加载当前 checkpoint。",
     )
-    result = offline_result
+    online_result: InferenceResult | None = None
     if run_online:
         with st.spinner("加载 checkpoint 并运行推理..."):
-            try:
-                result = run_registered_inference(selected_image, artifact)
-            except Exception as exc:
-                states = dict(
-                    st.session_state.get("_ophagent_model_load_state", {})
-                )
-                states[selected_model] = f"failed:{type(exc).__name__}: {exc}"
-                st.session_state["_ophagent_model_load_state"] = states
+            online_result = run_single_image_inference(
+                selected_image,
+                artifact,
+                cache=st.session_state,
+            )
+            if not online_result.ok:
                 st.error(
-                    "当前模型加载或推理失败，页面继续使用可用的离线预测记录。"
+                    f"在线推理未完成（{online_result.stage}）："
+                    f"{online_result.error_type or 'Error'}"
+                    f"：{online_result.error_message or '未提供错误摘要'}"
                 )
-                result = offline_result
-            else:
-                states = dict(
-                    st.session_state.get("_ophagent_model_load_state", {})
-                )
-                states[selected_model] = "verified"
-                st.session_state["_ophagent_model_load_state"] = states
+    result = resolve_display_result(offline_result, online_result)
+    source_status = clinical_source_status(
+        artifact,
+        display_result=result,
+        online_result=online_result,
+    )
 
     image_col, result_col = st.columns([0.8, 1.4], gap="large")
     with image_col:
         section_header("输入图像")
         st.image(selected_image, use_container_width=True)
-        st.caption(result["source"])
+        if result is not None:
+            st.caption(result.get("source", "模型输出结果"))
+        else:
+            st.caption("当前未生成有效在线推理结果")
         if selected_path:
             st.code(selected_path.relative_to(PROJECT_ROOT).as_posix())
         elif uploaded_name:
@@ -437,7 +375,11 @@ def render() -> None:
         "以保持预审场景：先排序，后验阶段再评价是否抓到危险事件。"
     )
 
-    section_header("模型追溯")
+    section_header(
+        "结果来源与审计范围"
+        if st.session_state.get("display_mode") == "临床展示"
+        else "模型追溯"
+    )
     status_labels = {
         "static_complete": "静态完整",
         "inference_only": "可尝试加载，批量证据不完整",
@@ -445,26 +387,46 @@ def render() -> None:
         "artifact_missing": "文件不完整",
         "checkpoint_ambiguous": "权重存在歧义",
     }
-    trace_cols = st.columns(3, gap="small")
-    with trace_cols[0]:
-        metric_card(
-            "产物状态",
-            status_labels.get(artifact.artifact_status, artifact.artifact_status),
-            artifact.experiment_dir.name,
+    if st.session_state.get("display_mode") == "临床展示":
+        st.markdown(
+            "<div style='padding:.85rem 1rem;border-left:4px solid #0F8A83;"
+            "background:#F3F8F8;border-radius:4px;color:#243447'>"
+            f"<strong>{source_status}</strong><br>"
+            "<span style='color:#617080'>技术文件、协议和哈希信息可在研究审计模式查看。</span>"
+            "</div>",
+            unsafe_allow_html=True,
         )
-    with trace_cols[1]:
-        metric_card(
-            "通用概率审计",
-            "可计算" if capabilities["supports_probability_audit"] else "不可计算",
-            artifact.protocol_id,
-        )
-    with trace_cols[2]:
-        metric_card(
-            "DR 等级审计",
-            "可计算" if capabilities["supports_ordinal_dr_audit"] else "不适用",
-            "由显式协议决定，不按类别数量猜测",
-        )
-    if st.session_state.get("display_mode") == "研究审计":
+    else:
+        trace_cols = st.columns(3, gap="small")
+        with trace_cols[0]:
+            metric_card(
+                "产物状态",
+                status_labels.get(
+                    artifact.artifact_status,
+                    artifact.artifact_status,
+                ),
+                artifact.experiment_dir.name,
+            )
+        with trace_cols[1]:
+            metric_card(
+                "通用概率审计",
+                (
+                    "可计算"
+                    if capabilities["supports_probability_audit"]
+                    else "不可计算"
+                ),
+                artifact.protocol_id,
+            )
+        with trace_cols[2]:
+            metric_card(
+                "DR 等级审计",
+                (
+                    "可计算"
+                    if capabilities["supports_ordinal_dr_audit"]
+                    else "不适用"
+                ),
+                "由显式协议决定，不按类别数量猜测",
+            )
         with st.expander("查看 checkpoint / artifact 注册信息"):
             st.json(artifact.to_dict())
             metadata = load_json(artifact.checkpoint_meta_path) if artifact.checkpoint_meta_path else {}
