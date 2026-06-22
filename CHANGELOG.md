@@ -9,6 +9,8 @@
 - 新增预审/后验数据隔离，默认临床详情不显示真实标签和后验事件。
 - 新增 generic multiclass 边界，非 DR CSV 不启用 VTDR miss、large undergrading、expected grade 等 DR 专属指标。
 - 新增 checkpoint discovery、case detail、容量抽样和协议边界相关测试。
+- 修复单病例、批量卡片和详情弹窗的展示语义，统一区分“模型预测等级”和“模型输出复核优先级”，避免将 PDR / Severe 等重症预测误解为普通病例。
+- 修复上传图像在线 checkpoint 推理链路，上传图像无历史 prediction record 时也可基于当前模型生成五级概率；失败时显示固定阶段错误，不回退教学概率。
 
 ## v0.7.3 - Audit Demo clinical UI
 
