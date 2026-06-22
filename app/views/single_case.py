@@ -11,6 +11,7 @@ import streamlit as st
 from PIL import Image
 
 from app.audit_core import summarize_dr_review_priority
+from app.clinical_semantics import summarize_clinical_display
 from app.checkpoints import (
     ModelArtifact,
     compute_file_sha256,
@@ -51,20 +52,6 @@ GRADE_DISPLAY_LABELS = [
     "3级 · 重度",
     "4级 · 增殖期",
 ]
-GRADE_CLINICAL_NAMES = [
-    "未见糖尿病视网膜病变",
-    "轻度糖尿病视网膜病变",
-    "中度糖尿病视网膜病变",
-    "重度糖尿病视网膜病变",
-    "增殖期糖尿病视网膜病变",
-]
-RAW_TO_DISPLAY = {
-    "anodr": "No DR",
-    "bmilddr": "Mild DR",
-    "cmoderatedr": "Moderate DR",
-    "dseveredr": "Severe DR",
-    "eproliferativedr": "Proliferative DR",
-}
 
 @st.cache_data(show_spinner=False)
 def load_predictions(path: str) -> pd.DataFrame:
@@ -313,22 +300,20 @@ def render() -> None:
                 reasons.append("多个类别存在犹豫")
             if not reasons:
                 reasons.append("未触发主要输出风险信号")
+            clinical_summary = summarize_clinical_display(
+                pred_grade=pred_grade,
+                probabilities=probabilities,
+                review_priority=str(review["level"]),
+            )
             render_case_card(
                 case_id=(
                     selected_path.stem
                     if selected_path
                     else uploaded_name or "uploaded_case"
                 ),
-                priority_level=str(review["level"]),
-                priority_label=str(review["label"]),
-                prediction=f"模型预测：{GRADE_CLINICAL_NAMES[order[0]]}",
-                summary=str(review["summary"]),
-                action=str(review["action"]),
+                clinical_summary=clinical_summary,
+                model_context=artifact.display_name,
                 reasons=reasons,
-            )
-            st.caption(
-                f"当前模型：{artifact.display_name}。这是模型输出审计优先级，"
-                "不是临床病情分级。"
             )
 
     if result is not None:

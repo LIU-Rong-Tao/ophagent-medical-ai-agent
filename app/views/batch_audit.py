@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from app.audit_core import translate_risk_reasons
+from app.clinical_semantics import summarize_clinical_display
 from app.checkpoints import (
     ModelArtifact,
     discover_model_artifacts,
@@ -21,6 +22,7 @@ from app.views.case_detail import (
     index_prediction_records,
     normalize_image_key,
     paginate_case_queue,
+    probability_values_for_case,
     render_case_detail_dialog,
     select_review_capacity,
 )
@@ -82,15 +84,6 @@ METHOD_NAMES = {
     "margin_only": "Top1-Top2 间隔",
     "uncertainty_rank_fusion": "不确定性排序融合",
 }
-
-DR_GRADE_NAMES = {
-    "No DR": "未见 DR",
-    "Mild DR": "轻度 DR",
-    "Moderate DR": "中度 DR",
-    "Severe DR": "重度 DR",
-    "Proliferative DR": "增殖期 DR",
-}
-
 
 @st.cache_data(show_spinner=False)
 def load_csv(path: str) -> pd.DataFrame:
@@ -207,24 +200,24 @@ def render_pre_review_queue() -> None:
     count_cols = st.columns(3, gap="small")
     with count_cols[0]:
         metric_card(
-            "高优先级",
+            "优先输出复核",
             f"{int(level_counts.get('high', 0))}",
-            "进入首批模型结果复核",
+            "输出信号提示优先检查",
             accent="red",
         )
     with count_cols[1]:
         metric_card(
-            "中优先级",
+            "关注输出复核",
             f"{int(level_counts.get('medium', 0))}",
-            "建议在常规队列中提前查看",
+            "输出存在边界或分散信号",
             accent="amber",
         )
     with count_cols[2]:
         metric_card(
-            "常规队列",
+            "常规输出复核",
             f"{int(level_counts.get('low', 0))}",
-            "排序较后，不表示安全放行",
-            accent="teal",
+            "未触发主要输出异常信号",
+            accent="baseline",
         )
 
     section_header(
@@ -375,46 +368,31 @@ def render_pre_review_queue() -> None:
     card_columns = st.columns(2, gap="large")
     for index, (_, row) in enumerate(cards.iterrows()):
         raw_level = str(row.get("pre_review_risk_level", "medium"))
-        priority_level = {
+        audit_priority = {
             "high": "high",
             "medium": "medium",
             "low": "routine",
         }.get(raw_level, "medium")
-        priority_label = {
-            "high": "优先复核",
-            "medium": "建议关注",
-            "low": "常规队列",
-        }.get(raw_level, "建议关注")
         reasons = translate_risk_reasons(row.get("risk_reasons"))
-        prediction_raw = str(row.get("pred_label", "未记录"))
-        top2_raw = str(row.get("top2_label", "未记录"))
-        prediction = DR_GRADE_NAMES.get(prediction_raw, prediction_raw)
-        top2 = DR_GRADE_NAMES.get(top2_raw, top2_raw)
-        top2_probability = float(row.get("top2_confidence", 0.0))
-        severe_mass = float(row.get("severe_prob_mass", 0.0))
-        summary = (
-            f"模型预测为 {prediction}；第二候选为 {top2}（{top2_probability:.1%}）。"
-            f"重症类别概率质量为 {severe_mass:.1%}。"
-        )
-        action = {
-            "high": "建议进入首批模型结果复核队列",
-            "medium": "建议在常规队列中提前查看",
-            "low": "按常规流程复核，不代表无需查看",
-        }.get(raw_level, "建议结合图像质量进一步复核")
         normalized_key = normalize_image_key(
             row.get("image_path") or row.get("case_id")
         )
         prediction_record = prediction_index.get((backbone, normalized_key), {})
         merged = {**row.to_dict(), **prediction_record}
         case = build_pre_review_case(merged, backbone=backbone)
+        case["backbone_display_name"] = artifact.display_name
+        probabilities = probability_values_for_case(case)
+        clinical_summary = summarize_clinical_display(
+            pred_grade=int(case.get("pred_grade", 0)),
+            probabilities=probabilities,
+            severe_probability_mass=float(case.get("severe_prob_mass", 0.0)),
+            review_priority=audit_priority,
+        )
         with card_columns[index % 2]:
             render_case_card(
                 case_id=str(row.get("case_id", "")),
-                priority_level=priority_level,
-                priority_label=priority_label,
-                prediction=f"模型结果：{prediction}",
-                summary=summary,
-                action=action,
+                clinical_summary=clinical_summary,
+                model_context=artifact.display_name,
                 reasons=reasons,
             )
             if st.button(

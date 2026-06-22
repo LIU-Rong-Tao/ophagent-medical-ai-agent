@@ -8,6 +8,8 @@ from collections.abc import Sequence
 
 import streamlit as st
 
+from app.clinical_semantics import ClinicalDisplaySummary
+
 
 COLORS = {
     "navy": "#17324D",
@@ -141,10 +143,10 @@ def inject_app_css() -> None:
         .oa-case-card {{
             background: {COLORS["surface"]};
             border: 1px solid {COLORS["border"]};
-            border-left: 5px solid var(--priority-color, {COLORS["amber"]});
+            border-left: 5px solid var(--severity-color, {COLORS["baseline"]});
             border-radius: 7px;
             padding: 1rem 1.05rem;
-            min-height: 190px;
+            min-height: 258px;
         }}
         .oa-case-top {{
             display: flex;
@@ -156,6 +158,12 @@ def inject_app_css() -> None:
         .oa-case-id {{
             color: {COLORS["muted"]};
             font-size: .78rem;
+            overflow-wrap: anywhere;
+        }}
+        .oa-case-model {{
+            color: {COLORS["muted"]};
+            font-size: .74rem;
+            margin-top: .18rem;
             overflow-wrap: anywhere;
         }}
         .oa-priority {{
@@ -176,23 +184,49 @@ def inject_app_css() -> None:
             border-radius: 50%;
             background: var(--priority-color, {COLORS["amber"]});
         }}
-        .oa-case-prediction {{
-            color: {COLORS["navy"]};
-            font-size: 1.18rem;
-            font-weight: 760;
-            margin-bottom: .3rem;
+        .oa-case-semantic-grid {{
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 1rem;
+            margin-top: .8rem;
+            padding-top: .85rem;
+            border-top: 1px solid {COLORS["border"]};
         }}
-        .oa-case-summary {{
-            color: {COLORS["text"]};
-            line-height: 1.55;
-            font-size: .88rem;
-            min-height: 3.2rem;
+        .oa-case-dimension + .oa-case-dimension {{
+            border-left: 1px solid {COLORS["border"]};
+            padding-left: 1rem;
         }}
-        .oa-case-action {{
-            color: var(--priority-color, {COLORS["amber"]});
-            font-size: .84rem;
+        .oa-dimension-label {{
+            color: {COLORS["muted"]};
+            font-size: .74rem;
+            font-weight: 700;
+            margin-bottom: .25rem;
+        }}
+        .oa-dimension-value {{
+            color: var(--dimension-color, {COLORS["navy"]});
+            font-size: 1.06rem;
+            font-weight: 780;
+            line-height: 1.35;
+        }}
+        .oa-dimension-band {{
+            color: var(--dimension-color, {COLORS["navy"]});
+            font-size: .79rem;
             font-weight: 720;
-            margin-top: .65rem;
+            margin-top: .2rem;
+        }}
+        .oa-dimension-copy {{
+            color: {COLORS["text"]};
+            font-size: .82rem;
+            line-height: 1.55;
+            margin-top: .42rem;
+        }}
+        .oa-case-disclaimer {{
+            color: {COLORS["muted"]};
+            font-size: .72rem;
+            line-height: 1.45;
+            margin-top: .7rem;
+            padding-top: .65rem;
+            border-top: 1px dashed {COLORS["border"]};
         }}
         .oa-reasons {{
             display: flex;
@@ -272,6 +306,15 @@ def inject_app_css() -> None:
             }}
             .oa-case-card {{
                 min-height: auto;
+            }}
+            .oa-case-semantic-grid {{
+                grid-template-columns: 1fr;
+            }}
+            .oa-case-dimension + .oa-case-dimension {{
+                border-left: 0;
+                border-top: 1px solid {COLORS["border"]};
+                padding-left: 0;
+                padding-top: .8rem;
             }}
         }}
         </style>
@@ -376,44 +419,106 @@ def priority_palette(level: str) -> tuple[str, str]:
     return {
         "high": (COLORS["red"], "#FDECEA"),
         "medium": (COLORS["amber"], "#FFF4D8"),
-        "routine": (COLORS["teal"], "#E8F4F1"),
+        "routine": ("#52667A", "#EEF2F5"),
     }.get(level, (COLORS["baseline"], "#EEF2F5"))
+
+
+def severity_palette(level: str) -> tuple[str, str]:
+    """返回模型预测严重程度的前景色与浅背景色。"""
+
+    return {
+        "severe": (COLORS["red"], "#FDECEA"),
+        "moderate": (COLORS["amber"], "#FFF4D8"),
+        "nonsevere": ("#52667A", "#EEF2F5"),
+    }.get(level, (COLORS["baseline"], "#EEF2F5"))
+
+
+def build_case_card_html(
+    *,
+    case_id: str,
+    clinical_summary: ClinicalDisplaySummary,
+    model_context: str = "",
+    reasons: Sequence[str] = (),
+) -> str:
+    """构建病情等级与输出可疑度分栏展示的病例卡 HTML。"""
+
+    priority_color, priority_background = priority_palette(
+        clinical_summary.audit_priority_level
+    )
+    severity_color, _ = severity_palette(clinical_summary.clinical_severity_level)
+    reason_html = "".join(
+        f'<span class="oa-reason">{html.escape(str(reason))}</span>'
+        for reason in reasons[:3]
+    )
+    model_html = (
+        f'<div class="oa-case-model">当前模型：{html.escape(model_context)}</div>'
+        if model_context
+        else ""
+    )
+    return f"""
+        <div class="oa-case-card"
+             style="--severity-color:{severity_color};border-left-color:{severity_color}">
+          <div class="oa-case-top">
+            <div>
+              <div class="oa-case-id">病例记录：{html.escape(str(case_id))}</div>
+              {model_html}
+            </div>
+            <span class="oa-priority"
+                  style="color:{priority_color};background:{priority_background}">
+              <span class="oa-priority-dot" style="background:{priority_color}"></span>
+              {html.escape(clinical_summary.audit_priority_label)}
+            </span>
+          </div>
+          <div class="oa-case-semantic-grid">
+            <div class="oa-case-dimension">
+              <div class="oa-dimension-label">模型预测等级</div>
+              <div class="oa-dimension-value"
+                   style="--dimension-color:{severity_color}">
+                {html.escape(clinical_summary.predicted_grade_label)}
+              </div>
+              <div class="oa-dimension-band"
+                   style="--dimension-color:{severity_color}">
+                {html.escape(clinical_summary.predicted_severity_band)}
+              </div>
+              <div class="oa-dimension-copy">
+                {html.escape(clinical_summary.clinical_message)}
+              </div>
+            </div>
+            <div class="oa-case-dimension">
+              <div class="oa-dimension-label">模型输出复核优先级</div>
+              <div class="oa-dimension-value"
+                   style="--dimension-color:{priority_color}">
+                {html.escape(clinical_summary.audit_priority_label)}
+              </div>
+              <div class="oa-dimension-copy">
+                {html.escape(clinical_summary.audit_priority_message)}
+              </div>
+            </div>
+          </div>
+          <div class="oa-reasons">{reason_html}</div>
+          <div class="oa-case-disclaimer">
+            {html.escape(clinical_summary.disclaimer)}
+          </div>
+        </div>
+        """
 
 
 def render_case_card(
     *,
     case_id: str,
-    priority_level: str,
-    priority_label: str,
-    prediction: str,
-    summary: str,
-    action: str,
+    clinical_summary: ClinicalDisplaySummary,
+    model_context: str = "",
     reasons: Sequence[str] = (),
 ) -> None:
-    """渲染面向临床展示的单病例复核卡片。"""
+    """渲染面向临床展示的双维度病例复核卡片。"""
 
-    color, background = priority_palette(priority_level)
-    reason_html = "".join(
-        f'<span class="oa-reason">{html.escape(str(reason))}</span>'
-        for reason in reasons[:3]
-    )
     st.markdown(
-        f"""
-        <div class="oa-case-card"
-             style="border-left-color:{color}">
-          <div class="oa-case-top">
-            <span class="oa-case-id">{html.escape(str(case_id))}</span>
-            <span class="oa-priority" style="color:{color};background:{background}">
-              <span class="oa-priority-dot" style="background:{color}"></span>
-              {html.escape(priority_label)}
-            </span>
-          </div>
-          <div class="oa-case-prediction">{html.escape(prediction)}</div>
-          <div class="oa-case-summary">{html.escape(summary)}</div>
-          <div class="oa-reasons">{reason_html}</div>
-          <div class="oa-case-action" style="color:{color}">{html.escape(action)}</div>
-        </div>
-        """,
+        build_case_card_html(
+            case_id=case_id,
+            clinical_summary=clinical_summary,
+            model_context=model_context,
+            reasons=reasons,
+        ),
         unsafe_allow_html=True,
     )
 

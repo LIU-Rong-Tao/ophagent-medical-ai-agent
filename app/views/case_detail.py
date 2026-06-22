@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from app.audit_core import translate_risk_reasons
+from app.clinical_semantics import summarize_clinical_display
 from app.ui import (
     metric_card,
     render_boundary,
@@ -244,31 +245,17 @@ def paginate_case_queue(
     return frame.iloc[start : start + page_size].copy(), total_pages, current
 
 
-def _priority(case: Mapping[str, Any]) -> tuple[str, str, str]:
+def _audit_priority_level(case: Mapping[str, Any]) -> str:
     raw = str(case.get("pre_review_risk_level", "medium"))
     return {
-        "high": ("high", "优先复核", "建议进入首批模型结果复核队列"),
-        "medium": ("medium", "建议关注", "建议在常规队列中提前查看"),
-        "low": ("routine", "常规队列", "按科室常规流程复核"),
-    }.get(raw, ("medium", "建议关注", "建议结合图像质量进一步复核"))
+        "high": "high",
+        "medium": "medium",
+        "low": "routine",
+        "routine": "routine",
+    }.get(raw, "medium")
 
 
-def _plain_summary(case: Mapping[str, Any]) -> str:
-    pred = str(case.get("pred_label", case.get("pred_label_raw", "未记录")))
-    top2 = str(case.get("top2_label", "未记录"))
-    severe_mass = case.get("severe_prob_mass")
-    if severe_mass is not None and float(severe_mass) >= 0.15:
-        return (
-            f"模型判断为 {pred}，第二候选为 {top2}。"
-            "虽然最终结果未必达到重症等级，输出中仍保留较高重症可能性。"
-        )
-    return (
-        f"模型判断为 {pred}，第二候选为 {top2}。"
-        "当前优先级来自模型输出结构，仍需医生结合图像与临床信息核对。"
-    )
-
-
-def _probability_values(case: Mapping[str, Any]) -> list[float] | None:
+def probability_values_for_case(case: Mapping[str, Any]) -> list[float] | None:
     numeric = [f"prob_{grade}" for grade in range(5)]
     named = [
         "prob_No DR",
@@ -284,7 +271,7 @@ def _probability_values(case: Mapping[str, Any]) -> list[float] | None:
 
 
 def _derived_metrics(case: Mapping[str, Any]) -> dict[str, float | None]:
-    values = _probability_values(case)
+    values = probability_values_for_case(case)
     if values is None:
         return {
             "confidence": _float_or_none(case.get("confidence")),
@@ -336,9 +323,16 @@ def render_case_detail_dialog(
     payload = dict(case)
     if posthoc is not None and display_mode == "研究审计":
         payload = attach_posthoc_evidence(payload, posthoc)
-    level, label, action = _priority(payload)
+    audit_priority = _audit_priority_level(payload)
     reasons = translate_risk_reasons(payload.get("risk_reasons"))
     image = resolve_case_image(payload)
+    probabilities = probability_values_for_case(payload)
+    clinical_summary = summarize_clinical_display(
+        pred_grade=int(payload.get("pred_grade", 0)),
+        probabilities=probabilities,
+        severe_probability_mass=_float_or_none(payload.get("severe_prob_mass")),
+        review_priority=audit_priority,
+    )
 
     if image is not None:
         image_col, summary_col = st.columns([0.9, 1.1], gap="large")
@@ -355,17 +349,17 @@ def render_case_detail_dialog(
     with summary_col:
         render_case_card(
             case_id=str(payload.get("case_id", payload.get("normalized_image_key", ""))),
-            priority_level=level,
-            priority_label=label,
-            prediction=f"当前模型：{payload.get('backbone', '未记录')}",
-            summary=_plain_summary(payload),
-            action=action,
+            clinical_summary=clinical_summary,
+            model_context=str(
+                payload.get(
+                    "backbone_display_name",
+                    payload.get("backbone", "未记录"),
+                )
+            ),
             reasons=reasons,
         )
-        st.caption("该优先级用于安排模型结果复核，不是自动诊断或治疗建议。")
 
     with st.expander("查看模型输出依据", expanded=False):
-        probabilities = _probability_values(payload)
         if probabilities is not None:
             pred_grade = int(
                 payload.get("pred_grade", max(range(5), key=probabilities.__getitem__))
