@@ -8,7 +8,22 @@ import pandas as pd
 import streamlit as st
 
 from app.audit_core import translate_risk_reasons
+from app.checkpoints import (
+    ModelArtifact,
+    discover_model_artifacts,
+    select_preferred_artifacts,
+)
 from app.plots import plot_review_budget_curve
+from app.views.case_detail import (
+    build_pre_review_case,
+    filter_case_queue,
+    initialize_review_capacity,
+    index_prediction_records,
+    normalize_image_key,
+    paginate_case_queue,
+    render_case_detail_dialog,
+    select_review_capacity,
+)
 from app.ui import (
     metric_card,
     page_header,
@@ -41,6 +56,13 @@ RISK_ROOT = (
     / "summary"
     / "v0_6_6"
     / "full_test_backbones"
+)
+CLINICAL_CASES_PATH = (
+    PROJECT_ROOT
+    / "experiments"
+    / "summary"
+    / "v0_6_7"
+    / "clinical_event_cases.csv"
 )
 
 EVENT_NAMES = {
@@ -75,12 +97,51 @@ def load_csv(path: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+@st.cache_data(show_spinner=False)
+def load_artifact_registry() -> dict[str, ModelArtifact]:
+    return select_preferred_artifacts(discover_model_artifacts(PROJECT_ROOT))
+
+
 def risk_table_paths() -> dict[str, Path]:
     paths: dict[str, Path] = {}
     if RISK_ROOT.exists():
         for path in RISK_ROOT.glob("*/pre_review_risk_table.csv"):
             paths[path.parent.name] = path
     return paths
+
+
+def _posthoc_for_case(
+    *,
+    backbone: str,
+    normalized_image_key: str,
+) -> tuple[dict | None, pd.DataFrame | None]:
+    if (
+        st.session_state.get("display_mode") != "研究审计"
+        or not CLINICAL_CASES_PATH.exists()
+    ):
+        return None, None
+    frame = load_csv(str(CLINICAL_CASES_PATH)).copy()
+    frame["_normalized_image_key"] = frame["image_key"].map(normalize_image_key)
+    match = frame[
+        (frame["backbone"].astype(str) == backbone)
+        & (frame["_normalized_image_key"] == normalized_image_key)
+    ]
+    if len(match) > 1:
+        raise ValueError(
+            f"后验病例表存在重复连接键：({backbone}, {normalized_image_key})"
+        )
+    same_image = frame[frame["_normalized_image_key"] == normalized_image_key]
+    peer_columns = [
+        "backbone",
+        "pred_label",
+        "top2_label",
+        "confidence",
+        "margin",
+        "severe_prob_mass",
+    ]
+    peer_columns = [column for column in peer_columns if column in same_image.columns]
+    posthoc = match.iloc[0].to_dict() if len(match) == 1 else None
+    return posthoc, same_image[peer_columns].copy()
 
 
 def render_pre_review_queue() -> None:
@@ -93,12 +154,35 @@ def render_pre_review_queue() -> None:
         render_empty_state("没有病例级风险表", "改为在“后验验证”页查看聚合 tradeoff 结果。")
         return
 
-    backbone = st.selectbox("骨干模型", list(paths), key="pre_review_backbone")
+    registry = load_artifact_registry()
+    model_keys = [key for key in registry if key in paths]
+    if not model_keys:
+        render_empty_state(
+            "模型产物与预审风险表未对齐",
+            "不会回退到 ConvNeXt，也不会使用其他模型的队列。",
+        )
+        return
+    if st.session_state.get("selected_backbone") not in model_keys:
+        st.session_state["selected_backbone"] = model_keys[0]
+    backbone = st.selectbox(
+        "当前模型",
+        model_keys,
+        key="selected_backbone",
+        format_func=lambda key: registry[key].display_name,
+    )
+    artifact = registry[backbone]
+    st.caption(
+        f"当前队列：{artifact.display_name} · {artifact.experiment_dir.name}。"
+        "所有排序仅在该 backbone 内部进行。"
+    )
     frame = load_csv(str(paths[backbone]))
     display_columns = [
         "case_id",
+        "image_path",
+        "pred_grade",
         "pred_label",
         "confidence",
+        "top2_grade",
         "top2_label",
         "top2_confidence",
         "margin",
@@ -110,6 +194,15 @@ def render_pre_review_queue() -> None:
     ]
     display_columns = [column for column in display_columns if column in frame.columns]
     queue = frame.sort_values("review_priority_rank")[display_columns].copy()
+    prediction_index: dict[tuple[str, str], dict] = {}
+    if artifact.test_predictions_path is not None:
+        try:
+            prediction_index = index_prediction_records(
+                load_csv(str(artifact.test_predictions_path)),
+                backbone=backbone,
+            )
+        except ValueError as exc:
+            st.error(f"当前模型 prediction records 无法建立唯一病例索引：{exc}")
     level_counts = queue["pre_review_risk_level"].value_counts()
     count_cols = st.columns(3, gap="small")
     with count_cols[0]:
@@ -135,10 +228,150 @@ def render_pre_review_queue() -> None:
         )
 
     section_header(
-        "首批复核病例卡",
-        "以下展示队列最前面的 6 条记录，因此可能集中为高优先级；全队列分布见上方。",
+        "病例复核队列",
+        "先筛选候选池，再模拟科室当日复核容量；点击病例卡下方按钮打开详情。",
     )
-    cards = queue.head(6)
+    filter_col, search_col = st.columns([0.35, 0.65], gap="large")
+    with filter_col:
+        priority_filter = st.selectbox(
+            "优先级筛选",
+            ["全部", "优先", "关注", "常规"],
+            key=f"priority_filter_{backbone}",
+        )
+    with search_col:
+        case_search = st.text_input(
+            "病例编号搜索",
+            key=f"case_search_{backbone}",
+            placeholder="输入完整或部分病例编号",
+        )
+    filtered = filter_case_queue(
+        queue,
+        priority=priority_filter,
+        search=case_search,
+    )
+    if filtered.empty:
+        render_empty_state("没有匹配病例", "请调整优先级筛选或病例编号。")
+        return
+
+    capacity_key = f"review_capacity_{backbone}"
+    initialize_review_capacity(
+        st.session_state,
+        capacity_key,
+        pool_size=len(filtered),
+    )
+
+    with st.container(border=True):
+        st.markdown("#### 科室复核容量模拟")
+        st.caption(
+            "模拟当前科室本轮最多能复核多少例。默认按风险顺序取 Top N；"
+            "随机抽样仅作为同等工作量下的展示对照。"
+        )
+        capacity_col, method_col, seed_col = st.columns(
+            [0.28, 0.46, 0.26],
+            gap="large",
+        )
+        with capacity_col:
+            review_capacity = int(
+                st.number_input(
+                    "复核容量 N",
+                    min_value=1,
+                    max_value=len(filtered),
+                    step=1,
+                    key=capacity_key,
+                    help="容量作用于当前优先级筛选和病例搜索得到的候选池。",
+                )
+            )
+        with method_col:
+            selection_method = st.radio(
+                "病例选取方式",
+                ["风险 Top N", "随机抽 N"],
+                horizontal=True,
+                key=f"review_selection_method_{backbone}",
+                help="风险 Top N 使用当前模型内部排序；随机抽 N 不改变模型推理。",
+            )
+        with seed_col:
+            random_seed = int(
+                st.number_input(
+                    "随机种子",
+                    min_value=0,
+                    max_value=2_147_483_647,
+                    value=42,
+                    step=1,
+                    disabled=selection_method != "随机抽 N",
+                    key=f"review_random_seed_{backbone}",
+                    help="固定随机种子可保证演示时重复得到同一批对照病例。",
+                )
+            )
+
+        selected_pool = select_review_capacity(
+            filtered,
+            capacity=review_capacity,
+            method=selection_method,
+            random_seed=random_seed,
+        )
+        coverage = len(selected_pool) / len(filtered)
+        method_explanation = (
+            "按当前模型风险排序优先取前 N 例"
+            if selection_method == "风险 Top N"
+            else f"从候选池随机抽取 N 例（seed={random_seed}）"
+        )
+        st.markdown(
+            "<div style='margin-top:.35rem;padding:.72rem .9rem;"
+            "border-left:4px solid #0F8A83;background:#F3F8F8;"
+            "color:#243447;border-radius:4px'>"
+            f"<strong>当前模拟复核 {len(selected_pool)} / {len(filtered)} 例"
+            f"（{coverage:.1%}）</strong><br>"
+            f"<span style='color:#617080'>{method_explanation}</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    page_key = f"queue_page_{backbone}"
+    selection_signature = (
+        priority_filter,
+        case_search,
+        review_capacity,
+        selection_method,
+        random_seed if selection_method == "随机抽 N" else None,
+    )
+    signature_key = f"queue_selection_signature_{backbone}"
+    if st.session_state.get(signature_key) != selection_signature:
+        st.session_state[page_key] = 1
+        st.session_state[signature_key] = selection_signature
+    page_number = int(st.session_state.get(page_key, 1))
+    cards, total_pages, page_number = paginate_case_queue(
+        selected_pool,
+        page_number=page_number,
+        page_size=12,
+    )
+    st.session_state[page_key] = page_number
+    nav_left, nav_center, nav_right = st.columns([0.2, 0.6, 0.2])
+    with nav_left:
+        if st.button(
+            "上一页",
+            disabled=page_number <= 1,
+            key=f"queue_prev_{backbone}",
+            use_container_width=True,
+        ):
+            st.session_state[page_key] = page_number - 1
+            st.rerun()
+    with nav_center:
+        st.markdown(
+            f"<div style='text-align:center;color:#5B6878;padding:.55rem'>"
+            f"第 {page_number} / {total_pages} 页 · "
+            f"本次模拟复核 {len(selected_pool)} 条"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with nav_right:
+        if st.button(
+            "下一页",
+            disabled=page_number >= total_pages,
+            key=f"queue_next_{backbone}",
+            use_container_width=True,
+        ):
+            st.session_state[page_key] = page_number + 1
+            st.rerun()
     card_columns = st.columns(2, gap="large")
     for index, (_, row) in enumerate(cards.iterrows()):
         raw_level = str(row.get("pre_review_risk_level", "medium"))
@@ -168,6 +401,12 @@ def render_pre_review_queue() -> None:
             "medium": "建议在常规队列中提前查看",
             "low": "按常规流程复核，不代表无需查看",
         }.get(raw_level, "建议结合图像质量进一步复核")
+        normalized_key = normalize_image_key(
+            row.get("image_path") or row.get("case_id")
+        )
+        prediction_record = prediction_index.get((backbone, normalized_key), {})
+        merged = {**row.to_dict(), **prediction_record}
+        case = build_pre_review_case(merged, backbone=backbone)
         with card_columns[index % 2]:
             render_case_card(
                 case_id=str(row.get("case_id", "")),
@@ -178,13 +417,31 @@ def render_pre_review_queue() -> None:
                 action=action,
                 reasons=reasons,
             )
-            with st.expander("查看审计依据"):
-                st.write("；".join(reasons))
-                st.caption(
-                    f"置信度 {float(row.get('confidence', 0.0)):.3f} · "
-                    f"Top1-Top2 间隔 {float(row.get('margin', 0.0)):.3f} · "
-                    f"归一化熵 {float(row.get('entropy_norm', 0.0)):.3f}"
-                )
+            if st.button(
+                "查看复核详情",
+                key=(
+                    f"case_detail_{backbone}_"
+                    f"{case['normalized_image_key']}_{page_number}_{index}"
+                ),
+                use_container_width=True,
+            ):
+                try:
+                    posthoc, peers = _posthoc_for_case(
+                        backbone=backbone,
+                        normalized_image_key=case["normalized_image_key"],
+                    )
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    render_case_detail_dialog(
+                        case,
+                        display_mode=st.session_state.get(
+                            "display_mode",
+                            "临床展示",
+                        ),
+                        posthoc=posthoc,
+                        peer_predictions=peers,
+                    )
 
     rename = {
         "case_id": "病例记录",
@@ -244,6 +501,37 @@ def render_posthoc_validation() -> None:
         return
 
     frame = load_csv(str(TRADEOFF_PATH))
+    registry = load_artifact_registry()
+    current_backbone = st.session_state.get("selected_backbone")
+    if current_backbone not in set(frame["backbone"].astype(str)):
+        current_backbone = next(iter(registry), None)
+    scope_options = ["当前模型"]
+    if st.session_state.get("display_mode") == "研究审计":
+        scope_options.append("六模型汇总")
+    evidence_scope = st.selectbox(
+        "结果范围",
+        scope_options,
+        key="posthoc_evidence_scope",
+    )
+    if evidence_scope == "当前模型":
+        if current_backbone is None:
+            render_empty_state("没有当前模型", "请先在预审队列选择模型。")
+            return
+        frame = frame[frame["backbone"].astype(str) == current_backbone].copy()
+        if frame.empty:
+            render_empty_state(
+                "当前模型暂无后验验证产物",
+                "不会回退到 ConvNeXt 或其他 backbone。",
+            )
+            return
+        display_name = (
+            registry[current_backbone].display_name
+            if current_backbone in registry
+            else current_backbone
+        )
+        st.caption(f"当前模型：{display_name}")
+    else:
+        st.caption("当前范围：六模型冻结内部研究汇总，不代表某个即时 checkpoint。")
     events = frame["clinical_event"].dropna().astype(str).unique().tolist()
     default_event = (
         "vision_threatening_dr_miss"
@@ -326,10 +614,19 @@ def render_posthoc_validation() -> None:
         total = point["dangerous_error_total"].sum()
         captured = point["dangerous_error_captured"].sum()
         cols = st.columns(4, gap="small")
+        aggregation_note = (
+            "当前模型记录"
+            if evidence_scope == "当前模型"
+            else "六个 backbone 记录汇总"
+        )
         with cols[0]:
             metric_card("事件召回率", f"{recall:.1%}", f"固定复核 {budget:.0%}")
         with cols[1]:
-            metric_card("捕获 / 总数", f"{captured:.0f} / {total:.0f}", "六个 backbone 记录汇总")
+            metric_card(
+                "捕获 / 总数",
+                f"{captured:.0f} / {total:.0f}",
+                aggregation_note,
+            )
         with cols[2]:
             metric_card("相对随机富集", f"{lift:.2f}×", f"复核队列精确率 {precision:.1%}", accent="amber")
         with cols[3]:
