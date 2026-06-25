@@ -177,3 +177,10 @@ celerybeat.pid
 /experiments/summary/v0_6_6/v0_6_6_showcase_standalone.html
 /experiments/summary/v0_6_6/figure_v066_pre_review_ranking_summary.png
 /notes/v0.6.6_pre_review_risk_ranking_design.md
+
+# v0.8 GreenScout / RETFound experiment heavy artifacts
+experiments/**/checkpoints/*.pth
+experiments/**/logs/events.out.tfevents*
+experiments/**/checkpoints/*.jpg
+experiments/v0_8_0_greenscout_feasibility/green_embeddings/*.csv
+experiments/v0_8_0_greenscout_feasibility/green_probe/*.joblib

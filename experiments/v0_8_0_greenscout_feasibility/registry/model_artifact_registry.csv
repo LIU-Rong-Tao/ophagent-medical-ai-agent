@@ -1,0 +1,7 @@
+model_name,prediction_path,source_stage,include_in_v080,notes
+convnext_tiny,./experiments/aptos_convnext_tiny/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction
+swin_tiny,./experiments/aptos_swin_tiny/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction
+vit_b_imagenet,./experiments/aptos_vit_base_patch16_imagenet/lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction
+vit_b_official_like,./experiments/aptos_vit_base_patch16_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction
+vit_l_official_like,./experiments/aptos_vit_large_patch16_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction
+retfound_official_like,./experiments/aptos_retfound_mae_cfp_official_like/official_like_bs32_epoch50_seed42/evaluation/test/test_predictions.csv,aptos_test_raw_prediction,1,APTOS test raw prediction

@@ -1,0 +1,86 @@
+setting,policy,expert,expert_call_rate,expert_call_n,accuracy,macro_f1,qwk,n_correct,n_error,note
+baseline,green_only,none,0.0,0,0.7790909090909091,0.6394309461388187,0.8653377490177998,857,243,可部署低成本 scout
+baseline,convnext_only,convnext,1.0,1100,0.8136363636363636,0.6496387745585863,0.86153550730867,895,205,可部署单专家
+baseline,retfound_mae_only,retfound_mae,1.0,1100,0.8036363636363636,0.5834373647903611,0.8659212645253975,884,216,可部署单专家
+baseline,dense_average_ensemble,dense_average,1.0,1100,0.8309090909090909,0.6935173263762987,0.8874556246807673,914,186,三模型全部运行，概率平均，可部署但成本高
+oracle,oracle_any_expert,any_expert,1.0,1100,0.9190909090909091,0.8503924349418763,0.9424932675044884,1011,89,后验理论上限，使用 true_label，不可部署
+oracle_up_to_k,oracle_useful_only,convnext,0.1,110,0.8790909090909091,0.771272879993069,0.9167795838144378,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,convnext,0.1,110,0.7936363636363636,0.6544572116661639,0.8658109595233983,873,227,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,convnext,0.1,110,0.7918181818181819,0.6494812356238835,0.8639125089378952,871,229,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,convnext,0.1,110,0.7936363636363636,0.6558722154567804,0.8674852713304652,873,227,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,convnext,0.2,220,0.8790909090909091,0.771272879993069,0.9167795838144378,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,convnext,0.2,220,0.8127272727272727,0.6696453739999685,0.8679653840953779,894,206,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,convnext,0.2,220,0.8118181818181818,0.6724157798009568,0.8695945523038031,893,207,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,convnext,0.2,220,0.8036363636363636,0.6609129317257941,0.8687591457729541,884,216,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,convnext,0.3,330,0.8790909090909091,0.771272879993069,0.9167795838144378,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,convnext,0.3,330,0.8163636363636364,0.6694958105871877,0.869893347892952,898,202,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,convnext,0.3,330,0.8136363636363636,0.6662400447826393,0.8684136287783273,895,205,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,convnext,0.3,330,0.8190909090909091,0.6744408939319233,0.8754163498302471,901,199,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,convnext,0.4,440,0.8790909090909091,0.771272879993069,0.9167795838144378,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,convnext,0.4,440,0.8181818181818182,0.6668107966261043,0.8686197523406826,900,200,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,convnext,0.4,440,0.8190909090909091,0.6705341595953078,0.8722816271095628,901,199,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,convnext,0.4,440,0.8172727272727273,0.6621904809323772,0.8684471108560757,899,201,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,convnext,0.5,550,0.8790909090909091,0.771272879993069,0.9167795838144378,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,convnext,0.5,550,0.8209090909090909,0.6710341752213351,0.8687052715165038,903,197,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,convnext,0.5,550,0.8209090909090909,0.671616015629396,0.8686049283106055,903,197,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,convnext,0.5,550,0.8209090909090909,0.6710341752213351,0.8687052715165038,903,197,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,retfound_mae,0.1,110,0.8790909090909091,0.7782635210981496,0.9212635999236496,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,retfound_mae,0.1,110,0.7963636363636364,0.661355307098224,0.8781055080871205,876,224,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,retfound_mae,0.1,110,0.7872727272727272,0.6403749220465226,0.8692892347329677,866,234,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,retfound_mae,0.1,110,0.7981818181818182,0.6706299334145606,0.8789799584298871,878,222,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,retfound_mae,0.2,220,0.8872727272727273,0.7938195756607158,0.9263480784296417,976,124,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,retfound_mae,0.2,220,0.8081818181818182,0.6698476531715706,0.8797546564740373,889,211,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,retfound_mae,0.2,220,0.8081818181818182,0.6691926898369276,0.8780537854627499,889,211,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,retfound_mae,0.2,220,0.8009090909090909,0.6659766946491926,0.8782543035051817,881,219,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,retfound_mae,0.3,330,0.8872727272727273,0.7938195756607158,0.9263480784296417,976,124,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,retfound_mae,0.3,330,0.8118181818181818,0.6677883707806302,0.876728110025267,893,207,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,retfound_mae,0.3,330,0.8118181818181818,0.6652364850678103,0.8800712770708584,893,207,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,retfound_mae,0.3,330,0.8154545454545454,0.6722799796682947,0.8778564681547961,897,203,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,retfound_mae,0.4,440,0.8872727272727273,0.7938195756607158,0.9263480784296417,976,124,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,retfound_mae,0.4,440,0.8136363636363636,0.6517984212222719,0.8743406041166524,895,205,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,retfound_mae,0.4,440,0.8118181818181818,0.6474237958744526,0.8741034225675486,893,207,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,retfound_mae,0.4,440,0.8145454545454546,0.655642827037234,0.8743488364354602,896,204,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,retfound_mae,0.5,550,0.8872727272727273,0.7938195756607158,0.9263480784296417,976,124,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,retfound_mae,0.5,550,0.8154545454545454,0.6401070270943655,0.8734736739279085,897,203,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,retfound_mae,0.5,550,0.8181818181818182,0.6518457512463698,0.8748337233920722,900,200,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,retfound_mae,0.5,550,0.8118181818181818,0.6334034811965233,0.8721419755080307,893,207,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,both_average,0.1,110,0.8790909090909091,0.7762584319525453,0.9166813088402832,967,133,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,both_average,0.1,110,0.7990909090909091,0.6615639864292046,0.8752864402858505,879,221,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,both_average,0.1,110,0.7963636363636364,0.6560000978473302,0.8725169849435472,876,224,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,both_average,0.1,110,0.7972727272727272,0.6627445198782969,0.8771589819396226,877,223,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,both_average,0.2,220,0.8854545454545455,0.7851603900549208,0.9198722933892438,974,126,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,both_average,0.2,220,0.8163636363636364,0.6795835352525756,0.8822883623770686,898,202,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,both_average,0.2,220,0.8181818181818182,0.6851553295893951,0.8817553484074726,900,200,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,both_average,0.2,220,0.8090909090909091,0.6715408187278079,0.8832926063700084,890,210,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,both_average,0.3,330,0.8854545454545455,0.7851603900549208,0.9198722933892438,974,126,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,both_average,0.3,330,0.8254545454545454,0.688660030799606,0.8859461761661006,908,192,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,both_average,0.3,330,0.8227272727272728,0.6836105850505748,0.8851781849706929,905,195,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,both_average,0.3,330,0.83,0.6927501551789976,0.8913536231699851,913,187,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,both_average,0.4,440,0.8854545454545455,0.7851603900549208,0.9198722933892438,974,126,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,both_average,0.4,440,0.8363636363636363,0.6981402021657936,0.8937683116571822,920,180,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,both_average,0.4,440,0.8354545454545454,0.697848125072065,0.893715438166247,919,181,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,both_average,0.4,440,0.8345454545454546,0.6951570881544684,0.8928336782981354,918,182,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,both_average,0.5,550,0.8854545454545455,0.7851603900549208,0.9198722933892438,974,126,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,both_average,0.5,550,0.8418181818181818,0.7083731655972832,0.8949632949839527,926,174,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,both_average,0.5,550,0.8427272727272728,0.7096944790476715,0.8952202231965313,927,173,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,both_average,0.5,550,0.8409090909090909,0.7069478642689575,0.8947528546541224,925,175,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,dense_average,0.1,110,0.8545454545454545,0.7357818295033797,0.9019455724713928,940,160,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,dense_average,0.1,110,0.8,0.6631195291890636,0.8746181168387409,880,220,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,dense_average,0.1,110,0.7963636363636364,0.6559878858356274,0.8719324162645832,876,224,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,dense_average,0.1,110,0.7981818181818182,0.664912705362315,0.8756425429686809,878,222,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,dense_average,0.2,220,0.8545454545454545,0.7357818295033797,0.9019455724713928,940,160,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,dense_average,0.2,220,0.8172727272727273,0.6820883781491054,0.8803972469725145,899,201,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,dense_average,0.2,220,0.8163636363636364,0.6813861333350992,0.8794574204356504,898,202,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,dense_average,0.2,220,0.8109090909090909,0.6761405693991883,0.881302990199715,892,208,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,dense_average,0.3,330,0.8545454545454545,0.7357818295033797,0.9019455724713928,940,160,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,dense_average,0.3,330,0.8254545454545454,0.6913229738208712,0.8837427575839316,908,192,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,dense_average,0.3,330,0.8236363636363636,0.6890401431107908,0.8831643633430556,906,194,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,dense_average,0.3,330,0.8245454545454546,0.6893745985637072,0.8853290507440614,907,193,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,dense_average,0.4,440,0.8545454545454545,0.7357818295033797,0.9019455724713928,940,160,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,dense_average,0.4,440,0.8281818181818181,0.6881477857802528,0.8858928390431786,911,189,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,dense_average,0.4,440,0.8272727272727273,0.6868640932400188,0.8856935479361804,910,190,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,dense_average,0.4,440,0.8272727272727273,0.685423979189786,0.8855283419041808,910,190,可部署：只使用 Green 输出的不确定性信号
+oracle_up_to_k,oracle_useful_only,dense_average,0.5,550,0.8545454545454545,0.7357818295033797,0.9019455724713928,940,160,后验 up-to-k 上限：只调用 Green 错且专家对的样本，不可部署
+uncertainty_defer,low_confidence,dense_average,0.5,550,0.8309090909090909,0.6935173263762987,0.8874556246807673,914,186,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,low_margin,dense_average,0.5,550,0.8309090909090909,0.6935173263762987,0.8874556246807673,914,186,可部署：只使用 Green 输出的不确定性信号
+uncertainty_defer,high_entropy,dense_average,0.5,550,0.8309090909090909,0.6935173263762987,0.8874556246807673,914,186,可部署：只使用 Green 输出的不确定性信号

@@ -1,0 +1,13 @@
+item,value,description
+n_images,1100,APTOS test 图像数
+models,convnext_tiny;retfound_green_linear_probe;retfound_mae_cfp_official_like,参与分析的模型
+best_single_model,convnext_tiny,Accuracy 最高单模型
+best_single_accuracy,0.8136363636363636,最佳单模型 Accuracy
+dense_average_ensemble_accuracy,0.8309090909090909,三模型概率平均 ensemble Accuracy
+oracle_any_expert_accuracy,0.9190909090909091,三个模型中任意一个预测正确即可视为 oracle 选对
+dense_average_gain_over_best_single,0.01727272727272733,Dense average ensemble 相对最佳单模型 Acc 增益
+oracle_any_gain_over_best_single,0.10545454545454547,Oracle any-expert 相对最佳单模型 Acc 增益
+oracle_any_gain_over_dense_average,0.08818181818181814,Oracle any-expert 相对 dense average ensemble Acc 增益
+all_models_wrong_count,89,三个模型全部错误图像数
+all_models_correct_count,729,三个模型全部正确图像数
+mixed_correct_wrong_count,282,至少一个模型正确且至少一个模型错误的图像数

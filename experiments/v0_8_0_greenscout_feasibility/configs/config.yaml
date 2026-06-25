@@ -1,0 +1,20 @@
+project_root: /data/LRT/ophagent-medical-ai-agent
+experiment_dir: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility
+
+data:
+  aptos_root: /data/LRT/RETFound/Data_split/APTOS2019
+  aptos_test: /data/LRT/RETFound/Data_split/APTOS2019/test
+
+retfound_green:
+  env_path: /data/conda_envs/retfound_green
+  cache_dir: /data/LRT/model_cache/retfound_green
+  checkpoint: /data/LRT/model_cache/retfound_green/retfoundgreen_statedict.pth
+  input_size: 392
+
+outputs:
+  existing_prediction_files: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/registry/existing_prediction_files.txt
+  existing_predictions: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/predictions/existing_models_standardized.csv
+  complementarity_dir: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/complementarity
+  green_smoke: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/green_smoke/retfound_green_smoke_test.csv
+  cost_table: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/cost/inference_cost_table.csv
+  go_no_go_report: /data/LRT/ophagent-medical-ai-agent/experiments/v0_8_0_greenscout_feasibility/reports/go_no_go_summary.md

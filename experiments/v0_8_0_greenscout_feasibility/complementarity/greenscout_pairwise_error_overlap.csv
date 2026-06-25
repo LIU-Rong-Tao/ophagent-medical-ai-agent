@@ -1,0 +1,4 @@
+model_a,model_b,n_images,model_a_error,model_b_error,both_error,either_error,a_correct_b_wrong,b_correct_a_wrong,error_jaccard,error_overlap_over_min_error
+convnext_tiny,retfound_mae_cfp_official_like,1100,205,216,125,296,91,80,0.4222972972972973,0.6097560975609756
+convnext_tiny,retfound_green_linear_probe,1100,205,243,133,315,110,72,0.4222222222222222,0.6487804878048781
+retfound_green_linear_probe,retfound_mae_cfp_official_like,1100,243,216,124,335,92,119,0.3701492537313433,0.5740740740740741

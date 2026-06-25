@@ -1,0 +1,4 @@
+model_name,role,stage,checkpoint_mb,n_images,n_ok,ok_rate,mean_inference_ms,median_inference_ms,max_inference_ms,max_peak_mem_mb,embedding_dim,device,img_size,note
+retfound_green,scout,demo_samples_embedding_smoke_test,83.34796524047852,15,15,1.0,6.02186641190201,5.567547050304711,7.971951039507985,108.77685546875,384,cuda,392,RETFound-Green demo_samples smoke test only; embedding output; no classification head.
+convnext_tiny,existing_expert,demo_samples_classifier_inference,106.20856094360352,15,15,1.0,10.714472675075134,5.832536960951984,77.19915302004665,130.9111328125,,cuda,224,Existing expert classifier inference on demo_samples.
+retfound_mae_cfp_official_like,existing_expert,demo_samples_classifier_inference,1157.1368503570557,15,15,1.0,8.083592657931149,8.076398982666433,8.18906002677977,1175.75537109375,,cuda,224,Existing expert classifier inference on demo_samples.

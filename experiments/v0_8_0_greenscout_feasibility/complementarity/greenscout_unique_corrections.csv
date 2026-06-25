@@ -1,0 +1,4 @@
+model_name,n_images,correct_count,error_count,unique_correct_count,unique_correct_rate,unique_wrong_count,unique_wrong_rate
+retfound_mae_cfp_official_like,1100,884,216,44,0.04,56,0.05090909090909091
+retfound_green_linear_probe,1100,857,243,36,0.03272727272727273,75,0.06818181818181818
+convnext_tiny,1100,895,205,35,0.031818181818181815,36,0.03272727272727273

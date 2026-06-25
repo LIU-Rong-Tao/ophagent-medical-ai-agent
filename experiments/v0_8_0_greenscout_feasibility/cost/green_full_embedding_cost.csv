@@ -1,0 +1,4 @@
+model_name,split,n_images,embedding_dim,batch_size,mean_ms_per_image,median_ms_per_image,max_ms_per_image,peak_mem_mb,checkpoint_mb,img_size,device,output_csv
+retfound_green,train,2048,384,32,1.8706682096194527,1.873811172117712,1.8813283095369115,591.95703125,83.34796524047852,392,cuda,experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_train_embeddings.csv
+retfound_green,val,514,384,32,2.8659926384509857,1.8531640635046642,261.457345506642,591.95703125,83.34796524047852,392,cuda,experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_val_embeddings.csv
+retfound_green,test,1100,384,32,1.868203182662414,1.8733976903604344,2.0037233286226788,591.95703125,83.34796524047852,392,cuda,experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_test_embeddings.csv
