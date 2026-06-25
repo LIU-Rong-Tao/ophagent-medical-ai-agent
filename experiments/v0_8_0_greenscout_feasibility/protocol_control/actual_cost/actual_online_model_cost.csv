@@ -1,0 +1,4 @@
+model_name,role,chain_note,n_images,batch_size,mean_ms_per_image,median_ms_per_image,p95_ms_per_image,total_forward_ms,images_per_second,pytorch_peak_allocated_mem_mb,checkpoint_mb,device
+retfound_green_linear_probe,scout,Green encoder forward + sklearn linear-probe predict_proba,1100,32,1.896507273791247,1.8825214392563794,1.9994394690002082,2082.6990249333903,528.1608080818017,591.95703125,83.34796524047852,cuda
+convnext_tiny,scout_or_expert,ConvNeXt-Tiny classifier forward,1100,32,0.486143987724236,0.47327981155831367,0.47699973874841817,526.1491229757667,2090.6620423097497,538.8994140625,106.20856094360352,cuda
+retfound_mae_cfp_official_protocol,expert,RETFound-MAE official-protocol classifier forward via timm global_pool=avg,1100,32,3.517568206041774,3.511542938213097,3.5503503517247736,3862.900585751049,284.7601111086143,1479.02490234375,1157.1359272003174,cuda
