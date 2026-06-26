@@ -1,0 +1,2 @@
+model_name,model_type,arch,checkpoint_path,checkpoint_key,strip_module_prefix,num_classes,img_size,norm,global_pool,batch_size,n_runs,role_hint,prediction_csv,enabled,notes
+swin_tiny,timm_classifier,swin_tiny_patch4_window7_224,experiments/aptos_swin_tiny/lr1e-4_bs32_seed42/checkpoints/swin_tiny_patch4_window7_224.ms_in1k_best.pth,,1,5,224,imagenet,,32,5,scout_or_expert,experiments/v0_8_1_unified_orchestration/inputs/predictions/swin_tiny_standardized.csv,1,Swin-Tiny ImageNet-pretrained APTOS baseline

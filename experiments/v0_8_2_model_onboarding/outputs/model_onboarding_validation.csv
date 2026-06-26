@@ -1,0 +1,2 @@
+model_name,arch,checkpoint_path,prediction_csv,strict_load_ok,strict_load_error,prediction_valid,prediction_errors,n,accuracy,macro_f1,qwk,n_error
+swin_tiny,swin_tiny_patch4_window7_224,experiments/aptos_swin_tiny/lr1e-4_bs32_seed42/checkpoints/swin_tiny_patch4_window7_224.ms_in1k_best.pth,experiments/v0_8_1_unified_orchestration/inputs/predictions/swin_tiny_standardized.csv,True,,True,,1100,0.8290909090909091,0.6567072753814438,0.8981859638745026,188
