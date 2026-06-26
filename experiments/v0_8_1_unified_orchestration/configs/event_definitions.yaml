@@ -1,0 +1,15 @@
+events:
+  severe_pdr_miss_dr_specific:
+    description: "True label is Severe/PDR but scout prediction is non-severe."
+    true_min: 3
+    pred_max: 2
+
+  large_undergrading_dr_specific:
+    description: "True label is PDR but scout prediction is Moderate or below."
+    true_min: 4
+    pred_max: 2
+
+  referable_dr_miss_dr_specific:
+    description: "True label is referable DR or above but scout prediction is No/Mild DR."
+    true_min: 2
+    pred_max: 1
