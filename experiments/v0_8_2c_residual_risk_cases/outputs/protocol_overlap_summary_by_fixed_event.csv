@@ -1,0 +1,4 @@
+event_name,event_total,efficiency_multiscout_30_selected_n,efficiency_multiscout_30_residual_n,safety_convnext_50_selected_n,safety_convnext_50_residual_n,safety_swin_50_selected_n,safety_swin_50_residual_n,selected_by_0_ops,selected_by_1_ops,selected_by_2_ops,selected_by_3_ops,only_efficiency_multiscout_30_selected_n,only_safety_convnext_50_selected_n,only_safety_swin_50_selected_n,missed_by_all_n
+fixed_large_undergrading_union_pool,45,33,12,44,1,44,1,1,0,11,33,0,0,0,1
+fixed_referable_miss_union_pool,90,83,7,89,1,88,2,1,0,7,82,0,0,0,1
+fixed_severe_pdr_miss_union_pool,75,48,27,72,3,74,1,1,2,24,48,0,0,2,1

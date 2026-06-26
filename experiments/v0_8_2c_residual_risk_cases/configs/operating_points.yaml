@@ -1,0 +1,69 @@
+protocol_group: v0.8.2c_residual_risk_cases
+description: >
+  病例级 residual risk case export。只导出 v0.8.2b 预算匹配分析中确定的
+  三个 operating points，不再重新搜索协议。
+
+source:
+  prediction_registry: experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+  v082b_summary: experiments/v0_8_2b_controlled_protocols/outputs/budget_matched_performance_risk_best.csv
+  fixed_risk_pool: experiments/v0_8_2b_controlled_protocols/outputs/fixed_risk_pool_coverage.csv
+
+operating_points:
+  - name: efficiency_multiscout_30
+    protocol_name: convnext_swin_to_retfound
+    family: multi_scout
+    role: efficiency_oriented
+    scouts: [convnext_tiny, swin_tiny]
+    expert: retfound_mae_cfp_official_protocol
+    budget: 0.3
+    policy: disagreement_then_uncertainty
+    description: 30% expert budget; strongest average performance and referable-miss coverage.
+
+  - name: safety_convnext_50
+    protocol_name: convnext_to_retfound
+    family: single_scout
+    role: safety_large_referable
+    scout: convnext_tiny
+    expert: retfound_mae_cfp_official_protocol
+    budget: 0.5
+    policy: low_confidence
+    description: 50% expert budget; strong large-undergrading and referable-miss coverage.
+
+  - name: safety_swin_50
+    protocol_name: swin_to_retfound
+    family: single_scout
+    role: safety_severe_pdr
+    scout: swin_tiny
+    expert: retfound_mae_cfp_official_protocol
+    budget: 0.5
+    policy: low_confidence
+    description: 50% expert budget; strongest severe/PDR miss coverage.
+
+risk_events:
+  large_undergrading_event:
+    true_min: 4
+    pred_max: 2
+    description: True label is PDR but base/scout prediction is Moderate or below.
+
+  referable_miss_event:
+    true_min: 2
+    pred_max: 1
+    description: True label is referable DR or above but base/scout prediction is No/Mild DR.
+
+  severe_pdr_miss_event:
+    true_min: 3
+    pred_max: 2
+    description: True label is Severe/PDR but base/scout prediction is non-severe.
+
+outputs:
+  all_cases: operating_point_case_table.csv
+  selected_risk_cases: selected_risk_cases.csv
+  residual_risk_cases: residual_risk_cases.csv
+  protocol_overlap_cases: protocol_overlap_cases.csv
+  summary: case_export_summary.csv
+
+reporting_rules:
+  no_protocol_search: true
+  fixed_operating_points_only: true
+  no_ui_in_this_stage: true
+  residual_risk_must_be_reported: true
