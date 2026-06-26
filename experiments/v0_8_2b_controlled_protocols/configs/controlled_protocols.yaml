@@ -1,0 +1,114 @@
+protocol_group: v0.8.2b_controlled_protocols
+description: >
+  受控协议评测配置。全组合搜索只作为 exploratory screening，
+  主结论只来自本文件中预定义的 dense baseline、single-scout routing、
+  multi-scout routing 和 bounds。
+
+source:
+  prediction_registry: experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+  basic_outputs: experiments/v0_8_1_unified_orchestration/outputs
+  full_sparse_curve: experiments/v0_8_1_unified_orchestration/outputs/sparse_routing_curve.csv
+  static_ensemble_summary: experiments/v0_8_1_unified_orchestration/outputs/static_ensemble_summary.csv
+  single_model_summary: experiments/v0_8_1_unified_orchestration/outputs/single_model_summary.csv
+
+reporting_rules:
+  full_combination_search: exploratory_only
+  candidate_ranking_score: screening_only
+  main_claim_source: controlled_protocols_only
+  external_validation: frozen_protocol_only
+  no_test_set_protocol_tuning: true
+
+dense_baselines:
+  - name: dense_convnext
+    models: [convnext_tiny]
+    role: main
+
+  - name: dense_swin
+    models: [swin_tiny]
+    role: main
+
+  - name: dense_vit_b
+    models: [vit_b_imagenet]
+    role: screening
+
+  - name: dense_retfound
+    models: [retfound_mae_cfp_official_protocol]
+    role: main
+
+  - name: dense_convnext_retfound
+    models: [convnext_tiny, retfound_mae_cfp_official_protocol]
+    role: dense_expert_reference
+
+single_scout_protocols:
+  - name: convnext_to_retfound
+    scout: convnext_tiny
+    experts: [retfound_mae_cfp_official_protocol]
+    policies: [low_confidence, high_entropy, low_margin]
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: main
+
+  - name: swin_to_retfound
+    scout: swin_tiny
+    experts: [retfound_mae_cfp_official_protocol]
+    policies: [low_confidence, high_entropy, low_margin]
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: main
+
+  - name: green_to_retfound
+    scout: retfound_green_linear_probe
+    experts: [retfound_mae_cfp_official_protocol]
+    policies: [low_confidence, high_entropy, low_margin]
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: ablation
+
+  - name: vit_b_to_retfound
+    scout: vit_b_imagenet
+    experts: [retfound_mae_cfp_official_protocol]
+    policies: [low_confidence, high_entropy, low_margin]
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: screening
+
+multi_scout_protocols:
+  - name: convnext_swin_to_retfound
+    scouts: [convnext_tiny, swin_tiny]
+    expert: retfound_mae_cfp_official_protocol
+    routing_signals:
+      - mean_uncertainty
+      - max_uncertainty
+      - disagreement_then_uncertainty
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: main
+
+  - name: convnext_swin_vitb_to_retfound
+    scouts: [convnext_tiny, swin_tiny, vit_b_imagenet]
+    expert: retfound_mae_cfp_official_protocol
+    routing_signals:
+      - mean_uncertainty
+      - max_uncertainty
+      - disagreement_then_uncertainty
+    budgets: [0.2, 0.3, 0.4, 0.5]
+    role: screening
+
+bounds:
+  random_same_budget:
+    enabled: true
+    n_runs: 2000
+    seed: 2026
+
+  oracle_same_budget:
+    enabled: true
+
+  dense_expert_reference:
+    name: dense_convnext_retfound
+    models: [convnext_tiny, retfound_mae_cfp_official_protocol]
+
+risk_events:
+  enabled: true
+  source: experiments/v0_8_1_unified_orchestration/configs/event_definitions.yaml
+
+notes:
+  - 全组合搜索只用于发现候选，不用于主结论。
+  - 主表只展示本配置文件中预定义的协议。
+  - ViT-B 当前作为 screening baseline，不代表 ViT 架构上限。
+  - GreenScout 当前作为 ablation/scouting signal 对照。
+  - Multi-scout routing 用于验证 scout 不必只有一个。
