@@ -1,0 +1,191 @@
+protocol_id: v082c_dr_controlled_replay
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: dr_icdr_5class
+output_dir: experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay
+
+cost_enrichment:
+  model_registry: experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+  expert_reference_model: retfound_mae_cfp_official_protocol
+
+# This profile replays the existing v0.8.2c analysis from frozen prediction and
+# cost artifacts. It is intentionally exploratory because the historical
+# protocol selected policies on the same APTOS test split used for evaluation.
+stages:
+  - id: validate-inputs
+    kind: validation
+    command:
+      - "{python}"
+      - scripts/v081_orchestration/validate_model_inputs.py
+      - --registry
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+      - --out_dir
+      - experiments/v0_8_1_unified_orchestration/outputs
+    inputs:
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+      - experiments/v0_8_0_greenscout_feasibility/protocol_control/predictions/greenscout_three_model_standardized.csv
+      - experiments/v0_8_0_greenscout_feasibility/protocol_control/actual_cost/actual_online_model_cost.csv
+      - experiments/v0_8_1_unified_orchestration/inputs/predictions/swin_tiny_standardized.csv
+      - experiments/v0_8_1_unified_orchestration/inputs/predictions/vit_b_imagenet_standardized.csv
+      - experiments/v0_8_2_model_onboarding/outputs/model_forward_cost_summary.csv
+    outputs:
+      - experiments/v0_8_1_unified_orchestration/outputs/input_prediction_validation_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/input_cost_validation_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/input_validation_report.md
+
+  - id: summarize-models
+    kind: baseline
+    depends_on: [validate-inputs]
+    command:
+      - "{python}"
+      - scripts/v081_orchestration/evaluate_unified_orchestration.py
+      - --registry
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+      - --out_dir
+      - experiments/v0_8_1_unified_orchestration/outputs
+    inputs:
+      - experiments/v0_8_1_unified_orchestration/outputs/input_validation_report.md
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+    outputs:
+      - experiments/v0_8_1_unified_orchestration/outputs/single_model_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/static_ensemble_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/pairwise_complementarity.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/key_findings.md
+
+  - id: evaluate-sparse-routing
+    kind: routing
+    depends_on: [summarize-models]
+    command:
+      - "{python}"
+      - scripts/v081_orchestration/evaluate_sparse_routing_and_cost.py
+      - --registry
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+      - --out_dir
+      - experiments/v0_8_1_unified_orchestration/outputs
+    inputs:
+      - experiments/v0_8_1_unified_orchestration/outputs/input_cost_validation_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/single_model_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/pairwise_complementarity.csv
+    outputs:
+      - experiments/v0_8_1_unified_orchestration/outputs/sparse_routing_curve.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/dense_cost_performance.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/cost_performance_frontier.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/sparse_random_baseline.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/sparse_oracle_upper_bound.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/sparse_cost_key_findings.md
+
+  - id: evaluate-controlled-protocols
+    kind: routing
+    depends_on: [evaluate-sparse-routing]
+    command:
+      - "{python}"
+      - scripts/v082b_protocols/evaluate_controlled_protocols.py
+    inputs:
+      - experiments/v0_8_2b_controlled_protocols/configs/controlled_protocols.yaml
+      - experiments/v0_8_1_unified_orchestration/outputs/sparse_routing_curve.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/static_ensemble_summary.csv
+      - experiments/v0_8_1_unified_orchestration/outputs/single_model_summary.csv
+    outputs:
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_results.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_main_results.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_best_per_protocol.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_cost_frontier.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_key_findings.md
+
+  - id: evaluate-controlled-risk-events
+    kind: risk
+    depends_on: [evaluate-controlled-protocols]
+    command:
+      - "{python}"
+      - scripts/v082b_protocols/evaluate_controlled_risk_events.py
+    inputs:
+      - experiments/v0_8_2b_controlled_protocols/configs/controlled_protocols.yaml
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_main_results.csv
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+    outputs:
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_risk_event_coverage.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_risk_event_main_coverage.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_risk_event_best_by_event.csv
+
+  - id: evaluate-fixed-risk-pool
+    kind: risk
+    depends_on: [evaluate-controlled-protocols]
+    command:
+      - "{python}"
+      - scripts/v082b_protocols/evaluate_fixed_risk_pool_coverage.py
+    inputs:
+      - experiments/v0_8_2b_controlled_protocols/configs/controlled_protocols.yaml
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_main_results.csv
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+    outputs:
+      - experiments/v0_8_2b_controlled_protocols/outputs/fixed_risk_pool_coverage.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/fixed_risk_pool_best_by_event.csv
+
+  - id: summarize-performance-risk
+    kind: summary
+    depends_on: [evaluate-controlled-risk-events, evaluate-fixed-risk-pool]
+    command:
+      - "{python}"
+      - scripts/v082b_protocols/summarize_controlled_performance_and_risk.py
+    inputs:
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_protocol_main_results.csv
+      - experiments/v0_8_2b_controlled_protocols/outputs/fixed_risk_pool_coverage.csv
+    outputs:
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_performance_risk_summary.csv
+
+  - id: export-residual-cases
+    kind: case-audit
+    depends_on: [summarize-performance-risk]
+    command:
+      - "{python}"
+      - scripts/v082c_cases/export_residual_risk_cases.py
+    inputs:
+      - experiments/v0_8_2c_residual_risk_cases/configs/operating_points.yaml
+      - experiments/v0_8_2b_controlled_protocols/outputs/controlled_performance_risk_summary.csv
+      - experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+    outputs:
+      - experiments/v0_8_2c_residual_risk_cases/outputs/operating_point_case_table.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/selected_risk_cases.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/residual_risk_cases.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/protocol_overlap_cases.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/case_export_summary.csv
+
+  - id: summarize-case-overlap
+    kind: case-audit
+    depends_on: [export-residual-cases]
+    command:
+      - "{python}"
+      - scripts/v082c_cases/summarize_case_overlap.py
+    inputs:
+      - experiments/v0_8_2c_residual_risk_cases/outputs/protocol_overlap_cases.csv
+    outputs:
+      - experiments/v0_8_2c_residual_risk_cases/outputs/protocol_overlap_summary_by_fixed_event.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/fixed_risk_cases_missed_by_all_protocols.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/fixed_risk_cases_uniquely_selected.csv
+
+  - id: export-hard-cases
+    kind: case-audit
+    depends_on: [summarize-case-overlap]
+    command:
+      - "{python}"
+      - scripts/v082c_cases/export_hard_case_review_table.py
+    inputs:
+      - experiments/v0_8_2c_residual_risk_cases/outputs/operating_point_case_table.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/fixed_risk_cases_missed_by_all_protocols.csv
+      - experiments/v0_8_2c_residual_risk_cases/outputs/fixed_risk_cases_uniquely_selected.csv
+    outputs:
+      - experiments/v0_8_2c_residual_risk_cases/outputs/hard_case_review_table.csv
+
+publish:
+  report: report.html
+  artifacts:
+    - name: model_baselines
+      source: experiments/v0_8_1_unified_orchestration/outputs/single_model_summary.csv
+      target: model_baselines.csv
+    - name: routing_results
+      source: experiments/v0_8_2b_controlled_protocols/outputs/controlled_performance_risk_summary.csv
+      target: routing_results.csv
+    - name: case_audit
+      source: experiments/v0_8_2c_residual_risk_cases/outputs/hard_case_review_table.csv
+      target: case_audit.csv
