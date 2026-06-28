@@ -2,7 +2,12 @@ protocol_id: v082c_dr_controlled_replay
 mode: exploratory
 selection_split: test
 evaluation_split: test
+risk_metric_profile: dr_icdr_5class
 output_dir: experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay
+
+cost_enrichment:
+  model_registry: experiments/v0_8_1_unified_orchestration/configs/model_registry.csv
+  expert_reference_model: retfound_mae_cfp_official_protocol
 
 # This profile replays the existing v0.8.2c analysis from frozen prediction and
 # cost artifacts. It is intentionally exploratory because the historical

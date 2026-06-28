@@ -25,6 +25,12 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE = ".controlled_runner_state.json"
+DR_RISK_COLUMN_MARKERS = (
+    "large_undergrading",
+    "referable_miss",
+    "severe_pdr_miss",
+    "vtdr",
+)
 
 
 class RunnerError(RuntimeError):
@@ -70,6 +76,15 @@ def validate_config(config: dict[str, Any]) -> None:
             "final mode requires different selection_split and evaluation_split; "
             f"both are {config['selection_split']!r}"
         )
+
+    risk_profile = str(config.get("risk_metric_profile", "unspecified"))
+    if risk_profile not in {
+        "unspecified",
+        "generic_multiclass",
+        "dr_icdr_5class",
+        "custom",
+    }:
+        raise RunnerError(f"unsupported risk_metric_profile: {risk_profile}")
 
     seen: set[str] = set()
     for raw in config["stages"]:
@@ -133,6 +148,211 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def read_csv_records(path: Path) -> tuple[list[str], list[dict[str, str]]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        return list(reader.fieldnames or []), list(reader)
+
+
+def write_csv_records(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def enabled_registry_row(row: dict[str, str]) -> bool:
+    return str(row.get("enabled", "1")).strip().lower() not in {"0", "false", "no"}
+
+
+def load_model_costs(config: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], str | None]:
+    settings = config.get("cost_enrichment", {})
+    registry_value = settings.get("model_registry")
+    if not registry_value:
+        return {}, None
+
+    registry_path = resolve_path(str(registry_value), repo_root=REPO_ROOT)
+    if not registry_path.exists():
+        raise RunnerError(f"cost model registry is missing: {registry_path}")
+
+    _, registry_rows = read_csv_records(registry_path)
+    costs: dict[str, dict[str, Any]] = {}
+    source_cache: dict[Path, list[dict[str, str]]] = {}
+    expert_candidates: list[str] = []
+
+    for registry_row in registry_rows:
+        if not enabled_registry_row(registry_row):
+            continue
+        model_name = str(registry_row.get("model_name", "")).strip()
+        cost_value = str(registry_row.get("cost_csv", "")).strip()
+        if not model_name or not cost_value:
+            continue
+        if "expert" in str(registry_row.get("role_hint", "")).lower():
+            expert_candidates.append(model_name)
+
+        cost_path = resolve_path(cost_value, repo_root=REPO_ROOT)
+        if not cost_path.exists():
+            continue
+        if cost_path not in source_cache:
+            _, source_cache[cost_path] = read_csv_records(cost_path)
+        matches = [row for row in source_cache[cost_path] if row.get("model_name") == model_name]
+        if len(matches) != 1:
+            continue
+
+        row = matches[0]
+        estimate = optional_float(
+            row.get("mean_ms_per_image") or row.get("estimated_forward_ms_per_image")
+        )
+        if estimate is None or estimate <= 0:
+            continue
+        throughput = optional_float(row.get("images_per_second")) or (1000.0 / estimate)
+        costs[model_name] = {
+            "estimated_forward_ms_per_image": estimate,
+            "images_per_second": throughput,
+            "peak_allocated_memory_mb": optional_float(
+                row.get("pytorch_peak_allocated_mem_mb") or row.get("peak_allocated_memory_mb")
+            ),
+            "checkpoint_mb": optional_float(row.get("checkpoint_mb")),
+            "batch_size": row.get("batch_size", ""),
+            "device": row.get("device", ""),
+            "timing_source": str(cost_path),
+            "timing_scope": row.get("cost_note", "single-GPU forward-only benchmark"),
+        }
+
+    explicit_expert = str(settings.get("expert_reference_model", "")).strip()
+    expert_reference = explicit_expert or (
+        expert_candidates[0] if len(set(expert_candidates)) == 1 else None
+    )
+    if expert_reference and expert_reference not in costs:
+        expert_reference = None
+    return costs, expert_reference
+
+
+def enrich_model_baselines(path: Path, config: dict[str, Any]) -> None:
+    fieldnames, rows = read_csv_records(path)
+    if not rows:
+        return
+    model_column = "name" if "name" in fieldnames else "model_name" if "model_name" in fieldnames else None
+    if model_column is None:
+        return
+
+    costs, expert_reference = load_model_costs(config)
+    estimates = [
+        cost["estimated_forward_ms_per_image"]
+        for row in rows
+        if (cost := costs.get(str(row.get(model_column, "")))) is not None
+    ]
+    fastest = min(estimates) if estimates else None
+    expert_cost = (
+        costs[expert_reference]["estimated_forward_ms_per_image"]
+        if expert_reference in costs
+        else None
+    )
+    appended = [
+        "estimated_forward_ms_per_image",
+        "images_per_second",
+        "relative_forward_cost_vs_fastest_model",
+        "relative_forward_cost_vs_expert",
+        "peak_allocated_memory_mb",
+        "checkpoint_mb",
+        "batch_size",
+        "device",
+        "timing_source",
+        "timing_scope",
+    ]
+    for name in appended:
+        if name not in fieldnames:
+            fieldnames.append(name)
+
+    for row in rows:
+        cost = costs.get(str(row.get(model_column, "")))
+        if cost is None:
+            for name in appended:
+                row.setdefault(name, "")
+            continue
+        estimate = cost["estimated_forward_ms_per_image"]
+        row.update(cost)
+        row["relative_forward_cost_vs_fastest_model"] = (
+            estimate / fastest if fastest else ""
+        )
+        row["relative_forward_cost_vs_expert"] = (
+            estimate / expert_cost if expert_cost else ""
+        )
+    write_csv_records(path, fieldnames, rows)
+
+
+def validate_risk_columns(fieldnames: list[str], config: dict[str, Any]) -> None:
+    if str(config.get("risk_metric_profile", "unspecified")) != "generic_multiclass":
+        return
+    offending = [
+        name for name in fieldnames if any(marker in name.lower() for marker in DR_RISK_COLUMN_MARKERS)
+    ]
+    if offending:
+        raise RunnerError(
+            "generic_multiclass output contains DR-specific risk columns: " + ", ".join(offending)
+        )
+
+
+def enrich_routing_results(path: Path, config: dict[str, Any]) -> None:
+    fieldnames, rows = read_csv_records(path)
+    validate_risk_columns(fieldnames, config)
+    if not rows:
+        return
+
+    appended = [
+        "estimated_forward_ms_per_image",
+        "relative_forward_cost_vs_dense_expert",
+        "forward_cost_reduction_vs_dense_expert",
+    ]
+    for name in appended:
+        if name not in fieldnames:
+            fieldnames.append(name)
+
+    estimates: list[float | None] = []
+    for row in rows:
+        estimate = optional_float(
+            row.get("estimated_forward_ms_per_image")
+            or row.get("ms_per_image")
+            or row.get("online_no_cache_ms_per_image")
+        )
+        estimates.append(estimate)
+        row["estimated_forward_ms_per_image"] = estimate if estimate is not None else ""
+
+    dense_candidates = [
+        estimate
+        for row, estimate in zip(rows, estimates)
+        if estimate is not None and str(row.get("role", "")) == "dense_expert_reference"
+    ]
+    dense_reference = dense_candidates[0] if len(dense_candidates) == 1 else None
+    for row, estimate in zip(rows, estimates):
+        if estimate is None or not dense_reference:
+            row["relative_forward_cost_vs_dense_expert"] = ""
+            row["forward_cost_reduction_vs_dense_expert"] = ""
+            continue
+        ratio = estimate / dense_reference
+        row["relative_forward_cost_vs_dense_expert"] = ratio
+        row["forward_cost_reduction_vs_dense_expert"] = 1.0 - ratio
+    write_csv_records(path, fieldnames, rows)
+
+
+def normalize_published_artifact(name: str, target: Path, config: dict[str, Any]) -> None:
+    if target.suffix.lower() != ".csv":
+        return
+    if name == "model_baselines":
+        enrich_model_baselines(target, config)
+    elif name == "routing_results":
+        enrich_routing_results(target, config)
 
 
 def render_command(tokens: list[Any], *, config_path: Path, output_dir: Path) -> list[str]:
@@ -318,6 +538,7 @@ def publish_artifacts(
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.resolve() != target.resolve():
             shutil.copy2(source, target)
+        normalize_published_artifact(name, target, config)
         stat = target.stat()
         producer_status = "external"
         for result in stage_results:
@@ -398,6 +619,15 @@ def write_html_report(
             "may use the same split. Do not present this report as an unbiased final evaluation.</div>"
         )
 
+    cost_notice = ""
+    if config.get("cost_enrichment"):
+        cost_notice = (
+            "<div class='notice'><strong>Cost scope:</strong> estimated forward-only cost. "
+            "It excludes image decoding, preprocessing, disk and network I/O, host-to-device "
+            "transfer, queueing, model loading, service overhead, post-processing, and clinical "
+            "workflow latency.</div>"
+        )
+
     stage_html = "".join(
         "<tr>"
         f"<td>{html.escape(result.stage_id)}</td>"
@@ -436,6 +666,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;
 main{{max-width:1180px;margin:0 auto;padding:36px 24px 64px}}
 h1{{font-size:30px;margin:0 0 8px}} h2{{font-size:20px;margin-top:32px}}
 .meta{{color:#607086;margin-bottom:24px}} .warning{{background:#fff4dc;border-left:4px solid #c88012;padding:14px 16px;margin:22px 0}}
+.notice{{background:#eaf4f3;border-left:4px solid #0f8178;padding:14px 16px;margin:22px 0}}
 table{{border-collapse:collapse;width:100%;background:white}} th,td{{padding:9px 11px;border:1px solid #d9e1ea;text-align:left;font-size:13px;white-space:nowrap}}
 th{{background:#eaf0f6}} .table-wrap{{overflow:auto;border:1px solid #d9e1ea}} code{{font-family:Consolas,monospace}}
 </style>
@@ -444,6 +675,7 @@ th{{background:#eaf0f6}} .table-wrap{{overflow:auto;border:1px solid #d9e1ea}} c
 <h1>{html.escape(str(config['protocol_id']))}</h1>
 <div class="meta">mode={html.escape(str(config['mode']))} | selection={html.escape(str(config['selection_split']))} | evaluation={html.escape(str(config['evaluation_split']))}<br>config=<code>{html.escape(str(config_path))}</code></div>
 {warning}
+{cost_notice}
 <section><h2>Pipeline stages</h2><table><thead><tr><th>Stage</th><th>Kind</th><th>Status</th><th>Seconds</th></tr></thead><tbody>{stage_html}</tbody></table></section>
 {''.join(artifact_sections)}
 </main></body></html>"""

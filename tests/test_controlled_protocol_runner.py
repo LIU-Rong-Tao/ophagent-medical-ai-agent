@@ -11,7 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "scripts" / "routing" / "run_controlled_protocol.py"
 
 
-def write_config(tmp_path: Path, *, stages: list[dict], mode: str = "exploratory", publish=None) -> Path:
+def write_config(
+    tmp_path: Path,
+    *,
+    stages: list[dict],
+    mode: str = "exploratory",
+    publish=None,
+    extra: dict | None = None,
+) -> Path:
     config = {
         "protocol_id": "fixture_protocol",
         "mode": mode,
@@ -21,6 +28,7 @@ def write_config(tmp_path: Path, *, stages: list[dict], mode: str = "exploratory
         "stages": stages,
         "publish": {"artifacts": publish or []},
     }
+    config.update(extra or {})
     path = tmp_path / "protocol.json"
     path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
@@ -256,6 +264,112 @@ def test_publish_writes_canonical_artifacts_manifest_and_report(tmp_path: Path):
     assert manifest_rows
     assert manifest_rows[0]["created_at_utc"]
     assert manifest_rows[0]["reused_or_generated"] == "generated"
+
+
+def test_publish_enriches_baselines_and_routing_with_forward_cost(tmp_path: Path):
+    raw_baseline = tmp_path / "raw" / "baseline.csv"
+    raw_routing = tmp_path / "raw" / "routing.csv"
+    registry = tmp_path / "registry.csv"
+    scout_cost = tmp_path / "scout_cost.csv"
+    expert_cost = tmp_path / "expert_cost.csv"
+
+    raw_baseline.parent.mkdir(parents=True)
+    raw_baseline.write_text(
+        "name,accuracy,macro_f1,qwk\n"
+        "scout,0.8,0.7,0.75\n"
+        "expert,0.9,0.8,0.85\n",
+        encoding="utf-8",
+    )
+    raw_routing.write_text(
+        "protocol_family,protocol_name,role,ms_per_image,accuracy,macro_f1,qwk\n"
+        "dense_baseline,dense_expert,dense_expert_reference,4.0,0.9,0.8,0.85\n"
+        "single_scout,scout_to_expert,main,2.0,0.88,0.79,0.83\n",
+        encoding="utf-8",
+    )
+    scout_cost.write_text(
+        "model_name,mean_ms_per_image,images_per_second,pytorch_peak_allocated_mem_mb,checkpoint_mb,batch_size,device,cost_note\n"
+        "scout,1.0,1000,512,100,32,cuda,forward-only scout benchmark\n",
+        encoding="utf-8",
+    )
+    expert_cost.write_text(
+        "model_name,mean_ms_per_image,images_per_second,pytorch_peak_allocated_mem_mb,checkpoint_mb,batch_size,device,cost_note\n"
+        "expert,4.0,250,1024,500,32,cuda,forward-only expert benchmark\n",
+        encoding="utf-8",
+    )
+    registry.write_text(
+        "model_name,role_hint,cost_csv,enabled\n"
+        f"scout,scout,{scout_cost},1\n"
+        f"expert,expert,{expert_cost},1\n",
+        encoding="utf-8",
+    )
+
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=[
+            {"name": "model_baselines", "source": str(raw_baseline), "target": "model_baselines.csv"},
+            {"name": "routing_results", "source": str(raw_routing), "target": "routing_results.csv"},
+        ],
+        extra={
+            "risk_metric_profile": "generic_multiclass",
+            "cost_enrichment": {
+                "model_registry": str(registry),
+                "expert_reference_model": "expert",
+            },
+        },
+    )
+
+    result = run_runner(config)
+    assert result.returncode == 0, result.stderr
+
+    with (tmp_path / "published" / "model_baselines.csv").open(
+        encoding="utf-8-sig", newline=""
+    ) as handle:
+        baselines = list(csv.DictReader(handle))
+    assert baselines[0]["estimated_forward_ms_per_image"] == "1.0"
+    assert float(baselines[0]["images_per_second"]) == 1000.0
+    assert baselines[0]["relative_forward_cost_vs_fastest_model"] == "1.0"
+    assert baselines[0]["relative_forward_cost_vs_expert"] == "0.25"
+    assert baselines[0]["accuracy"] == "0.8"
+    assert baselines[1]["relative_forward_cost_vs_expert"] == "1.0"
+    assert baselines[1]["timing_source"] == str(expert_cost)
+
+    with (tmp_path / "published" / "routing_results.csv").open(
+        encoding="utf-8-sig", newline=""
+    ) as handle:
+        routing = list(csv.DictReader(handle))
+    assert routing[0]["estimated_forward_ms_per_image"] == "4.0"
+    assert routing[0]["relative_forward_cost_vs_dense_expert"] == "1.0"
+    assert routing[0]["forward_cost_reduction_vs_dense_expert"] == "0.0"
+    assert routing[1]["relative_forward_cost_vs_dense_expert"] == "0.5"
+    assert routing[1]["forward_cost_reduction_vs_dense_expert"] == "0.5"
+    assert routing[1]["accuracy"] == "0.88"
+
+    report = (tmp_path / "published" / "report.html").read_text(encoding="utf-8")
+    assert "estimated forward-only cost" in report
+    assert "image decoding" in report
+
+
+def test_generic_risk_profile_rejects_dr_specific_columns(tmp_path: Path):
+    raw_routing = tmp_path / "routing.csv"
+    raw_routing.write_text(
+        "protocol_name,accuracy,severe_pdr_miss_event_recall_fixed_pool\n"
+        "glaucoma_route,0.85,0.9\n",
+        encoding="utf-8",
+    )
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=[
+            {"name": "routing_results", "source": str(raw_routing), "target": "routing_results.csv"}
+        ],
+        extra={"risk_metric_profile": "generic_multiclass"},
+    )
+
+    result = run_runner(config)
+
+    assert result.returncode != 0
+    assert "DR-specific" in result.stderr
 
 
 def test_repository_v082c_profile_has_a_valid_dry_run():
