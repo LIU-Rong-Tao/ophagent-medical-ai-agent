@@ -184,3 +184,9 @@ experiments/**/logs/events.out.tfevents*
 experiments/**/checkpoints/*.jpg
 experiments/v0_8_0_greenscout_feasibility/green_embeddings/*.csv
 experiments/v0_8_0_greenscout_feasibility/green_probe/*.joblib
+
+# local experiment artifacts
+experiments/**/checkpoints/*.pth
+experiments/**/checkpoints/*.pt
+experiments/**/figures/*.png
+experiments/**/logs/train_log.csv

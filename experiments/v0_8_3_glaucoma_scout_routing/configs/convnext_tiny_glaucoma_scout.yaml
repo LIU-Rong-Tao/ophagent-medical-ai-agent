@@ -1,0 +1,12 @@
+data_root: /data/LRT/RETFound/Data_split/Glaucoma_fundus
+backbone: convnext_tiny
+num_classes: 3
+image_size: 224
+batch_size: 32
+num_epochs: 10
+learning_rate: 0.0001
+experiment_root: experiments/v0_8_3_glaucoma_scout_routing
+experiment_name: convnext_tiny_glaucoma_scout
+run_name: imagenet_lr1e-4_bs32_seed42
+seed: 42
+pretrained: true

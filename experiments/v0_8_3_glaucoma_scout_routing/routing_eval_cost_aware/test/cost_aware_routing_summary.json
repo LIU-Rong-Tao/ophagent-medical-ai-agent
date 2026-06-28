@@ -1,0 +1,38 @@
+{
+  "n": 465,
+  "budgets": [
+    0.05,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5
+  ],
+  "random_trials": 2000,
+  "scout_only": {
+    "accuracy": 0.8086021505376344,
+    "macro_f1": 0.7621638610664482,
+    "weighted_f1": 0.8086576141265761,
+    "kappa": 0.6914836516527263,
+    "error_n": 89
+  },
+  "expert_only": {
+    "accuracy": 0.8602150537634409,
+    "macro_f1": 0.8326806210330632,
+    "weighted_f1": 0.8622095608513445,
+    "kappa": 0.7743662098002329,
+    "error_n": 65
+  },
+  "complementarity": {
+    "both_correct": 353,
+    "scout_wrong_expert_correct": 47,
+    "scout_correct_expert_wrong": 23,
+    "both_wrong": 42
+  },
+  "outputs": {
+    "curve": "experiments/v0_8_3_glaucoma_scout_routing/routing_eval_cost_aware/test/cost_aware_routing_curve.csv",
+    "best_policy_by_budget": "experiments/v0_8_3_glaucoma_scout_routing/routing_eval_cost_aware/test/best_policy_by_budget.csv",
+    "random_defer_summary": "experiments/v0_8_3_glaucoma_scout_routing/routing_eval_cost_aware/test/random_defer_summary.csv",
+    "oracle_up_to_k_curve": "experiments/v0_8_3_glaucoma_scout_routing/routing_eval_cost_aware/test/oracle_up_to_k_curve.csv"
+  }
+}
