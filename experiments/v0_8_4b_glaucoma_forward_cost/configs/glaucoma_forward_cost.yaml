@@ -1,0 +1,40 @@
+benchmark_id: v084b_glaucoma_forward_only_cost
+timing_scope: forward_only
+device: cuda
+expected_device_name_contains: "4090"
+precision: fp32
+warmup_runs: 5
+timed_runs: 10
+
+# 两个模型使用相同 batch size 与精度，保证本轮协议内成本可比较。
+artifacts:
+  - artifact_id: convnext_tiny_glaucoma_scout
+    cost_profile_id: rtx4090_fp32_bs24_forward_only_v1
+    adapter: glaucoma_convnext_tiny
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: convnext
+    batch_size: 24
+    num_workers: 4
+    checkpoint_path: experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth
+    class_to_idx_path: experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/configs/class_to_idx.json
+    model_config: experiments/v0_8_3_glaucoma_scout_routing/configs/convnext_tiny_glaucoma_scout.yaml
+    data_root: /data/LRT/RETFound/Data_split/Glaucoma_fundus
+    split: test
+
+  - artifact_id: retfound_dinov2_glaucoma_expert
+    cost_profile_id: rtx4090_fp32_bs24_forward_only_v1
+    adapter: glaucoma_retfound_dinov2
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: retfound_dinov2
+    batch_size: 24
+    num_workers: 8
+    checkpoint_path: /data/LRT/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+    retfound_root: /data/LRT/RETFound
+    data_root: /data/LRT/RETFound/Data_split/Glaucoma_fundus
+    split: test
+    expected_class_to_idx:
+      anormal_control: 0
+      bearly_glaucoma: 1
+      cadvanced_glaucoma: 2

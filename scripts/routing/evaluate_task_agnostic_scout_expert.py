@@ -496,14 +496,33 @@ def artifact_cost(registry_row: pd.Series, registry_path: Path) -> dict[str, Any
     if not cost_path.exists():
         return {"cost_status": "missing"}
     cost_frame = pd.read_csv(cost_path)
-    if "model_name" in cost_frame.columns:
-        model_name = str(registry_row["artifact_id"])
-        matched = cost_frame.loc[cost_frame["model_name"].astype(str) == model_name]
-        if len(matched) == 1:
-            cost_frame = matched
-    if len(cost_frame) != 1:
+    artifact_id = str(registry_row["artifact_id"])
+    cost_profile_id = str(registry_row.get("cost_profile_id", "")).strip()
+    if "artifact_id" in cost_frame.columns:
+        cost_frame = cost_frame.loc[
+            cost_frame["artifact_id"].astype(str) == artifact_id
+        ]
+        if "cost_profile_id" in cost_frame.columns:
+            if not cost_profile_id:
+                raise EvaluationError(
+                    f"{artifact_id} 已配置共享成本表，但 registry 缺少 cost_profile_id"
+                )
+            cost_frame = cost_frame.loc[
+                cost_frame["cost_profile_id"].astype(str) == cost_profile_id
+            ]
+    elif "model_name" in cost_frame.columns:
+        cost_frame = cost_frame.loc[
+            cost_frame["model_name"].astype(str) == artifact_id
+        ]
+    if cost_frame.empty:
         return {"cost_status": "missing"}
+    if len(cost_frame) != 1:
+        raise EvaluationError(
+            f"{artifact_id} / {cost_profile_id or '<未指定>'} 的成本记录不唯一"
+        )
     row = cost_frame.iloc[0]
+    if str(row.get("cost_status", "measured")) != "measured":
+        return {"cost_status": "missing"}
     estimate = row.get("estimated_forward_ms_per_image", row.get("mean_ms_per_image"))
     try:
         estimate = float(estimate)
@@ -514,6 +533,14 @@ def artifact_cost(registry_row: pd.Series, registry_path: Path) -> dict[str, Any
         "estimated_forward_ms_per_image": estimate,
         "images_per_second": float(row.get("images_per_second", 1000.0 / estimate)),
         "checkpoint_mb": row.get("checkpoint_mb", ""),
+        "cost_profile_id": row.get("cost_profile_id", cost_profile_id),
+        "mean_ms_per_image": row.get("mean_ms_per_image", ""),
+        "median_ms_per_image": row.get("median_ms_per_image", estimate),
+        "std_ms_per_image": row.get("std_ms_per_image", ""),
+        "cv_ms_per_image": row.get("cv_ms_per_image", ""),
+        "n_repeats": row.get("n_repeats", ""),
+        "peak_allocated_memory_mb": row.get("peak_allocated_memory_mb", ""),
+        "timing_scope": row.get("timing_scope", "forward_only"),
         "timing_source": str(cost_path),
     }
 

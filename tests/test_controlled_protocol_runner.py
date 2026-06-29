@@ -376,6 +376,79 @@ def test_generic_risk_profile_rejects_dr_specific_columns(tmp_path: Path):
     assert "DR-specific" in result.stderr
 
 
+def test_forward_only_scope_shows_chinese_notice_without_legacy_cost_enrichment(tmp_path: Path):
+    raw_routing = tmp_path / "routing.csv"
+    raw_routing.write_text(
+        "protocol_name,cost_status,estimated_forward_ms_per_image\n"
+        "scout_to_expert,estimated_from_measured_models,2.0\n",
+        encoding="utf-8",
+    )
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=[
+            {"name": "routing_results", "source": str(raw_routing), "target": "routing_results.csv"}
+        ],
+        extra={"risk_metric_profile": "generic_multiclass", "cost_scope": "forward_only"},
+    )
+
+    result = run_runner(config)
+
+    assert result.returncode == 0, result.stderr
+    report = (tmp_path / "published" / "report.html").read_text(encoding="utf-8")
+    assert "成本口径" in report
+    assert "仅前向传播成本" in report
+
+
+def test_task_agnostic_routing_does_not_add_empty_dense_reference_columns(tmp_path: Path):
+    raw_routing = tmp_path / "routing.csv"
+    raw_routing.write_text(
+        "protocol_name,cost_status,estimated_forward_ms_per_image,"
+        "relative_forward_cost_vs_expert_only,forward_cost_reduction_vs_expert_only\n"
+        "scout_to_expert,estimated_from_measured_models,2.0,0.5,0.5\n",
+        encoding="utf-8",
+    )
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=[
+            {"name": "routing_results", "source": str(raw_routing), "target": "routing_results.csv"}
+        ],
+        extra={"risk_metric_profile": "generic_multiclass", "cost_scope": "forward_only"},
+    )
+
+    result = run_runner(config)
+
+    assert result.returncode == 0, result.stderr
+    with (tmp_path / "published" / "routing_results.csv").open(
+        encoding="utf-8-sig", newline=""
+    ) as handle:
+        fieldnames = list(csv.DictReader(handle).fieldnames or [])
+    assert "relative_forward_cost_vs_expert_only" in fieldnames
+    assert "relative_forward_cost_vs_dense_expert" not in fieldnames
+    assert "forward_cost_reduction_vs_dense_expert" not in fieldnames
+
+
+def test_report_previews_all_controlled_routing_rows(tmp_path: Path):
+    raw_routing = tmp_path / "routing.csv"
+    rows = "".join(f"route_{index},0.{index}\n" for index in range(12))
+    raw_routing.write_text("protocol_name,accuracy\n" + rows, encoding="utf-8")
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=[
+            {"name": "routing_results", "source": str(raw_routing), "target": "routing_results.csv"}
+        ],
+        extra={"risk_metric_profile": "generic_multiclass"},
+    )
+
+    result = run_runner(config)
+
+    assert result.returncode == 0, result.stderr
+    report = (tmp_path / "published" / "report.html").read_text(encoding="utf-8")
+    assert "route_11" in report
+
+
 def test_repository_v082c_profile_has_a_valid_dry_run():
     config = ROOT / "experiments" / "v0_8_3_controlled_runner" / "configs" / "v082c_dr_replay.yaml"
 

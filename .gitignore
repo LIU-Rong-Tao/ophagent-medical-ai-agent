@@ -190,3 +190,7 @@ experiments/**/checkpoints/*.pth
 experiments/**/checkpoints/*.pt
 experiments/**/figures/*.png
 experiments/**/logs/train_log.csv
+
+# Controlled protocol runtime state
+experiments/**/work/
+experiments/**/.controlled_runner_state.json

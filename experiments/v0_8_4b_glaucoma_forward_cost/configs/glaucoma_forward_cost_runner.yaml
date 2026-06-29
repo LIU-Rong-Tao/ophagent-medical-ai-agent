@@ -1,0 +1,77 @@
+protocol_id: v084b_glaucoma_forward_cost
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: generic_multiclass
+cost_scope: forward_only
+output_dir: experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_convnext_retfound
+
+# 本配置先测两个冻结 artifact 的 forward-only 成本，再调用 v0.8.4 evaluator。
+# 仍属于 test=test 的历史复现，不得作为无偏最终评估。
+stages:
+  - id: benchmark-glaucoma-forward-cost
+    kind: benchmark
+    command:
+      - "{python}"
+      - scripts/routing/benchmark_artifact_forward_cost.py
+      - --config
+      - experiments/v0_8_4b_glaucoma_forward_cost/configs/glaucoma_forward_cost.yaml
+      - --runs-output
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_model_forward_cost_runs.csv
+      - --summary-output
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv
+    inputs:
+      - scripts/routing/benchmark_artifact_forward_cost.py
+      - scripts/v083_glaucoma/export_retfound_dinov2_glaucoma_expert_predictions.py
+      - models/classifiers/builder.py
+      - models/datasets/aptos_dataset.py
+      - experiments/v0_8_4b_glaucoma_forward_cost/configs/glaucoma_forward_cost.yaml
+      - experiments/v0_8_3_glaucoma_scout_routing/configs/convnext_tiny_glaucoma_scout.yaml
+      - experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/checkpoints/convnext_tiny_best.pth
+      - experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/configs/class_to_idx.json
+      - /data/LRT/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+      - /data/LRT/RETFound/Data_split/Glaucoma_fundus/test
+    outputs:
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_model_forward_cost_runs.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv
+
+  - id: evaluate-cost-aware-routing
+    kind: routing
+    depends_on: [benchmark-glaucoma-forward-cost]
+    command:
+      - "{python}"
+      - scripts/routing/evaluate_task_agnostic_scout_expert.py
+      - --registry
+      - experiments/v0_8_4b_glaucoma_forward_cost/configs/artifact_registry.csv
+      - --protocol
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/glaucoma_convnext_retfound_protocol.yaml
+      - --work-dir
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound
+    inputs:
+      - scripts/routing/evaluate_task_agnostic_scout_expert.py
+      - experiments/v0_8_4b_glaucoma_forward_cost/configs/artifact_registry.csv
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/glaucoma_convnext_retfound_protocol.yaml
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv
+      - experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv
+      - experiments/v0_8_3_glaucoma_scout_routing/retfound_dinov2_glaucoma_expert/evaluation/test/test_predictions.csv
+    outputs:
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/model_baselines.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/routing_results.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/risk_results.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/case_audit.csv
+
+publish:
+  report: report.html
+  artifacts:
+    - name: model_baselines
+      source: experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/model_baselines.csv
+      target: model_baselines.csv
+    - name: routing_results
+      source: experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/routing_results.csv
+      target: routing_results.csv
+    - name: risk_results
+      source: experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/risk_results.csv
+      target: risk_results.csv
+    - name: case_audit
+      source: experiments/v0_8_4b_glaucoma_forward_cost/work/glaucoma_convnext_retfound/case_audit.csv
+      target: case_audit.csv

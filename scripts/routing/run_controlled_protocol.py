@@ -310,14 +310,8 @@ def enrich_routing_results(path: Path, config: dict[str, Any]) -> None:
     if not rows:
         return
 
-    appended = [
-        "estimated_forward_ms_per_image",
-        "relative_forward_cost_vs_dense_expert",
-        "forward_cost_reduction_vs_dense_expert",
-    ]
-    for name in appended:
-        if name not in fieldnames:
-            fieldnames.append(name)
+    if "estimated_forward_ms_per_image" not in fieldnames:
+        fieldnames.append("estimated_forward_ms_per_image")
 
     estimates: list[float | None] = []
     for row in rows:
@@ -335,6 +329,19 @@ def enrich_routing_results(path: Path, config: dict[str, Any]) -> None:
         if estimate is not None and str(row.get("role", "")) == "dense_expert_reference"
     ]
     dense_reference = dense_candidates[0] if len(dense_candidates) == 1 else None
+    dense_fields = [
+        "relative_forward_cost_vs_dense_expert",
+        "forward_cost_reduction_vs_dense_expert",
+    ]
+    use_dense_reference = dense_reference is not None or any(
+        name in fieldnames for name in dense_fields
+    )
+    if not use_dense_reference:
+        write_csv_records(path, fieldnames, rows)
+        return
+    for name in dense_fields:
+        if name not in fieldnames:
+            fieldnames.append(name)
     for row, estimate in zip(rows, estimates):
         if estimate is None or not dense_reference:
             row["relative_forward_cost_vs_dense_expert"] = ""
@@ -620,7 +627,7 @@ def write_html_report(
         )
 
     cost_notice = ""
-    if config.get("cost_enrichment"):
+    if config.get("cost_enrichment") or config.get("cost_scope") == "forward_only":
         cost_notice = (
             "<div class='notice'><strong>成本口径：</strong>估算的仅前向传播成本"
             "（estimated forward-only cost）。不包括图像解码（image decoding）、预处理、"
@@ -647,7 +654,8 @@ def write_html_report(
     }
     for row in rows:
         artifact_path = Path(row["published_path"])
-        headers, preview = csv_preview(artifact_path)
+        preview_limit = 30 if str(row["artifact_name"]) == "routing_results" else 8
+        headers, preview = csv_preview(artifact_path, limit=preview_limit)
         table = ""
         if headers:
             head = "".join(f"<th>{html.escape(value)}</th>" for value in headers)
