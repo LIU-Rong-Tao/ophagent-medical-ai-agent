@@ -1,0 +1,48 @@
+protocol_id: v084_glaucoma_convnext_retfound_exploratory
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: generic_multiclass
+output_dir: experiments/v0_8_4_task_agnostic_evaluator/outputs/glaucoma_convnext_retfound
+
+# 当前配置用于复现 v0.8.3 青光眼 smoke 结果并验证跨病种统一 evaluator。
+# 真实成本未测量，因此不启用 cost_enrichment，也不使用调用比例代替毫秒成本。
+stages:
+  - id: evaluate-task-agnostic-routing
+    kind: routing
+    command:
+      - "{python}"
+      - scripts/routing/evaluate_task_agnostic_scout_expert.py
+      - --registry
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/artifact_registry.csv
+      - --protocol
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/glaucoma_convnext_retfound_protocol.yaml
+      - --work-dir
+      - experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound
+    inputs:
+      - scripts/routing/evaluate_task_agnostic_scout_expert.py
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/artifact_registry.csv
+      - experiments/v0_8_4_task_agnostic_evaluator/configs/glaucoma_convnext_retfound_protocol.yaml
+      - experiments/v0_8_3_glaucoma_scout_routing/convnext_tiny_glaucoma_scout/imagenet_lr1e-4_bs32_seed42/evaluation/test/test_predictions.csv
+      - experiments/v0_8_3_glaucoma_scout_routing/retfound_dinov2_glaucoma_expert/evaluation/test/test_predictions.csv
+    outputs:
+      - experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/model_baselines.csv
+      - experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/routing_results.csv
+      - experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/risk_results.csv
+      - experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/case_audit.csv
+
+publish:
+  report: report.html
+  artifacts:
+    - name: model_baselines
+      source: experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/model_baselines.csv
+      target: model_baselines.csv
+    - name: routing_results
+      source: experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/routing_results.csv
+      target: routing_results.csv
+    - name: risk_results
+      source: experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/risk_results.csv
+      target: risk_results.csv
+    - name: case_audit
+      source: experiments/v0_8_4_task_agnostic_evaluator/work/glaucoma_convnext_retfound/case_audit.csv
+      target: case_audit.csv

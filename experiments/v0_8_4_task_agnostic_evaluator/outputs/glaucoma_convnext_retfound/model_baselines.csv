@@ -1,0 +1,3 @@
+﻿protocol_id,task_id,artifact_id,role,model_family,split,n_images,accuracy,macro_f1,macro_auroc_ovr,macro_aupr_ovr,n_error,cost_status
+v084_glaucoma_convnext_retfound_exploratory,glaucoma_3class,convnext_tiny_glaucoma_scout,scout,convnext,test,465,0.8086021505376344,0.7621638610664482,0.9256889498929528,0.8207734960154811,89,missing
+v084_glaucoma_convnext_retfound_exploratory,glaucoma_3class,retfound_dinov2_glaucoma_expert,expert,retfound_dinov2,test,465,0.8602150537634409,0.8326806210330632,0.9546075126693907,0.8890151118106991,65,missing

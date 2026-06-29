@@ -1,0 +1,41 @@
+protocol_id: v084_glaucoma_convnext_retfound_exploratory
+task_id: glaucoma_3class
+task_type: generic_multiclass
+mode: exploratory
+selection_split: test
+evaluation_split: test
+metric_profile: classification_standard_v1
+
+# 本协议只复现数据集定义的三分类任务，不把 CFP 标签解释为完整临床分期。
+scouts:
+  - convnext_tiny_glaucoma_scout
+experts:
+  - retfound_dinov2_glaucoma_expert
+
+budgets: [0.2, 0.3, 0.5]
+policies:
+  - low_confidence
+  - low_margin
+  - high_entropy
+
+random_trials: 2000
+seed: 42
+
+# v0.8.4 核心只使用统一分类指标；专病风险事件以后按独立协议补充。
+risk_events: []
+
+# 只导出历史 smoke 实验中的代表性操作点，避免病例表无意义膨胀。
+case_export_points:
+  - budget: 0.2
+    policy: high_entropy
+  - budget: 0.3
+    policy: high_entropy
+  - budget: 0.5
+    policy: low_margin
+  - budget: 0.5
+    policy: low_confidence
+
+notes:
+  - 当前 selection_split 与 evaluation_split 都是 test，仅用于历史实验复现和 evaluator 冒烟验证。
+  - 不得把本结果表述为独立测试或无偏最终性能。
+  - 当前仓库没有这两个青光眼模型的独立 forward-cost 产物，因此成本状态必须显示 missing。

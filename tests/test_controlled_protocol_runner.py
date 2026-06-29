@@ -258,7 +258,10 @@ def test_publish_writes_canonical_artifacts_manifest_and_report(tmp_path: Path):
     assert (published / "case_audit.csv").exists()
     assert (published / "artifact_manifest.csv").exists()
     assert (published / "report.html").exists()
-    assert "exploratory" in (published / "report.html").read_text(encoding="utf-8")
+    report_text = (published / "report.html").read_text(encoding="utf-8")
+    assert "exploratory" in report_text
+    assert "探索性结果" in report_text
+    assert "流水线阶段" in report_text
     with (published / "artifact_manifest.csv").open(encoding="utf-8-sig", newline="") as handle:
         manifest_rows = list(csv.DictReader(handle))
     assert manifest_rows
@@ -348,6 +351,7 @@ def test_publish_enriches_baselines_and_routing_with_forward_cost(tmp_path: Path
     report = (tmp_path / "published" / "report.html").read_text(encoding="utf-8")
     assert "estimated forward-only cost" in report
     assert "image decoding" in report
+    assert "估算的仅前向传播成本" in report
 
 
 def test_generic_risk_profile_rejects_dr_specific_columns(tmp_path: Path):

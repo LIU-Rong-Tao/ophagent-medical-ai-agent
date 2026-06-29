@@ -615,17 +615,17 @@ def write_html_report(
     warning = ""
     if config["mode"] == "exploratory":
         warning = (
-            "<div class='warning'><strong>Exploratory result:</strong> selection and evaluation "
-            "may use the same split. Do not present this report as an unbiased final evaluation.</div>"
+            "<div class='warning'><strong>探索性结果（exploratory）：</strong>选择与评估可能使用"
+            "同一数据划分，不得将本报告表述为无偏的最终评估。</div>"
         )
 
     cost_notice = ""
     if config.get("cost_enrichment"):
         cost_notice = (
-            "<div class='notice'><strong>Cost scope:</strong> estimated forward-only cost. "
-            "It excludes image decoding, preprocessing, disk and network I/O, host-to-device "
-            "transfer, queueing, model loading, service overhead, post-processing, and clinical "
-            "workflow latency.</div>"
+            "<div class='notice'><strong>成本口径：</strong>估算的仅前向传播成本"
+            "（estimated forward-only cost）。不包括图像解码（image decoding）、预处理、"
+            "磁盘与网络 I/O、主机到设备传输、排队、模型加载、服务开销、后处理和临床"
+            "工作流耗时。</div>"
         )
 
     stage_html = "".join(
@@ -639,6 +639,12 @@ def write_html_report(
     )
 
     artifact_sections = []
+    artifact_labels = {
+        "model_baselines": "模型基线",
+        "routing_results": "路由结果",
+        "risk_results": "风险结果",
+        "case_audit": "病例审计",
+    }
     for row in rows:
         artifact_path = Path(row["published_path"])
         headers, preview = csv_preview(artifact_path)
@@ -651,7 +657,8 @@ def write_html_report(
             )
             table = f"<div class='table-wrap'><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
         artifact_sections.append(
-            f"<section><h2>{html.escape(str(row['artifact_name']))}</h2>"
+            f"<section><h2>{html.escape(artifact_labels.get(str(row['artifact_name']), str(row['artifact_name'])))}"
+            f" <small>({html.escape(str(row['artifact_name']))})</small></h2>"
             f"<p><code>{html.escape(str(artifact_path))}</code></p>{table}</section>"
         )
 
@@ -660,7 +667,7 @@ def write_html_report(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(str(config['protocol_id']))} controlled protocol report</title>
+<title>{html.escape(str(config['protocol_id']))} 受控协议报告</title>
 <style>
 body{{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;margin:0;background:#f4f7fa;color:#14253d}}
 main{{max-width:1180px;margin:0 auto;padding:36px 24px 64px}}
@@ -672,11 +679,11 @@ th{{background:#eaf0f6}} .table-wrap{{overflow:auto;border:1px solid #d9e1ea}} c
 </style>
 </head>
 <body><main>
-<h1>{html.escape(str(config['protocol_id']))}</h1>
-<div class="meta">mode={html.escape(str(config['mode']))} | selection={html.escape(str(config['selection_split']))} | evaluation={html.escape(str(config['evaluation_split']))}<br>config=<code>{html.escape(str(config_path))}</code></div>
+<h1>{html.escape(str(config['protocol_id']))} 受控协议报告</h1>
+<div class="meta">运行模式={html.escape(str(config['mode']))} | 选择数据划分={html.escape(str(config['selection_split']))} | 评估数据划分={html.escape(str(config['evaluation_split']))}<br>配置文件=<code>{html.escape(str(config_path))}</code></div>
 {warning}
 {cost_notice}
-<section><h2>Pipeline stages</h2><table><thead><tr><th>Stage</th><th>Kind</th><th>Status</th><th>Seconds</th></tr></thead><tbody>{stage_html}</tbody></table></section>
+<section><h2>流水线阶段</h2><table><thead><tr><th>阶段</th><th>类型</th><th>状态</th><th>耗时（秒）</th></tr></thead><tbody>{stage_html}</tbody></table></section>
 {''.join(artifact_sections)}
 </main></body></html>"""
     path.write_text(document, encoding="utf-8")
