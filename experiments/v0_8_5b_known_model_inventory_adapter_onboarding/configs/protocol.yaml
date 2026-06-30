@@ -1,0 +1,8 @@
+protocol_id: v085b_known_model_inventory_adapter_onboarding
+mode: exploratory
+inventory_sources: inventory_sources.csv
+adapter_registry: adapter_registry.csv
+onboarding_jobs: onboarding_jobs.csv
+routing_replay_protocols: routing_replay_protocols.csv
+output_dir: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/outputs
+report: summary.html

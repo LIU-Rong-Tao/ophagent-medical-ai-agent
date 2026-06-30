@@ -1,0 +1,126 @@
+protocol_id: v085b_known_model_inventory_adapter_onboarding
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: custom
+cost_scope: forward_only
+output_dir: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/outputs
+
+stages:
+  - id: inventory
+    kind: routing
+    command:
+      - "{python}"
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - --config
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding
+      - --stage
+      - inventory
+    inputs:
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/inventory_sources.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/adapter_registry.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/onboarding_jobs.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/routing_replay_protocols.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/protocol.yaml
+    outputs:
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/model_inventory.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/artifact_source_index.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/inventory_summary.csv
+
+  - id: onboarding
+    kind: routing
+    depends_on:
+      - inventory
+    command:
+      - "{python}"
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - --config
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding
+      - --stage
+      - onboarding
+    inputs:
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/onboarding_jobs.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/model_inventory.csv
+    outputs:
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_job_summary.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/onboarded_models.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/model_baselines_from_adapters.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/forward_cost_summary_from_adapters.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_manifest.csv
+
+  - id: replay
+    kind: routing
+    depends_on:
+      - onboarding
+    command:
+      - "{python}"
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - --config
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding
+      - --stage
+      - replay
+    inputs:
+      - scripts/routing/run_known_model_inventory_adapter_onboarding.py
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/configs/routing_replay_protocols.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_job_summary.csv
+    outputs:
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/single_scout_routing_results_from_adapters.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/multi_scout_routing_results_from_adapters.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/routing_replay_summary.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_vs_legacy_baseline_check.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_vs_legacy_routing_check.csv
+      - experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/summary.html
+
+publish:
+  report: report.html
+  artifacts:
+    - name: model_inventory
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/model_inventory.csv
+      target: model_inventory.csv
+    - name: artifact_source_index
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/artifact_source_index.csv
+      target: artifact_source_index.csv
+    - name: inventory_summary
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/inventory_summary.csv
+      target: inventory_summary.csv
+    - name: adapter_job_summary
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_job_summary.csv
+      target: adapter_job_summary.csv
+    - name: onboarded_models
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/onboarded_models.csv
+      target: onboarded_models.csv
+    - name: model_baselines_from_adapters
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/model_baselines_from_adapters.csv
+      target: model_baselines_from_adapters.csv
+    - name: forward_cost_summary_from_adapters
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/forward_cost_summary_from_adapters.csv
+      target: forward_cost_summary_from_adapters.csv
+    - name: adapter_manifest
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_manifest.csv
+      target: adapter_manifest.csv
+    - name: single_scout_routing_results_from_adapters
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/single_scout_routing_results_from_adapters.csv
+      target: single_scout_routing_results_from_adapters.csv
+    - name: multi_scout_routing_results_from_adapters
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/multi_scout_routing_results_from_adapters.csv
+      target: multi_scout_routing_results_from_adapters.csv
+    - name: routing_replay_summary
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/routing_replay_summary.csv
+      target: routing_replay_summary.csv
+    - name: adapter_vs_legacy_baseline_check
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_vs_legacy_baseline_check.csv
+      target: adapter_vs_legacy_baseline_check.csv
+    - name: adapter_vs_legacy_routing_check
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/adapter_vs_legacy_routing_check.csv
+      target: adapter_vs_legacy_routing_check.csv
+    - name: summary_html
+      source: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/work/adapter_onboarding/summary.html
+      target: summary.html

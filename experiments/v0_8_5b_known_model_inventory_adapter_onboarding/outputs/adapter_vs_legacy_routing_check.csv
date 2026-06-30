@@ -1,0 +1,5 @@
+﻿task_id,artifact_id,legacy_source,adapter_source,metric,legacy_value,adapter_value,diff,status,notes
+aptos_dr_5class,retfound_mae_cfp_official_protocol,,routing_replay_summary.csv,best_macro_f1,,,,missing_legacy_reference,sanity comparison，不是 strict reproduction
+aptos_dr_5class,retfound_mae_cfp_official_protocol,,routing_replay_summary.csv,best_macro_f1,,,,missing_legacy_reference,sanity comparison，不是 strict reproduction
+aptos_dr_5class,retfound_mae_cfp_official_protocol,,routing_replay_summary.csv,best_macro_f1,,,,missing_legacy_reference,sanity comparison，不是 strict reproduction
+glaucoma_3class,retfound_dinov2_glaucoma_expert,,routing_replay_summary.csv,best_macro_f1,,,,missing_legacy_reference,sanity comparison，不是 strict reproduction

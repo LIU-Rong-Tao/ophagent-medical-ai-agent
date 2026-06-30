@@ -1,0 +1,5 @@
+﻿job_id,task_id,artifact_id,adapter_id,status,n_images,accuracy,macro_f1,estimated_forward_ms_per_image,cost_scope,outputs_dir,notes
+dr_convnext_tiny_adapter,aptos_dr_5class,convnext_tiny,timm_classifier_v1,skipped_disabled,,,,,,,服务器已确认 checkpoint 存在；data_root/input_csv 待确认后再启用真实 adapter
+dr_swin_tiny_adapter,aptos_dr_5class,swin_tiny,timm_classifier_v1,skipped_disabled,,,,,,,服务器已确认 checkpoint 存在；data_root/input_csv 待确认
+dr_vit_b_imagenet_adapter,aptos_dr_5class,vit_b_imagenet,timm_classifier_v1,skipped_disabled,,,,,,,服务器已确认 checkpoint 存在；data_root/input_csv 待确认
+glaucoma_convnext_adapter,glaucoma_3class,convnext_tiny_glaucoma_scout,timm_classifier_v1,skipped_disabled,,,,,,,服务器已确认 checkpoint 存在；data_root/input_csv 待确认

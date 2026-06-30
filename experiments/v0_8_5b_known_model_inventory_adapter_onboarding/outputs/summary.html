@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>v0.8.5b 已知模型清单与适配器接入摘要</title>
+<style>body{font-family:Arial,"Microsoft YaHei",sans-serif;margin:32px;color:#142033} table{border-collapse:collapse;width:100%} td,th{border:1px solid #d9e1ea;padding:8px} .notice{background:#fff8e8;border-left:4px solid #b7791f;padding:12px;margin:16px 0}</style></head>
+<body>
+<h1>v0.8.5b 已知模型清单与适配器接入摘要</h1>
+<p>当前版本定位：已知模型 inventory + adapter-level onboarding + routing replay。它不是训练、微调、UI 或 Agent。</p>
+<h2>Stage 1：Inventory</h2>
+<ul>
+<li>inventory 总数：10</li>
+<li>ready_for_adapter 数量：0</li>
+<li>missing checkpoint 数量：0</li>
+<li>needs_loader_audit 数量：4</li>
+<li>legacy replay only 数量：0</li>
+<li>DR 候选数量：8</li>
+<li>青光眼候选数量：2</li>
+</ul>
+<h2>Stage 2：Adapter Onboarding</h2>
+<p>completed job 数：0；skipped job 数：4。</p>
+<p>adapter 产物路径：<code>onboarded_models/&lt;job_id&gt;/predictions.csv</code>、<code>model_baseline.csv</code>、<code>forward_cost_summary.csv</code>、<code>adapter_manifest.csv</code>。</p>
+<h2>Stage 3：Routing Replay</h2>
+<p>single scout replay 完成数：0；multi scout replay 完成数：0；skipped_missing_predictions 数量：4。</p>
+<h2>Sanity Comparison</h2>
+<p>sanity comparison 记录数：1。它不是严格复现，不用于证明严格复现。</p>
+<div class="notice">当前边界：不训练；不微调；不做自动微调；不做 UI；不做 Agent；不伪造 checkpoint；不伪造 predictions；forward-only cost 不是真实部署端到端延迟。</div>
+</body></html>

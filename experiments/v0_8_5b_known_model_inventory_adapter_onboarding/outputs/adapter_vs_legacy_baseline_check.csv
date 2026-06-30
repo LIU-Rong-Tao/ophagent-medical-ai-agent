@@ -1,0 +1,2 @@
+﻿task_id,artifact_id,legacy_source,adapter_source,metric,legacy_value,adapter_value,diff,status,notes
+,,,,,,,,missing_adapter_result,adapter baseline 不存在

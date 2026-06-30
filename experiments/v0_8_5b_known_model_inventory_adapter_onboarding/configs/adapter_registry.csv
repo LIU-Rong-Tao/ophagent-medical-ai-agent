@@ -1,0 +1,3 @@
+adapter_id,adapter_type,model_family,supported_backbones,status,enabled,notes
+timm_classifier_v1,timm_classifier,timm,convnext_tiny|swin_tiny|swin_tiny_patch4_window7_224|vit_b|vit_base|vit_base_patch16_224|vit_large_patch16_224,available,true,timm 分类模型适配器候选；真实运行需要 checkpoint、class mapping、data root/input csv 均齐全
+retfound_adapter_v1,retfound,retfound,retfound_mae_cfp|retfound_dinov2|retfound_green,needs_loader_audit,true,RETFound/RETFound-DINOv2 纳入 inventory；第一轮不从零发明 loader
