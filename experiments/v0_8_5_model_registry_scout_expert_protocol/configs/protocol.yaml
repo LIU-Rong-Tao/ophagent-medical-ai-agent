@@ -1,0 +1,8 @@
+protocol_id: v085_model_registry_scout_expert_protocol
+mode: exploratory
+task_registry: task_registry.csv
+model_registry: model_registry.csv
+route_protocols: route_protocols.csv
+cost_registry: cost_registry.csv
+output_dir: experiments/v0_8_5_model_registry_scout_expert_protocol/outputs
+report: summary.html

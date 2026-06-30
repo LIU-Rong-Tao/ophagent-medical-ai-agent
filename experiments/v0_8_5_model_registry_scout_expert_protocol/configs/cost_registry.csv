@@ -1,0 +1,5 @@
+artifact_id,cost_profile_id,cost_scope,cost_source,device,precision,batch_size,enabled,notes
+convnext_tiny_glaucoma_scout,rtx4090_fp32_bs24_forward_only_v1,forward_only,experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv,NVIDIA GeForce RTX 4090,fp32,24,true,仅前向传播计算成本（forward-only cost）
+retfound_dinov2_glaucoma_expert,rtx4090_fp32_bs24_forward_only_v1,forward_only,experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv,NVIDIA GeForce RTX 4090,fp32,24,true,仅前向传播计算成本（forward-only cost）
+convnext_tiny,rtx4090_forward_only_replay_v1,forward_only,experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay/model_baselines.csv,NVIDIA GeForce RTX 4090,mixed_replay,,true,来自 v0.8.3 replay 的 forward-only 成本字段
+retfound_mae_cfp_official_protocol,rtx4090_forward_only_replay_v1,forward_only,experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay/model_baselines.csv,NVIDIA GeForce RTX 4090,mixed_replay,,true,来自 v0.8.3 replay 的 forward-only 成本字段

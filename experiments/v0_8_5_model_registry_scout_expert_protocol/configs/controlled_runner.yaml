@@ -1,0 +1,71 @@
+protocol_id: v085_model_registry_scout_expert_protocol
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: custom
+cost_scope: forward_only
+output_dir: experiments/v0_8_5_model_registry_scout_expert_protocol/outputs
+
+stages:
+  - id: run-model-registry-protocol
+    kind: routing
+    command:
+      - "{python}"
+      - scripts/routing/run_model_registry_scout_expert_protocol.py
+      - --config
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol
+    inputs:
+      - scripts/routing/run_model_registry_scout_expert_protocol.py
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/model_registry.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/route_protocols.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/cost_registry.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/configs/protocol.yaml
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_model_forward_cost_summary.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_convnext_retfound/model_baselines.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_convnext_retfound/routing_results.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_convnext_retfound/risk_results.csv
+      - experiments/v0_8_4b_glaucoma_forward_cost/outputs/glaucoma_convnext_retfound/case_audit.csv
+      - experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay/model_baselines.csv
+      - experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay/routing_results.csv
+      - experiments/v0_8_3_controlled_runner/outputs/v082c_dr_replay/case_audit.csv
+    outputs:
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/registered_tasks.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/registered_models.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/route_protocol_summary.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/model_baselines_all.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/routing_results_all.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/risk_results_all.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/case_audit_all.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/artifact_manifest.csv
+      - experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/summary.html
+
+publish:
+  report: report.html
+  artifacts:
+    - name: registered_tasks
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/registered_tasks.csv
+      target: registered_tasks.csv
+    - name: registered_models
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/registered_models.csv
+      target: registered_models.csv
+    - name: route_protocol_summary
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/route_protocol_summary.csv
+      target: route_protocol_summary.csv
+    - name: model_baselines_all
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/model_baselines_all.csv
+      target: model_baselines_all.csv
+    - name: routing_results_all
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/routing_results_all.csv
+      target: routing_results_all.csv
+    - name: risk_results_all
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/risk_results_all.csv
+      target: risk_results_all.csv
+    - name: case_audit_all
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/case_audit_all.csv
+      target: case_audit_all.csv
+    - name: summary_html
+      source: experiments/v0_8_5_model_registry_scout_expert_protocol/work/registry_protocol/summary.html
+      target: summary.html
