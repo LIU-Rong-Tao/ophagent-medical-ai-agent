@@ -1,0 +1,5 @@
+﻿job_id,task_id,artifact_id,split,n_images,accuracy,macro_f1,qwk,qwk_status,macro_auroc_ovr,macro_aupr_ovr,n_error,source,notes
+dr_convnext_tiny_adapter,aptos_dr_5class,convnext_tiny,test,1100,0.8136363636363636,0.6496387745585863,0.86153550730867,computed,0.9389381715767424,0.6997660812542732,205,adapter_generated,由 v0.8.5c 真实 timm adapter 生成
+dr_swin_tiny_adapter,aptos_dr_5class,swin_tiny,test,1100,0.8290909090909091,0.6567072753814438,0.8981859638745026,computed,0.9450057888471918,0.7142770037151068,188,adapter_generated,由 v0.8.5c 真实 timm adapter 生成
+dr_vit_b_imagenet_adapter,aptos_dr_5class,vit_b_imagenet,test,1100,0.8181818181818182,0.6462110328178807,0.8756704135690613,computed,0.938378708042488,0.6798896720613111,200,adapter_generated,由 v0.8.5c 真实 timm adapter 生成
+glaucoma_convnext_adapter,glaucoma_3class,convnext_tiny_glaucoma_scout,test,465,0.8086021505376344,0.7621638610664482,,not_applicable,0.9256889498929528,0.8207734960154811,89,adapter_generated,由 v0.8.5c 真实 timm adapter 生成

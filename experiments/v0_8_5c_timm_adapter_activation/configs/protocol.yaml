@@ -1,0 +1,5 @@
+protocol_id: v085c_timm_adapter_activation
+timm_adapter_jobs: experiments/v0_8_5c_timm_adapter_activation/configs/timm_adapter_jobs.csv
+routing_replay_protocols: experiments/v0_8_5c_timm_adapter_activation/configs/routing_replay_protocols.csv
+output_dir: experiments/v0_8_5c_timm_adapter_activation/outputs
+report: summary.html

@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,split,n_images,accuracy,macro_f1,qwk,qwk_status,macro_auroc_ovr,macro_aupr_ovr,n_error,source,notes
+dr_vit_b_imagenet_adapter,aptos_dr_5class,vit_b_imagenet,test,1100,0.8181818181818182,0.6462110328178807,0.8756704135690613,computed,0.9383787080424881,0.6798896720613111,200,adapter_generated,由 v0.8.5c 真实 timm adapter 生成

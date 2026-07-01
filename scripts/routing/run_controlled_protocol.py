@@ -362,6 +362,23 @@ def normalize_published_artifact(name: str, target: Path, config: dict[str, Any]
         enrich_routing_results(target, config)
 
 
+def rewrite_published_paths(target: Path, config: dict[str, Any]) -> None:
+    rules = config.get("publish", {}).get("path_rewrites", [])
+    if not rules or target.suffix.lower() not in {".csv", ".html", ".htm", ".json"}:
+        return
+    text = target.read_text(encoding="utf-8-sig")
+    rewritten = text
+    for rule in rules:
+        source_prefix = str(rule.get("source_prefix", ""))
+        target_prefix = str(rule.get("target_prefix", ""))
+        if not source_prefix or not target_prefix:
+            raise RunnerError("publish.path_rewrites requires source_prefix and target_prefix")
+        rewritten = rewritten.replace(source_prefix, target_prefix)
+    if rewritten != text:
+        encoding = "utf-8-sig" if target.suffix.lower() == ".csv" else "utf-8"
+        target.write_text(rewritten, encoding=encoding)
+
+
 def render_command(tokens: list[Any], *, config_path: Path, output_dir: Path) -> list[str]:
     values = {
         "python": sys.executable,
@@ -545,6 +562,7 @@ def publish_artifacts(
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.resolve() != target.resolve():
             shutil.copy2(source, target)
+        rewrite_published_paths(target, config)
         normalize_published_artifact(name, target, config)
         stat = target.stat()
         producer_status = "external"

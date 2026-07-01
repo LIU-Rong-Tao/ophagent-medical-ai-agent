@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,split,n_images,accuracy,macro_f1,qwk,qwk_status,macro_auroc_ovr,macro_aupr_ovr,n_error,source,notes
+dr_convnext_tiny_adapter,aptos_dr_5class,convnext_tiny,test,1100,0.8136363636363636,0.6496387745585863,0.86153550730867,computed,0.9389381715767424,0.6997660812542732,205,adapter_generated,由 v0.8.5c 真实 timm adapter 生成

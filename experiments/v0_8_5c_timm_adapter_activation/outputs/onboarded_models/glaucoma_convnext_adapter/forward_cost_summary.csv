@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,cost_scope,device,actual_device_name,precision,batch_size,warmup_runs,timed_runs,mean_ms_per_image,median_ms_per_image,std_ms_per_image,cv_ms_per_image,images_per_second,peak_allocated_memory_mb,checkpoint_mb,notes
+glaucoma_convnext_adapter,glaucoma_3class,convnext_tiny_glaucoma_scout,forward_only,cuda,NVIDIA GeForce RTX 4090,fp32,32,3,5,0.47000830302075036,0.47004403326139654,0.00023607934042587457,0.0005022875955777571,2127.460257417818,557.267578125,106.20270156860352,多次 single-GPU forward-only benchmark；不含读取、预处理、传输和服务开销

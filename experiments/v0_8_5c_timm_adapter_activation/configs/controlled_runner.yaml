@@ -1,0 +1,121 @@
+protocol_id: v085c_timm_adapter_activation
+mode: exploratory
+selection_split: test
+evaluation_split: test
+risk_metric_profile: custom
+cost_scope: forward_only
+output_dir: experiments/v0_8_5c_timm_adapter_activation/outputs
+
+stages:
+  - id: audit
+    kind: routing
+    command:
+      - "{python}"
+      - scripts/routing/run_timm_adapter_activation.py
+      - --config
+      - experiments/v0_8_5c_timm_adapter_activation/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation
+      - --stage
+      - audit
+    inputs:
+      - scripts/routing/run_timm_adapter_activation.py
+      - scripts/routing/timm_adapter_runtime.py
+      - experiments/v0_8_5c_timm_adapter_activation/configs/timm_adapter_jobs.csv
+      - experiments/v0_8_5c_timm_adapter_activation/configs/routing_replay_protocols.csv
+      - experiments/v0_8_5c_timm_adapter_activation/configs/protocol.yaml
+    outputs:
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/model_inventory.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_convnext_tiny_adapter_input_manifest.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_swin_tiny_adapter_input_manifest.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_vit_b_imagenet_adapter_input_manifest.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/glaucoma_convnext_adapter_input_manifest.csv
+
+  - id: onboarding
+    kind: routing
+    depends_on: [audit]
+    command:
+      - "{python}"
+      - scripts/routing/run_timm_adapter_activation.py
+      - --config
+      - experiments/v0_8_5c_timm_adapter_activation/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation
+      - --stage
+      - onboarding
+    inputs:
+      - scripts/routing/run_timm_adapter_activation.py
+      - scripts/routing/timm_adapter_runtime.py
+      - experiments/v0_8_5c_timm_adapter_activation/configs/timm_adapter_jobs.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/model_inventory.csv
+    outputs:
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_job_summary.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/model_baselines_from_adapters.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/forward_cost_summary_from_adapters.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_manifest.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_vs_legacy_prediction_check.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_vs_legacy_baseline_check.csv
+
+  - id: replay
+    kind: routing
+    depends_on: [onboarding]
+    command:
+      - "{python}"
+      - scripts/routing/run_timm_adapter_activation.py
+      - --config
+      - experiments/v0_8_5c_timm_adapter_activation/configs/protocol.yaml
+      - --output-dir
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation
+      - --stage
+      - replay
+    inputs:
+      - scripts/routing/run_timm_adapter_activation.py
+      - experiments/v0_8_5c_timm_adapter_activation/configs/routing_replay_protocols.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_job_summary.csv
+    outputs:
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/single_scout_routing_results_from_adapters.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/routing_replay_summary.csv
+      - experiments/v0_8_5c_timm_adapter_activation/work/activation/summary.html
+
+publish:
+  report: report.html
+  path_rewrites:
+    - source_prefix: experiments/v0_8_5c_timm_adapter_activation/work/activation
+      target_prefix: experiments/v0_8_5c_timm_adapter_activation/outputs
+  artifacts:
+    - {name: model_inventory, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/model_inventory.csv, target: model_inventory.csv}
+    - {name: adapter_job_summary, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_job_summary.csv, target: adapter_job_summary.csv}
+    - {name: onboarded_models, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models.csv, target: onboarded_models.csv}
+    - {name: model_baselines, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/model_baselines_from_adapters.csv, target: model_baselines_from_adapters.csv}
+    - {name: forward_cost, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/forward_cost_summary_from_adapters.csv, target: forward_cost_summary_from_adapters.csv}
+    - {name: adapter_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_manifest.csv, target: adapter_manifest.csv}
+    - {name: prediction_check, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_vs_legacy_prediction_check.csv, target: adapter_vs_legacy_prediction_check.csv}
+    - {name: baseline_check, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/adapter_vs_legacy_baseline_check.csv, target: adapter_vs_legacy_baseline_check.csv}
+    - {name: routing_results, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/single_scout_routing_results_from_adapters.csv, target: single_scout_routing_results_from_adapters.csv}
+    - {name: routing_summary, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/routing_replay_summary.csv, target: routing_replay_summary.csv}
+    - {name: summary_html, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/summary.html, target: summary.html}
+    - {name: dr_convnext_input_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_convnext_tiny_adapter_input_manifest.csv, target: input_manifests/dr_convnext_tiny_adapter_input_manifest.csv}
+    - {name: dr_swin_input_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_swin_tiny_adapter_input_manifest.csv, target: input_manifests/dr_swin_tiny_adapter_input_manifest.csv}
+    - {name: dr_vit_input_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/dr_vit_b_imagenet_adapter_input_manifest.csv, target: input_manifests/dr_vit_b_imagenet_adapter_input_manifest.csv}
+    - {name: glaucoma_convnext_input_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/input_manifests/glaucoma_convnext_adapter_input_manifest.csv, target: input_manifests/glaucoma_convnext_adapter_input_manifest.csv}
+    - {name: dr_convnext_predictions, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_convnext_tiny_adapter/predictions.csv, target: onboarded_models/dr_convnext_tiny_adapter/predictions.csv}
+    - {name: dr_convnext_baseline, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_convnext_tiny_adapter/model_baseline.csv, target: onboarded_models/dr_convnext_tiny_adapter/model_baseline.csv}
+    - {name: dr_convnext_cost_runs, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_convnext_tiny_adapter/forward_cost_runs.csv, target: onboarded_models/dr_convnext_tiny_adapter/forward_cost_runs.csv}
+    - {name: dr_convnext_cost, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_convnext_tiny_adapter/forward_cost_summary.csv, target: onboarded_models/dr_convnext_tiny_adapter/forward_cost_summary.csv}
+    - {name: dr_convnext_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_convnext_tiny_adapter/adapter_manifest.csv, target: onboarded_models/dr_convnext_tiny_adapter/adapter_manifest.csv}
+    - {name: dr_swin_predictions, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_swin_tiny_adapter/predictions.csv, target: onboarded_models/dr_swin_tiny_adapter/predictions.csv}
+    - {name: dr_swin_baseline, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_swin_tiny_adapter/model_baseline.csv, target: onboarded_models/dr_swin_tiny_adapter/model_baseline.csv}
+    - {name: dr_swin_cost_runs, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_swin_tiny_adapter/forward_cost_runs.csv, target: onboarded_models/dr_swin_tiny_adapter/forward_cost_runs.csv}
+    - {name: dr_swin_cost, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_swin_tiny_adapter/forward_cost_summary.csv, target: onboarded_models/dr_swin_tiny_adapter/forward_cost_summary.csv}
+    - {name: dr_swin_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_swin_tiny_adapter/adapter_manifest.csv, target: onboarded_models/dr_swin_tiny_adapter/adapter_manifest.csv}
+    - {name: dr_vit_predictions, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_vit_b_imagenet_adapter/predictions.csv, target: onboarded_models/dr_vit_b_imagenet_adapter/predictions.csv}
+    - {name: dr_vit_baseline, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_vit_b_imagenet_adapter/model_baseline.csv, target: onboarded_models/dr_vit_b_imagenet_adapter/model_baseline.csv}
+    - {name: dr_vit_cost_runs, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_vit_b_imagenet_adapter/forward_cost_runs.csv, target: onboarded_models/dr_vit_b_imagenet_adapter/forward_cost_runs.csv}
+    - {name: dr_vit_cost, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_vit_b_imagenet_adapter/forward_cost_summary.csv, target: onboarded_models/dr_vit_b_imagenet_adapter/forward_cost_summary.csv}
+    - {name: dr_vit_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/dr_vit_b_imagenet_adapter/adapter_manifest.csv, target: onboarded_models/dr_vit_b_imagenet_adapter/adapter_manifest.csv}
+    - {name: glaucoma_convnext_predictions, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/glaucoma_convnext_adapter/predictions.csv, target: onboarded_models/glaucoma_convnext_adapter/predictions.csv}
+    - {name: glaucoma_convnext_baseline, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/glaucoma_convnext_adapter/model_baseline.csv, target: onboarded_models/glaucoma_convnext_adapter/model_baseline.csv}
+    - {name: glaucoma_convnext_cost_runs, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/glaucoma_convnext_adapter/forward_cost_runs.csv, target: onboarded_models/glaucoma_convnext_adapter/forward_cost_runs.csv}
+    - {name: glaucoma_convnext_cost, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/glaucoma_convnext_adapter/forward_cost_summary.csv, target: onboarded_models/glaucoma_convnext_adapter/forward_cost_summary.csv}
+    - {name: glaucoma_convnext_manifest, source: experiments/v0_8_5c_timm_adapter_activation/work/activation/onboarded_models/glaucoma_convnext_adapter/adapter_manifest.csv, target: onboarded_models/glaucoma_convnext_adapter/adapter_manifest.csv}

@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,split,n_images,accuracy,macro_f1,qwk,qwk_status,macro_auroc_ovr,macro_aupr_ovr,n_error,source,notes
+glaucoma_convnext_adapter,glaucoma_3class,convnext_tiny_glaucoma_scout,test,465,0.8086021505376344,0.7621638610664482,,not_applicable,0.9256889498929528,0.8207734960154811,89,adapter_generated,由 v0.8.5c 真实 timm adapter 生成

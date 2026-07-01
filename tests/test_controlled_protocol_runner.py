@@ -269,6 +269,53 @@ def test_publish_writes_canonical_artifacts_manifest_and_report(tmp_path: Path):
     assert manifest_rows[0]["reused_or_generated"] == "generated"
 
 
+def test_publish_rewrites_intermediate_work_paths_in_csv_and_html(tmp_path: Path):
+    work_dir = tmp_path / "work" / "activation"
+    source_prefix = str(tmp_path / "work" / "activation")
+    target_prefix = str(tmp_path / "published")
+    work_dir.mkdir(parents=True)
+    csv_names = [
+        "adapter_job_summary.csv",
+        "adapter_manifest.csv",
+        "adapter_vs_legacy_prediction_check.csv",
+        "routing_replay_summary.csv",
+    ]
+    for name in csv_names:
+        (work_dir / name).write_text(
+            "job_id,predictions_path\n"
+            f"job,{source_prefix}/onboarded_models/job/predictions.csv\n",
+            encoding="utf-8",
+        )
+    raw_html = work_dir / "summary.html"
+    raw_html.write_text(
+        f'<a href="{source_prefix}/onboarded_models/job/predictions.csv">result</a>',
+        encoding="utf-8",
+    )
+    publish = [
+        {"name": Path(name).stem, "source": str(work_dir / name), "target": name}
+        for name in csv_names
+    ]
+    publish.append({"name": "summary_html", "source": str(raw_html), "target": "summary.html"})
+    config = write_config(
+        tmp_path,
+        stages=[],
+        publish=publish,
+    )
+    payload = json.loads(config.read_text(encoding="utf-8"))
+    payload["publish"]["path_rewrites"] = [
+        {"source_prefix": source_prefix, "target_prefix": target_prefix}
+    ]
+    config.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = run_runner(config)
+
+    assert result.returncode == 0, result.stderr
+    for path in [*(tmp_path / "published" / name for name in csv_names), tmp_path / "published" / "summary.html"]:
+        text = path.read_text(encoding="utf-8-sig")
+        assert source_prefix not in text
+        assert target_prefix in text
+
+
 def test_publish_enriches_baselines_and_routing_with_forward_cost(tmp_path: Path):
     raw_baseline = tmp_path / "raw" / "baseline.csv"
     raw_routing = tmp_path / "raw" / "routing.csv"

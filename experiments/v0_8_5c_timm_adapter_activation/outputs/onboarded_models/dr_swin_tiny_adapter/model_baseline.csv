@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,split,n_images,accuracy,macro_f1,qwk,qwk_status,macro_auroc_ovr,macro_aupr_ovr,n_error,source,notes
+dr_swin_tiny_adapter,aptos_dr_5class,swin_tiny,test,1100,0.8290909090909091,0.6567072753814438,0.8981859638745026,computed,0.9450057888471918,0.7142770037151068,188,adapter_generated,由 v0.8.5c 真实 timm adapter 生成

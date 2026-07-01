@@ -1,0 +1,2 @@
+﻿job_id,task_id,artifact_id,cost_scope,device,actual_device_name,precision,batch_size,warmup_runs,timed_runs,mean_ms_per_image,median_ms_per_image,std_ms_per_image,cv_ms_per_image,images_per_second,peak_allocated_memory_mb,checkpoint_mb,notes
+dr_swin_tiny_adapter,aptos_dr_5class,swin_tiny,forward_only,cuda,NVIDIA GeForce RTX 4090,fp32,32,3,5,0.6109212309291416,0.6109218000942334,0.00040607506606872183,0.0006646930005217332,1636.8707088955612,615.4033203125,105.06313514709473,多次 single-GPU forward-only benchmark；不含读取、预处理、传输和服务开销
