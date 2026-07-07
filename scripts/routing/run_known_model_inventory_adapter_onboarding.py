@@ -34,6 +34,12 @@ from sklearn.metrics import accuracy_score, average_precision_score, f1_score, r
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.routing.model_metadata import normalized_model_metadata
+
+
 TRUTHY = {"1", "true", "yes", "y", "on"}
 FALSY = {"0", "false", "no", "n", "off"}
 VALID_STAGES = {"inventory", "onboarding", "replay", "all"}
@@ -246,10 +252,8 @@ def infer_artifact_from_path(path: Path) -> str:
         ("aptos_convnext_tiny", "convnext_tiny"),
         ("aptos_swin_tiny", "swin_tiny"),
         ("aptos_vit_base_patch16_imagenet", "vit_b_imagenet"),
-        ("aptos_vit_base_patch16_official_like", "vit_b_official_like"),
         ("aptos_vit_large_patch16_official_like", "vit_l_official_like"),
         ("aptos_retfound_mae_cfp_official_protocol", "retfound_mae_cfp_official_protocol"),
-        ("aptos_retfound_mae_cfp_official_like", "retfound_mae_cfp_official_like"),
         ("retfound_green", "retfound_green_linear_probe"),
         ("convnext_tiny_glaucoma_scout", "convnext_tiny_glaucoma_scout"),
         ("retfound_dinov2_glaucoma_expert", "retfound_dinov2_glaucoma_expert"),
@@ -261,20 +265,7 @@ def infer_artifact_from_path(path: Path) -> str:
 
 
 def infer_model_family(artifact_id: str) -> str:
-    lowered = artifact_id.lower()
-    if "convnext" in lowered:
-        return "convnext"
-    if "swin" in lowered:
-        return "swin"
-    if "vit" in lowered:
-        return "vit"
-    if "green" in lowered:
-        return "retfound_green"
-    if "dinov2" in lowered:
-        return "retfound_dinov2"
-    if "retfound" in lowered:
-        return "retfound"
-    return "unknown"
+    return normalized_model_metadata(artifact_id, infer_backbone(artifact_id))["model_family"]
 
 
 def infer_backbone(artifact_id: str) -> str:
@@ -282,10 +273,8 @@ def infer_backbone(artifact_id: str) -> str:
         "convnext_tiny": "convnext_tiny",
         "swin_tiny": "swin_tiny_patch4_window7_224",
         "vit_b_imagenet": "vit_base_patch16_224",
-        "vit_b_official_like": "vit_base_patch16_224",
         "vit_l_official_like": "vit_large_patch16_224",
         "retfound_mae_cfp_official_protocol": "retfound_mae_cfp",
-        "retfound_mae_cfp_official_like": "retfound_mae_cfp",
         "retfound_green_linear_probe": "retfound_green",
         "convnext_tiny_glaucoma_scout": "convnext_tiny",
         "retfound_dinov2_glaucoma_expert": "retfound_dinov2",
@@ -388,6 +377,14 @@ def discover_prediction_candidate(
     }
 
 
+def is_unified_model_hub_runtime_path(path: Path) -> bool:
+    parts = [part.lower() for part in path.parts]
+    return any(
+        parts[index] == "model_hub" and parts[index + 1] in {"runs", "runtime"}
+        for index in range(len(parts) - 1)
+    )
+
+
 def source_file_rows(source: pd.Series) -> list[dict[str, Any]]:
     source_path = resolve_path(source["source_path"])
     rows: list[dict[str, Any]] = []
@@ -448,7 +445,11 @@ def source_file_rows(source: pd.Series) -> list[dict[str, Any]]:
             ("**/test_predictions.csv", "prediction"),
             ("**/*standardized*.csv", "prediction"),
         ):
-            for path in sorted(source_path.glob(pattern))[:500]:
+            for path in (
+                path
+                for path in sorted(source_path.glob(pattern))[:500]
+                if not is_unified_model_hub_runtime_path(path)
+            ):
                 rows.append(
                     {
                         **base,
@@ -550,6 +551,8 @@ INVENTORY_COLUMNS = [
     "artifact_id",
     "model_family",
     "backbone",
+    "architecture",
+    "pretraining_source",
     "role_candidates",
     "legacy_source",
     "legacy_prediction_path",
@@ -652,6 +655,8 @@ def build_inventory(tables: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.D
             )
         if source.get("source_type", "") == "scan_root":
             for prediction_path in sorted(source_path.glob("**/test_predictions.csv"))[:500]:
+                if is_unified_model_hub_runtime_path(prediction_path):
+                    continue
                 merge(discover_prediction_candidate(prediction_path, source=source, adapters=adapters))
 
     concrete_artifacts = {
@@ -666,6 +671,12 @@ def build_inventory(tables: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.D
 
     normalized: list[dict[str, Any]] = []
     for row in rows_by_key.values():
+        row.update(
+            normalized_model_metadata(
+                str(row.get("artifact_id", "")),
+                str(row.get("backbone", "")) or infer_backbone(str(row.get("artifact_id", ""))),
+            )
+        )
         for column in INVENTORY_COLUMNS:
             row.setdefault(column, "")
         row.update(determine_onboarding(row, adapters))

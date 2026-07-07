@@ -194,3 +194,5 @@ experiments/**/logs/train_log.csv
 # Controlled protocol runtime state
 experiments/**/work/
 experiments/**/.controlled_runner_state.json
+experiments/model_hub/runtime/
+docs/superpowers/

@@ -162,6 +162,87 @@ def test_resume_reruns_when_declared_output_was_modified(tmp_path: Path):
     assert counter.read_text(encoding="utf-8") == "2"
 
 
+def test_publish_can_preserve_custom_report(tmp_path: Path):
+    source_report = tmp_path / "custom_report.html"
+    source_report.write_text(
+        "<html><body>interactive replay; not formal model selection</body></html>",
+        encoding="utf-8",
+    )
+    config = write_config(
+        tmp_path,
+        stages=[
+            {
+                "id": "report",
+                "kind": "report",
+                "command": ["{python}", "-c", "pass"],
+                "inputs": [str(source_report)],
+                "outputs": [str(source_report)],
+            }
+        ],
+        extra={
+            "publish": {
+                "generate_runner_report": False,
+                "report": "report.html",
+                "artifacts": [
+                    {
+                        "name": "interactive_report",
+                        "source": str(source_report),
+                        "target": "report.html",
+                    }
+                ],
+            }
+        },
+    )
+
+    result = run_runner(config, "--resume")
+
+    assert result.returncode == 0, result.stderr
+    published = tmp_path / "published" / "report.html"
+    assert "interactive replay" in published.read_text(encoding="utf-8")
+    assert (tmp_path / "published" / "artifact_manifest.csv").exists()
+
+
+def test_publish_can_hide_ephemeral_source_paths_from_manifest(tmp_path: Path):
+    source = tmp_path / "work" / "artifact.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("value\n1\n", encoding="utf-8")
+    config = write_config(
+        tmp_path,
+        stages=[
+            {
+                "id": "publishable",
+                "kind": "report",
+                "command": ["{python}", "-c", "pass"],
+                "inputs": [str(source)],
+                "outputs": [str(source)],
+            }
+        ],
+        extra={
+            "publish": {
+                "stable_manifest_paths": True,
+                "artifacts": [
+                    {
+                        "name": "artifact",
+                        "source": str(source),
+                        "target": "artifact.csv",
+                    }
+                ],
+            }
+        },
+    )
+
+    result = run_runner(config, "--resume")
+
+    assert result.returncode == 0, result.stderr
+    manifest = tmp_path / "published" / "artifact_manifest.csv"
+    with manifest.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    published_path = str(tmp_path / "published" / "artifact.csv")
+    assert rows[0]["source_path"] == published_path
+    assert rows[0]["published_path"] == published_path
+    assert "work" not in manifest.read_text(encoding="utf-8-sig")
+
+
 def test_force_stage_accepts_stage_kind(tmp_path: Path):
     counter = tmp_path / "counter.txt"
     output = tmp_path / "stage.csv"

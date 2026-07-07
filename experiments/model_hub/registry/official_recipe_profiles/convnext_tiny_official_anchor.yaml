@@ -1,0 +1,46 @@
+schema_version: 1
+profile:
+  profile_id: convnext_tiny_official_anchor
+  display_name: ConvNeXt 官方仓库迁移锚点（Tiny 适配）
+  model_family: convnext
+  supported_architectures: [convnext_tiny]
+  trainer_adapter: timm_imagefolder_v1
+  source:
+    title: ConvNeXt official training and fine-tuning instructions
+    url: https://github.com/facebookresearch/ConvNeXt
+    config_url: https://github.com/facebookresearch/ConvNeXt/blob/main/TRAINING.md
+    scope: ImageNet fine-tuning; family-level reference for target-task transfer
+    status: official_repository
+  translation:
+    status: task_adapted_subset
+    base_recipe_id: timm_full_train
+    note: 官方仓库的微调命令用于 ImageNet 且以 ConvNeXt-B/L 为主；本档案只把可迁移字段作为 ConvNeXt-Tiny 候选搜索锚点，不声称逐项复现。
+    unsupported_fields: [drop_path_rate, layer_decay, head_init_scale, auto_augment]
+    executable_overrides:
+      training.epochs: 30
+      training.batch_size: 32
+      training.grad_accum_steps: 1
+      training.early_stopping_patience: 0
+      optimizer.learning_rate: 0.00005
+      optimizer.weight_decay: 0.00000001
+      scheduler.name: cosine
+      scheduler.warmup_epochs: 0
+      scheduler.minimum_learning_rate: 0.000001
+      loss.label_smoothing: 0.1
+  reference_parameters:
+    epochs: 30
+    batch_size_per_gpu: 32
+    learning_rate: 0.00005
+    weight_decay: 0.00000001
+    warmup_epochs: 0
+    scheduler: cosine
+search_plan:
+  plan_id: fixed_budget_lr_wd_6trial
+  display_name: 固定预算 6 次 LR×WD 验证集搜索
+  trial_budget: 6
+  selection_split: val
+  selection_metric: task_default
+  final_seeds: [42, 3407, 2026]
+  grid:
+    optimizer.learning_rate: [0.000025, 0.00005, 0.0001]
+    optimizer.weight_decay: [0.00000001, 0.01]

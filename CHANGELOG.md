@@ -1,5 +1,73 @@
 # CHANGELOG
 
+## v0.8.6 - 交互式眼科模型中转台
+
+### 新增
+
+- 新增交互式 Model Hub 页面，包含模型工程区、研究评测区、病例回放与路由解释。
+- 新增全局模型库与任务兼容性判断，模型按当前任务标记为：可直接推理、仅离线回放、可适配当前任务、不可接入。
+- 新增 timm ImageFolder 训练适配流程，支持 ConvNeXt、Swin、ViT 等 timm 模型通过 YAML recipe 提交训练任务。
+- 新增训练配置注册系统，统一保存 base_recipe.yaml、submitted_config.yaml、effective_config.yaml、validation_report.json 和 run_manifest.yaml。
+- 新增四类工程训练模板：快速链路验证、通用全量微调、冻结骨干只训分类头、低学习率保守微调。
+- 新增官方锚点档案，记录 ConvNeXt-Tiny、Swin-Tiny、ViT-B/16、ViT-L/16 的官方配置来源和当前可执行边界。
+- 新增固定预算 LR×WD 验证集搜索计划，用于科研候选模型的等预算调参规划；当前仅作为规划和预览层。
+- 新增训练任务记录与本地曲线展示，支持查看训练/验证损失、验证集指标、测试结果和原始训练日志。
+- 新增路由/专家组合实验台，支持单路由、多路由、单专家、多专家、固定专家接管和专家池概率平均融合。
+- 新增全局候选扫描，支持在当前模型池内探索不同路由策略、专家调用比例和专家组合下的成本-性能操作点。
+- 新增病例回放与研究审计隔离，默认视图不显示真实标签、残余事件和原始 JSON。
+
+### 变更
+
+- 将“基础输出模型”改为“默认输出模型”，更准确地区分默认输出、路由模型和专家接管。
+- 全新微调默认从 timm 原始预训练权重初始化，不再静默继承已有眼病 checkpoint。
+- 旧 checkpoint 仅在显式选择继续训练或跨疾病迁移研究时使用。
+- DR 代理风险事件说明改为行内问号 Tooltip。
+- 组合对比表按任务注册协议展示指标，并对工程字段进行中文化。
+- 模型元信息进一步区分模型族、具体架构和预训练来源。
+- 青光眼 prediction 的 image_key 处理改为稳定的“类别/文件名”形式，避免不同类别下同名图片冲突。
+
+### 同步与清理
+
+- 更新 v0.8.5 / v0.8.5b / v0.8.5c 相关模型注册、任务注册、known-model inventory 和 adapter onboarding 产物。
+- 清理部分旧 official-like 实验配置与结果，避免与当前 Model Hub 资产和官方协议档案混淆。
+- 将训练运行状态、runtime、work、checkpoint 和日志从版本控制中隔离。
+
+### 已知限制
+
+- 自动训练当前主要支持 timm_imagefolder_v1。
+- RETFound、RETFound-Green、DINOv2 等模型仍需要后续专用 trainer/loader adapter。
+- 全局候选扫描是当前模型池上的探索性工具，不是最终论文结论。
+- 工程 recipe 用于链路验证和统一初筛，不代表每个模型的官方最优训练协议。
+- forward-only cost 不包含图像解码、预处理、I/O、服务排队和真实部署开销。
+
+
+## v0.8.5c - timm adapter 激活
+
+- 激活 ConvNeXt、Swin、ViT-B ImageNet 和青光眼 ConvNeXt 的 timm adapter 链路。
+- 生成统一预测、基础指标、前向成本和路由 replay 产物。
+- 验证 timm adapter 输出与既有实验结果的一致性。
+
+
+## v0.8.5b - known-model inventory 与 adapter onboarding
+
+- 新增已知模型清单、模型资产发现、adapter onboarding 和路由 replay 流程。
+- 补充模型族、架构、预训练来源等结构化字段。
+- 支持对已知模型进行注册、检查和受控产物发布。
+
+
+## v0.8.5 - 模型注册与路由协议
+
+- 新增模型注册、任务注册和 scout-expert 协议配置。
+- 将 DR 和青光眼任务纳入统一任务注册表。
+- 建立模型、任务、artifact、路由协议之间的基础映射。
+
+
+## v0.8.4b - 青光眼 forward-only 成本闭环
+
+- 新增青光眼三分类任务的 forward-only 成本评估。
+- 形成 ConvNeXt scout 与 RETFound-DINOv2 expert 的成本-性能对照。
+- 明确 forward-only cost 不包含图像解码、预处理、I/O、服务排队和真实部署开销。
+
 ## v0.7.4 - Audit Demo case detail and checkpoint discovery
 
 - 新增六个 APTOS backbone 的 checkpoint / artifact 自动发现。
@@ -81,8 +149,6 @@
 - 使用 `decision_function` 作为 learned deferral score，不解释为校准概率。
 - 采用 grouped cross-validation，并以 `image_key` 作为分组单位。
 - 结论：learned score 有竞争力，但不能替代最强事件特异性规则。
-
----
 
 ---
 

@@ -1,0 +1,47 @@
+schema_version: 1
+profile:
+  profile_id: swin_tiny_official_anchor
+  display_name: Swin-Tiny 官方微调协议锚点
+  model_family: swin
+  supported_architectures: [swin_tiny_patch4_window7_224]
+  trainer_adapter: timm_imagefolder_v1
+  source:
+    title: Swin-Tiny ImageNet-22K to ImageNet-1K fine-tuning config
+    url: https://github.com/microsoft/Swin-Transformer
+    config_url: https://github.com/microsoft/Swin-Transformer/blob/main/configs/swin/swin_tiny_patch4_window7_224_22kto1k_finetune.yaml
+    scope: Swin-Tiny ImageNet-22K to ImageNet-1K fine-tuning
+    status: official_repository
+  translation:
+    status: task_adapted_subset
+    base_recipe_id: timm_full_train
+    note: 保留官方配置中可迁移的 epoch、learning rate、weight decay 和 warmup 作为搜索锚点；单卡批量和数据增强由目标任务适配。
+    unsupported_fields: [drop_path_rate, gradient_clip, mixup, cutmix, random_erasing, auto_augment]
+    executable_overrides:
+      training.epochs: 30
+      training.batch_size: 32
+      training.grad_accum_steps: 4
+      training.early_stopping_patience: 0
+      optimizer.learning_rate: 0.00002
+      optimizer.weight_decay: 0.00000001
+      scheduler.name: cosine
+      scheduler.warmup_epochs: 5
+      scheduler.minimum_learning_rate: 0.0000002
+      loss.label_smoothing: 0.1
+      augmentation.color_jitter: 0.4
+  reference_parameters:
+    epochs: 30
+    learning_rate: 0.00002
+    weight_decay: 0.00000001
+    warmup_epochs: 5
+    minimum_learning_rate: 0.0000002
+    scheduler: cosine
+search_plan:
+  plan_id: fixed_budget_lr_wd_6trial
+  display_name: 固定预算 6 次 LR×WD 验证集搜索
+  trial_budget: 6
+  selection_split: val
+  selection_metric: task_default
+  final_seeds: [42, 3407, 2026]
+  grid:
+    optimizer.learning_rate: [0.00001, 0.00002, 0.00004]
+    optimizer.weight_decay: [0.00000001, 0.01]

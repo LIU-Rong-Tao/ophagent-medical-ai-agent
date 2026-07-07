@@ -42,6 +42,8 @@ class AdapterBackendResult:
     precision: str
     checkpoint_mb: float
     actual_device_name: str
+    parameter_count: int | None = None
+    trainable_parameter_count: int | None = None
 
 
 def clean_text(value: Any) -> str:
@@ -288,6 +290,8 @@ def summarize_cost_runs(job: pd.Series, result: AdapterBackendResult) -> pd.Data
                 "images_per_second": 1000.0 / median,
                 "peak_allocated_memory_mb": float(runs["peak_allocated_memory_mb"].max()),
                 "checkpoint_mb": result.checkpoint_mb,
+                "parameter_count": result.parameter_count,
+                "trainable_parameter_count": result.trainable_parameter_count,
                 "notes": "多次 single-GPU forward-only benchmark；不含读取、预处理、传输和服务开销",
             }
         ]
@@ -385,6 +389,8 @@ def write_adapter_outputs(
                 "model_baseline_path": str(baseline_path),
                 "forward_cost_summary_path": str(cost_path),
                 "checkpoint_sha256": sha256_file(checkpoint_path),
+                "parameter_count": result.parameter_count,
+                "trainable_parameter_count": result.trainable_parameter_count,
                 "predictions_sha256": sha256_file(predictions_path),
                 "created_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
                 "notes": "严格加载 checkpoint；sanity check 不等同于 strict reproduction",
@@ -429,6 +435,17 @@ def _extract_state_dict(raw: Any, checkpoint_key: str) -> dict[str, Any]:
     return state
 
 
+def timm_model_create_kwargs(job: pd.Series) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "pretrained": False,
+        "num_classes": int(job["num_classes"]),
+    }
+    global_pool = clean_text(job.get("global_pool", ""))
+    if global_pool:
+        kwargs["global_pool"] = global_pool
+    return kwargs
+
+
 def execute_timm_backend(job: pd.Series, manifest: pd.DataFrame) -> AdapterBackendResult:
     try:
         import torch
@@ -454,12 +471,14 @@ def execute_timm_backend(job: pd.Series, manifest: pd.DataFrame) -> AdapterBacke
 
     checkpoint_path = resolve_path(job["checkpoint_path"])
     try:
-        model = timm.create_model(
-            clean_text(job["arch"]),
-            pretrained=False,
-            num_classes=int(job["num_classes"]),
-        )
-        raw = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+        model = timm.create_model(clean_text(job["arch"]), **timm_model_create_kwargs(job))
+        if bool(job.get("allow_argparse_namespace", False)):
+            from argparse import Namespace
+
+            with torch.serialization.safe_globals([Namespace]):
+                raw = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+        else:
+            raw = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
         state = _extract_state_dict(raw, clean_text(job.get("checkpoint_key", "")))
         model.load_state_dict(state, strict=True)
     except AdapterStageError:
@@ -584,6 +603,10 @@ def execute_timm_backend(job: pd.Series, manifest: pd.DataFrame) -> AdapterBacke
         precision=precision,
         checkpoint_mb=checkpoint_path.stat().st_size / 1024 / 1024,
         actual_device_name=actual_device_name,
+        parameter_count=int(sum(parameter.numel() for parameter in model.parameters())),
+        trainable_parameter_count=int(
+            sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+        ),
     )
 
 

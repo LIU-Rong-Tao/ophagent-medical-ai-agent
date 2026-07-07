@@ -1,173 +1,174 @@
 # OphAgent
 
-眼科 AI 模型输出审计与复核优先级原型。
-
-这个项目关注一个实际问题：模型已经给出预测结果后，哪些样本更值得优先复核，未进入优先复核区的样本里还残留多少危险错误。
-
-当前主线已经从“继续堆分类模型”转向“模型输出后的风险审计”。
+OphAgent 是一个面向眼科医学图像模型的交互式模型中转台原型，用于管理模型发现、任务适配、路由模型、专家模型、成本-性能评测和病例级回放。
 
 本项目用于科研、工程实践和项目展示，不用于临床诊断、治疗建议或真实医疗决策。
 
 ---
 
-## 当前研究与展示节点
+## 当前主线：v0.8.6 交互式眼科模型中转台
 
-- 当前冻结研究证据：v0.7.1b / v0.7.2
-- 当前审计展示 Demo：v0.7.4-audit-demo-case-detail
-- 统一启动入口：`streamlit run app/demo.py`
+v0.8.6 将 OphAgent 从早期的“离线模型输出审计 Demo”，推进为一个可交互的眼科模型中转台原型。当前重点不再只是展示某个模型的预测结果，而是围绕“模型如何接入、如何适配当前任务、何时调用专家模型、成本和性能如何权衡、病例级路由过程如何解释”形成完整工作流。
 
-v0.7.4 主要增强的是展示与审计交互能力，包括六模型产物发现、病例复核详情弹窗、复核容量模拟、风险 Top-N / 随机抽样对照，以及预审/后验数据隔离。该版本不代表新的临床效用验证。
+统一入口：
 
-### v0.7.1b 外部复核排序协议补全
-
-v0.7.1b 完成了外部 DR 数据上的复核排序协议补全。核心问题是：
-
-> 在模型把病例预测成非重症时，输出概率里残留的重症概率，是否还能帮助我们把真正危险的漏检排到更前面？
-
-主实验设置：
-
-- 训练来源：APTOS2019 frozen checkpoints
-- 外部测试：IDRiD_data / MESSIDOR2
-- 目标事件：grade-based VTDR miss proxy，`true_grade >= 3 and pred_grade < 3`
-- 复核预算：Top20%
-- 方法：`gated_severe_prob_mass_only`
-- 对照：`random_gate_only_expected`
-- 统计：image-clustered bootstrap，同一图像的 6 个 backbone 记录一起重采样
-
-结果：
-
-| Dataset | Δ recall | 95% CI | Bootstrap win rate | Mean residual count reduction / backbone |
-|---|---:|---:|---:|---:|
-| IDRiD_data | +0.3385 | [0.2195, 0.4742] | 1.0000 | +7.8787 |
-| MESSIDOR2 | +0.6268 | [0.5003, 0.7369] | 1.0000 | +16.7396 |
-
-一句话解释：
-
-> 只知道“模型预测为非重症”还不够；在这些候选样本内部，重症概率质量仍然能继续排序危险漏检。
-
-补充说明：
-
-- `Bootstrap win rate` 表示 bootstrap 中 `Δ recall > 0` 的比例。
-- `Mean residual count reduction / backbone` 是六个 backbone 的平均残余危险事件减少量，不是患者数。
-- random gate-only 的独立随机抽样用于估计 baseline 分布；primary bootstrap 比较使用 `random_gate_only_expected`。
-- `learned_logistic` 是 v0.6.8/v0.6.8b 的内部监督式基线；原 v0.7.0 协议计划保留其外部 baseline，但当前 v0.7.1/v0.7.1b 尚未实现外部 frozen learned_logistic 推理，属于预设监督式 baseline（非 primary comparator）缺失 / protocol deviation，不影响本轮 primary gate-only comparison。
-
-### v0.7.2 评价指标敏感性审计
-
-v0.7.2 检查同一预审排序结论是否依赖单一评价指标。
-
-主要结果：
-
-- AURC：12/12 第一；
-- AUGRC：12/12 第一；
-- partial_AUGRC_70_90：12/12 第一；
-- Top20 event recall：11/12 第一或并列第一。
-
-该结果表示跨评价口径的一致性，不等同于临床效用证明。
+    streamlit run app/model_hub_demo.py
 
 ---
 
-## Run
+## 核心能力
 
-启动当前审计展示 demo：
+### 1. 全局模型库
 
-```bash
-streamlit run app/demo.py
-```
+Model Hub 会展示服务器已发现的模型，并根据当前任务标记其状态：
 
-旧版分类/CAM demo 入口：
+- 当前任务可直接推理
+- 当前任务仅离线回放
+- 可适配当前任务
+- 不可接入，并显示原因
 
-```bash
-streamlit run app/demo_legacy_v0_4_2.py
-```
+这避免了将 DR 五分类模型错误地直接用于青光眼三分类任务，同时允许兼容架构作为当前任务的适配骨干。
 
-重新生成 v0.7.1b 结果：
+### 2. 模型适配训练
 
-```bash
-python scripts/evaluate_v071b_protocol_completion_ci.py \
-  --predictions experiments/summary/v0_7_1/external_dr_direct_inference_predictions.csv \
-  --out-dir experiments/summary/v0_7_1b \
-  --n-random 2000 \
-  --n-bootstrap 2000 \
-  --seed 42
-```
+当前支持基于 `timm_imagefolder_v1` 的 ImageFolder 训练适配流程，可用于 ConvNeXt、Swin、ViT 等 timm 模型。
 
-外部直接推理：
+训练任务采用 YAML recipe 配置，运行后统一保存：
 
-```bash
-python scripts/run_v071_external_dr_direct_inference.py
-```
+- `base_recipe.yaml`
+- `submitted_config.yaml`
+- `effective_config.yaml`
+- `validation_report.json`
+- `run_manifest.yaml`
+- prediction、metrics、forward-only cost、registration record
 
-外部复核排序评估：
+默认全新微调从 timm 原始预训练权重初始化，不再静默继承已有眼病 checkpoint。旧 checkpoint 仅在显式选择继续训练或跨疾病迁移研究时使用。
 
-```bash
-python scripts/evaluate_v071_external_dr_review_ranking.py
-```
+### 3. 工程训练模板与科研候选档案
+
+当前提供四类工程训练模板：
+
+- 快速链路验证
+- 通用全量微调
+- 冻结骨干只训分类头
+- 低学习率保守微调
+
+这些模板用于链路验证和统一初筛，不代表各模型的官方最优训练协议。
+
+同时，系统提供 ConvNeXt、Swin、ViT 的官方锚点档案，用于记录官方配置来源、当前可执行边界和固定预算 LR×WD 验证集搜索计划。该搜索目前是科研候选实验规划层，不等同于完整官方复现或最终论文冻结协议。
+
+### 4. 路由模型与专家模型组合评测
+
+研究评测区支持：
+
+- 单路由模型
+- 多路由模型
+- 单专家模型
+- 多专家模型
+- 固定专家接管
+- 专家池概率平均融合
+- 不同专家调用预算
+- 成本-性能曲线
+- Pareto 前沿和推荐操作点
+
+系统区分“默认输出模型”和“路由模型”：未进入专家调用的病例由默认输出模型给出最终输出；进入专家调用后，由所选专家或专家池接管。其他路由模型仅在对应多模型路由机制下参与分歧或平均不确定性计算。
+
+### 5. 病例回放与研究审计隔离
+
+病例回放默认只显示在线推理时可获得的信息，例如图像、模型输出、专家调用状态、最终输出来源和路由解释。
+
+研究审计视图才显示公开测试标签、DR 代理风险事件、是否纠正、残余事件和原始字段，避免把后验评测信息包装成在线临床决策。
 
 ---
 
-## Main files
+## 当前支持任务
+
+| 任务 | 数据集 | 标签空间 | 当前用途 |
+|---|---|---|---|
+| DR 五级分级 | APTOS2019 | ICDR 0-4 | 模型训练、路由评测、风险代理事件分析 |
+| 青光眼三分类 | Glaucoma_fundus | normal / early / advanced | 模型训练、路由评测、成本-性能对比 |
+
+---
+
+## 当前支持模型与适配边界
+
+当前自动训练主要支持：
+
+- ConvNeXt
+- Swin
+- ViT
+
+当前自动训练协议：
+
+- `timm_imagefolder_v1`
+
+仍需后续补充专用 trainer / loader adapter 的模型包括：
+
+- RETFound
+- RETFound-Green
+- RETFound-DINOv2
+- 其他非 timm 或自定义预处理模型
+
+---
+
+## 主要入口文件
 
 | Path | Description |
 |---|---|
-| `app/demo.py` | 当前五页 OphAgent Audit Demo 入口 |
-| `app/demo_legacy_v0_4_2.py` | 旧版分类/CAM demo 入口 |
-| `app/checkpoints.py` | 六模型 checkpoint / artifact 自动发现 |
-| `app/views/case_detail.py` | 病例复核详情弹窗 |
-| `scripts/evaluate_v071b_protocol_completion_ci.py` | v0.7.1b 协议补全、random gate-only、clustered bootstrap |
-| `scripts/run_v071_external_dr_direct_inference.py` | 外部 DR frozen checkpoint direct inference |
-| `scripts/evaluate_v071_external_dr_review_ranking.py` | 外部复核排序评估 |
-| `scripts/precheck_v070_external_dr_datasets.py` | 外部数据预检、重叠审计、checkpoint manifest |
-| `experiments/summary/v0_7_1b/` | v0.7.1b 主结果 |
-| `experiments/summary/v0_7_2/` | v0.7.2 metric sensitivity audit 结果 |
-| `notes/v0.7.2_metric_sensitivity_audit.md` | v0.7.2 评价指标敏感性审计说明 |
-| `notes/v0.7.3_audit_demo_clinical_ui.md` | v0.7.3 Audit Demo 临床 UI 说明 |
-| `notes/v0.7.4_audit_demo_case_detail_and_checkpoint_discovery.md` | v0.7.4 病例详情与六模型发现说明 |
+| `app/model_hub_demo.py` | v0.8.6 交互式模型中转台入口 |
+| `app/model_hub_engineering.py` | 模型工程区：模型发现、任务适配、训练任务入口 |
+| `app/model_hub_research.py` | 研究评测区：路由/专家组合、成本-性能评测 |
+| `app/model_hub_clinical.py` | 病例回放与研究审计隔离 |
+| `app/training_config.py` | YAML recipe、配置校验、official profile 管理 |
+| `app/training_jobs.py` | 后台训练任务状态、运行包和注册记录 |
+| `scripts/routing/run_interactive_model_hub.py` | 生成 Model Hub 快照、组合评测和病例 trace |
+| `scripts/training/train_timm_classifier.py` | timm ImageFolder 训练器 |
+| `scripts/training/run_training_job.py` | 后台训练任务执行入口 |
+| `experiments/model_hub/` | Model Hub 资产、recipe、official profile 和运行目录 |
+| `experiments/v0_8_6_interactive_model_hub/` | v0.8.6 受控协议配置与发布产物 |
 
 ---
 
-## Project line
+## 旧版审计 Demo
+
+早期 v0.7.x 主线关注“模型输出后的风险审计与复核优先级”，核心入口仍保留：
+
+    streamlit run app/demo.py
+
+旧版分类/CAM demo 入口：
+
+    streamlit run app/demo_legacy_v0_4_2.py
+
+对应实验结果和说明主要位于：
+
+- `experiments/summary/v0_7_1b/`
+- `experiments/summary/v0_7_2/`
+- `notes/v0.7.2_metric_sensitivity_audit.md`
+- `notes/v0.7.3_audit_demo_clinical_ui.md`
+- `notes/v0.7.4_audit_demo_case_detail_and_checkpoint_discovery.md`
+
+---
+
+## 历史研究节点简表
 
 | Version | Focus |
 |---|---|
-| v0.7.4 | Audit Demo：六模型产物发现、病例详情弹窗、复核容量 Top-N / 随机抽样 |
-| v0.7.3 | Audit Demo：五页临床展示 UI、临床展示/研究审计模式、红黄绿复核队列 |
-| v0.7.2 | metric-sensitivity audit：AURC/AUGRC/partial_AUGRC/Top20 稳健性 |
-| v0.7.1b | 外部复核排序协议补全：random gate-only、image-clustered bootstrap、seed sensitivity |
-| v0.7.1 | APTOS frozen checkpoints 直接推理 IDRiD_data / MESSIDOR2 |
-| v0.7.0 | 外部 DR 数据预检、重叠审计、协议冻结 |
-| v0.6.8b | learned deferral score 稳健性与机制审计 |
-| v0.6.8 | learned deferral score |
-| v0.6.7c | 排序信号机制分析 |
-| v0.6.7b | severity-aware signal ablation |
-| v0.6.7 | residual risk audit |
-| v0.6.6 | 无真实标签预审风险排序 |
-| v0.6.5 | 医院线下展示版 |
+| v0.8.6 | 交互式眼科模型中转台：模型发现、任务适配、路由/专家组合、训练任务、病例回放 |
+| v0.8.5c | timm adapter 激活与 forward-only 成本接入 |
+| v0.8.5b | known-model inventory 与 adapter onboarding |
+| v0.8.5 | 模型注册与 scout-expert 协议 |
+| v0.8.4b | 青光眼 forward-only 成本闭环 |
+| v0.7.4 | Audit Demo：六模型产物发现、病例详情弹窗、复核容量模拟 |
+| v0.7.2 | metric-sensitivity audit：AURC / AUGRC / partial_AUGRC / Top20 稳健性 |
+| v0.7.1b | 外部 DR 复核排序协议补全 |
 
 ---
 
-## Classification backbone results
+## 当前边界与注意事项
 
-APTOS2019 test set:
-
-| Backbone | Accuracy | Macro-F1 | Weighted-F1 | QWK |
-|---|---:|---:|---:|---:|
-| Swin-Tiny | 0.829 | 0.657 | 0.820 | 0.898 |
-| ConvNeXt-Tiny | 0.814 | 0.650 | 0.809 | 0.862 |
-| ViT-B/16 | 0.818 | 0.646 | 0.814 | 0.876 |
-| RETFound-MAE-CFP | 0.804 | 0.583 | 0.789 | 0.866 |
-
-这些模型用于后续输出审计与复核排序，不作为 leaderboard 结果。
-
----
-
-## Notes
-
-- 当前结果来自公共数据集回顾性实验。
-- 当前展示 Demo 已更新到 v0.7.4-audit-demo-case-detail；冻结研究证据主要来自 v0.7.1b / v0.7.2。
-- VTDR miss 是 grade-based proxy，不是医生定义的患者级临床终点，且不包含 DME。
-- 当前完整疾病专属审计协议仅覆盖 DR 五级代理任务；其他眼病 CSV 默认仅启用通用分类审计。
-- v0.7.1 外部分类性能存在明显域移压力。
-- v0.7.1b 的重点是复核排序信号是否仍然有效。
-- prediction records 不等同于独立患者。
-- 所有输出都需要人工审核。
+- 本项目所有结果来自公共数据集或回顾性实验，不用于临床诊断、治疗建议或真实医疗决策。
+- forward-only cost 仅统计模型前向计算，不包含图像解码、预处理、I/O、服务排队和真实部署开销。
+- 工程 recipe 用于链路验证和统一初筛，不代表每个模型的官方最优训练协议。
+- 全局候选扫描是探索性工具，不等同于最终论文冻结协议。
+- 当前自动训练主要支持 `timm_imagefolder_v1`；RETFound / Green / DINOv2 等模型需要后续专用 adapter。
+- 病例回放中的研究审计信息来自公开测试标签和离线评估，不应被解释为在线临床可获得信息。

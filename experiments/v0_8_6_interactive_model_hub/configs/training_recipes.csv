@@ -1,0 +1,4 @@
+recipe_id,model_family,architecture,image_size,batch_size,num_epochs,learning_rate,pretrained,weight_decay,label_smoothing,num_workers,seed,device,enabled,notes
+convnext_tiny_screening,convnext,convnext_tiny,224,32,30,0.0001,1,0.01,0.1,4,42,auto,1,ConvNeXt-Tiny 受控筛选 recipe
+swin_tiny_screening,swin,swin_tiny_patch4_window7_224,224,32,30,0.0001,1,0.01,0.1,4,42,auto,1,Swin-Tiny 受控筛选 recipe
+vit_base_screening,vit,vit_base_patch16_224,224,16,30,0.00005,1,0.05,0.1,4,42,auto,1,ViT-B/16 受控筛选 recipe

@@ -547,6 +547,9 @@ def publish_artifacts(
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts = config.get("publish", {}).get("artifacts", [])
+    stable_manifest_paths = bool(
+        config.get("publish", {}).get("stable_manifest_paths", False)
+    )
     rows: list[dict[str, Any]] = []
     created_at = datetime.now(timezone.utc).isoformat()
 
@@ -575,7 +578,7 @@ def publish_artifacts(
                 "protocol_id": config["protocol_id"],
                 "mode": config["mode"],
                 "artifact_name": name,
-                "source_path": str(source),
+                "source_path": str(target if stable_manifest_paths else source),
                 "published_path": str(target),
                 "size_bytes": stat.st_size,
                 "mtime_utc": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
@@ -605,13 +608,14 @@ def publish_artifacts(
         writer.writeheader()
         writer.writerows(rows)
 
-    write_html_report(
-        output_dir / str(config.get("publish", {}).get("report", "report.html")),
-        config=config,
-        config_path=config_path,
-        rows=rows,
-        stage_results=stage_results,
-    )
+    if bool(config.get("publish", {}).get("generate_runner_report", True)):
+        write_html_report(
+            output_dir / str(config.get("publish", {}).get("report", "report.html")),
+            config=config,
+            config_path=config_path,
+            rows=rows,
+            stage_results=stage_results,
+        )
 
 
 def csv_preview(path: Path, limit: int = 8) -> tuple[list[str], list[list[str]]]:

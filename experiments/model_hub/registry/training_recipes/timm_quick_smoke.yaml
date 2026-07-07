@@ -1,0 +1,44 @@
+schema_version: 1
+recipe:
+  recipe_id: timm_quick_smoke
+  display_name: 快速链路验证
+  recipe_kind: engineering
+  evaluation_role: smoke_test
+  trainer_adapter: timm_imagefolder_v1
+  supported_model_families: [convnext, swin, vit]
+  description: 只验证数据、模型和训练链路；1 个 epoch 的结果不能作为正式性能结论
+model:
+  freeze_backbone: false
+training:
+  epochs: 1
+  batch_size: 8
+  image_size: 224
+  amp: true
+  grad_accum_steps: 1
+  seed: 42
+  early_stopping_patience: 0
+optimizer:
+  name: adamw
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  momentum: 0.9
+scheduler:
+  name: none
+  warmup_epochs: 0
+  minimum_learning_rate: 0.0
+  step_size: 1
+  gamma: 0.1
+loss:
+  name: cross_entropy
+  label_smoothing: 0.0
+  class_weights: null
+augmentation:
+  random_resized_crop: false
+  horizontal_flip_probability: 0.5
+  rotation_degrees: 0.0
+  color_jitter: 0.0
+evaluation:
+  save_best_by: macro_f1
+runtime:
+  device: cuda:2
+  num_workers: 4

@@ -1,0 +1,35 @@
+schema_version: 1
+profile:
+  profile_id: vit_base_patch16_official_anchor
+  display_name: ViT-B/16 官方迁移协议锚点
+  model_family: vit
+  supported_architectures: [vit_base_patch16_224]
+  trainer_adapter: timm_imagefolder_v1
+  source:
+    title: Google Research Vision Transformer fine-tuning config
+    url: https://github.com/google-research/vision_transformer
+    config_url: https://github.com/google-research/vision_transformer/blob/main/vit_jax/configs/vit.py
+    scope: ViT-B/16 downstream fine-tuning; JAX/Flax reference
+    status: official_repository
+  translation:
+    status: reference_only_until_adapter_parity
+    base_recipe_id: timm_full_train
+    note: 官方协议使用 JAX、step-based schedule、384 输入和大批量；当前 PyTorch timm trainer 不声称等价复现，仅记录来源并给出预注册小预算候选网格。
+    unsupported_fields: [step_based_schedule, jax_pretrained_npz, gradient_clip, position_embedding_interpolation, large_batch_lr_scaling]
+  reference_parameters:
+    batch_size: 512
+    gradient_accumulation_steps: 8
+    base_learning_rate: 0.03
+    warmup_steps: 500
+    scheduler: cosine
+    input_size: 384
+search_plan:
+  plan_id: fixed_budget_lr_wd_6trial
+  display_name: 固定预算 6 次 LR×WD 验证集搜索
+  trial_budget: 6
+  selection_split: val
+  selection_metric: task_default
+  final_seeds: [42, 3407, 2026]
+  grid:
+    optimizer.learning_rate: [0.000005, 0.00001, 0.00002]
+    optimizer.weight_decay: [0.01, 0.05]

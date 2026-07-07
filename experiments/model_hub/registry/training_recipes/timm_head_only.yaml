@@ -1,0 +1,44 @@
+schema_version: 1
+recipe:
+  recipe_id: timm_head_only
+  display_name: 冻结骨干只训分类头
+  recipe_kind: engineering
+  evaluation_role: transfer_probe
+  trainer_adapter: timm_imagefolder_v1
+  supported_model_families: [convnext, swin, vit]
+  description: 冻结骨干的低成本迁移基线；用于快速筛选表征，不代表全量微调上限
+model:
+  freeze_backbone: true
+training:
+  epochs: 20
+  batch_size: 32
+  image_size: 224
+  amp: true
+  grad_accum_steps: 1
+  seed: 42
+  early_stopping_patience: 5
+optimizer:
+  name: adamw
+  learning_rate: 0.001
+  weight_decay: 0.01
+  momentum: 0.9
+scheduler:
+  name: cosine
+  warmup_epochs: 1
+  minimum_learning_rate: 0.00001
+  step_size: 8
+  gamma: 0.1
+loss:
+  name: cross_entropy
+  label_smoothing: 0.0
+  class_weights: null
+augmentation:
+  random_resized_crop: false
+  horizontal_flip_probability: 0.5
+  rotation_degrees: 10.0
+  color_jitter: 0.0
+evaluation:
+  save_best_by: macro_f1
+runtime:
+  device: cuda:2
+  num_workers: 4

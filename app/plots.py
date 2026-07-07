@@ -32,10 +32,8 @@ METHOD_LABELS = {
 
 BACKBONE_LABELS = {
     "convnext_tiny": "ConvNeXt-T",
-    "retfound_mae_cfp_official_like": "RETFound-L",
     "swin_tiny": "Swin-T",
     "vit_b_imagenet": "ViT-B IN1K",
-    "vit_b_official_like": "ViT-B",
     "vit_l_official_like": "ViT-L",
 }
 

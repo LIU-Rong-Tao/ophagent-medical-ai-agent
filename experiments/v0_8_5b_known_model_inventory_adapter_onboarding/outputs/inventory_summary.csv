@@ -1,11 +1,11 @@
 ﻿metric,value
-total_candidates,10
+total_candidates,9
 ready_for_adapter_n,0
 missing_checkpoint_n,0
 missing_data_root_n,0
 missing_class_mapping_n,0
 unsupported_adapter_n,0
-needs_loader_audit_n,4
+needs_loader_audit_n,3
 legacy_replay_only_n,0
-dr_candidates_n,8
+dr_candidates_n,7
 glaucoma_candidates_n,2

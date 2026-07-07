@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+from scripts.routing.model_metadata import normalized_model_metadata
 from scripts.routing.run_known_model_inventory_adapter_onboarding import run_protocol
 
 
@@ -17,6 +18,19 @@ def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, object]]) 
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def test_normalized_model_metadata_separates_family_architecture_and_pretraining() -> None:
+    vit = normalized_model_metadata("vit_b_imagenet", "vit_base_patch16_224")
+    green = normalized_model_metadata("retfound_green_linear_probe", "retfound_green")
+
+    assert vit == {
+        "model_family": "vit",
+        "architecture": "vit_base_patch16_224",
+        "pretraining_source": "imagenet",
+    }
+    assert green["model_family"] == "retfound"
+    assert green["architecture"] == "retfound_green"
 
 
 def create_fixture(tmp_path: Path) -> Path:
@@ -548,6 +562,34 @@ def test_inventory_stage_records_missing_and_legacy_status(tmp_path: Path):
     keys = {row["metric"]: row["value"] for row in summary}
     assert int(keys["total_candidates"]) >= 5
     assert int(keys["missing_checkpoint_n"]) >= 1
+
+
+def test_inventory_scan_ignores_unified_model_hub_runtime_predictions(tmp_path: Path) -> None:
+    protocol = create_fixture(tmp_path)
+    prediction_path = (
+        tmp_path
+        / "experiments"
+        / "model_hub"
+        / "runs"
+        / "training"
+        / "aptos_dr_5class"
+        / "convnext_tiny_imagenet_aptos_dr_5class_adapter"
+        / "20260706-095755"
+        / "evaluation"
+        / "test"
+        / "test_predictions.csv"
+    )
+    write_csv(
+        prediction_path,
+        ["image_key", "true_label", "pred_label", "prob_0", "prob_1"],
+        [{"image_key": "case-1", "true_label": 0, "pred_label": 0, "prob_0": 0.9, "prob_1": 0.1}],
+    )
+    output_dir = tmp_path / "outputs"
+
+    run_protocol(protocol, output_dir=output_dir, stage="inventory")
+
+    inventory = read_csv(output_dir / "model_inventory.csv")
+    assert not any(row["artifact_id"] == "20260706-095755" for row in inventory)
 
 
 def test_all_stage_generates_adapter_outputs_replay_and_sanity(tmp_path: Path):

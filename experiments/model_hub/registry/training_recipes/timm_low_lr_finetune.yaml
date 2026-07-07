@@ -1,0 +1,44 @@
+schema_version: 1
+recipe:
+  recipe_id: timm_low_lr_finetune
+  display_name: 低学习率保守微调
+  recipe_kind: engineering
+  evaluation_role: sensitivity_probe
+  trainer_adapter: timm_imagefolder_v1
+  supported_model_families: [convnext, swin, vit]
+  description: 对预训练权重更保守的低学习率控制组；适合检查敏感骨干的 recipe 依赖性
+model:
+  freeze_backbone: false
+training:
+  epochs: 30
+  batch_size: 16
+  image_size: 224
+  amp: true
+  grad_accum_steps: 1
+  seed: 42
+  early_stopping_patience: 8
+optimizer:
+  name: adamw
+  learning_rate: 0.00001
+  weight_decay: 0.05
+  momentum: 0.9
+scheduler:
+  name: cosine
+  warmup_epochs: 3
+  minimum_learning_rate: 0.0000001
+  step_size: 10
+  gamma: 0.1
+loss:
+  name: cross_entropy
+  label_smoothing: 0.1
+  class_weights: null
+augmentation:
+  random_resized_crop: false
+  horizontal_flip_probability: 0.5
+  rotation_degrees: 10.0
+  color_jitter: 0.0
+evaluation:
+  save_best_by: macro_f1
+runtime:
+  device: cuda:2
+  num_workers: 4

@@ -46,21 +46,9 @@ KNOWN_MODEL_SPECS = (
         "vit_base_patch16_224",
     ),
     ModelSpec(
-        "vit_b_official_like",
-        "ViT-B official-like",
-        "aptos_vit_base_patch16_official_like",
-        "vit_base_patch16_224",
-    ),
-    ModelSpec(
         "vit_l_official_like",
         "ViT-L official-like",
         "aptos_vit_large_patch16_official_like",
-        "vit_large_patch16_224",
-    ),
-    ModelSpec(
-        "retfound_official_like",
-        "RETFound official-like",
-        "aptos_retfound_mae_cfp_official_like",
         "vit_large_patch16_224",
     ),
 )

@@ -1,0 +1,29 @@
+protocol_id: v086_interactive_model_hub
+result_semantics: interactive_replay
+output_dir: experiments/v0_8_6_interactive_model_hub/outputs
+
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+registered_models: experiments/v0_8_5_model_registry_scout_expert_protocol/outputs/registered_models.csv
+model_inventory: experiments/v0_8_5b_known_model_inventory_adapter_onboarding/outputs/model_inventory.csv
+legacy_model_baselines: experiments/v0_8_5_model_registry_scout_expert_protocol/outputs/model_baselines_all.csv
+v085c_output_dir: experiments/v0_8_5c_timm_adapter_activation/outputs
+v085c_replay_protocols: experiments/v0_8_5c_timm_adapter_activation/configs/routing_replay_protocols.csv
+pairing_protocols: experiments/v0_8_6_interactive_model_hub/configs/pairing_protocols.csv
+
+source_versions:
+  - v0.8.5
+  - v0.8.5b
+  - v0.8.5c
+
+qwk_enabled_tasks:
+  - aptos_dr_5class
+
+excluded_artifact_ids:
+  - retfound_mae_cfp_official_like
+  - vit_b_official_like
+  - vit_l_official_like
+
+case_trace_budgets:
+  - 0.2
+  - 0.3
+  - 0.5
