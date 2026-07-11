@@ -1,0 +1,65 @@
+schema_version: 1
+recipe:
+  recipe_id: ophbench_retfound_linear_probe_v1
+  display_name: RETFound CFP 冻结特征标准线性探针
+  recipe_kind: engineering
+  evaluation_role: controlled_task_adaptation
+  trainer_adapter: ophbench_retfound_linear_probe_v1
+  supported_model_families: [retfound]
+  description: 冻结 RETFound CFP 编码器，仅用 train 拟合线性头、val 选择 C、test 最终评估一次
+foundation:
+  base_model_provider: ophbench
+  base_model_id: retfound
+  base_checkpoint_id: retfound-cfp
+  encoder_checkpoint_path: null
+  encoder_checkpoint_sha256: e1e4f66a1b792eeb6e2efaf158f33be35c8255f36b3d17ed67cd5129da246485
+  encoder_frozen: true
+  adapter_version: "0.2.0"
+classifier:
+  type: logistic_regression
+  c_candidates: [0.01, 0.1, 1.0]
+  max_iter: 2000
+  selection_metric: macro_f1
+model:
+  family: retfound
+  architecture: retfound-mae-vit-large-patch16-256
+  freeze_backbone: true
+  initialization:
+    source: registered_checkpoint
+    checkpoint_path: null
+    source_num_classes: 0
+training:
+  epochs: 1
+  batch_size: 32
+  image_size: 256
+  amp: false
+  grad_accum_steps: 1
+  seed: 42
+  early_stopping_patience: 0
+optimizer:
+  name: sgd
+  learning_rate: 1.0
+  weight_decay: 0.0
+  momentum: 0.0
+scheduler:
+  name: none
+  warmup_epochs: 0
+  minimum_learning_rate: 0.0
+  step_size: 1
+  gamma: 0.0
+loss:
+  name: cross_entropy
+  label_smoothing: 0.0
+  class_weights: null
+augmentation:
+  random_resized_crop: false
+  horizontal_flip_probability: 0.0
+  rotation_degrees: 0.0
+  color_jitter: 0.0
+evaluation:
+  save_best_by: macro_f1
+runtime:
+  device: cuda:0
+  num_workers: 4
+output:
+  output_root: experiments/model_hub/runs/training/aptos_dr_5class

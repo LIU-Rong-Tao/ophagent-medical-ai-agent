@@ -56,6 +56,32 @@ class UnifiedModelRecord:
     task_checkpoint: bool
     target_task_id: str | None
     provenance: dict[str, Any]
+    model_name: str = ""
+    year: int | None = None
+    venue: str = ""
+    model_category: str = ""
+    architecture: str = ""
+    pretraining_data_summary: str = ""
+    pretraining_strategy: str = ""
+    reported_summary: str = ""
+    paper_url: str = ""
+    code_url: str = ""
+    runtime_phase: str = ""
+    verification_status: str = ""
+    license: str = ""
+    license_verified: bool = False
+    checkpoint_name: str = ""
+    checkpoint_provider: str = ""
+    weight_url: str = ""
+    access_type: str = ""
+    requires_auth: bool = False
+    framework: str = ""
+    input_size: str = ""
+    normalization: str = ""
+    embedding_dim: int | None = None
+    sha256: str = ""
+    last_verified: str = ""
+    checkpoint_verification_status: str = ""
 
     @property
     def runnable(self) -> bool:

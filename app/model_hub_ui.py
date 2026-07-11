@@ -17,6 +17,8 @@ TASK_LABELS = {
 }
 
 MODEL_LABELS = {
+    "aptos2019-retfound-cfp-linear-probe-v1": "RETFound CFP · APTOS DR 五分类",
+    "aptos2019-retfound-cfp-linear-probe-v2": "RETFound CFP · APTOS DR 五分类 · 标准线性探针 v2",
     "convnext_tiny": "ConvNeXt-Tiny",
     "swin_tiny": "Swin-Tiny",
     "vit_b_imagenet": "ViT-B/16（ImageNet）",

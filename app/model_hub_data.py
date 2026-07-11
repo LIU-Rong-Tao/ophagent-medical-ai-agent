@@ -424,11 +424,30 @@ def build_unified_model_catalog(
         lambda value: "smoke_test_passed" if str(value) == "completed" else "not_implemented"
     )
     local["base_adapter_ready"] = local["adapter_status"].astype(str).eq("completed")
-    local["task_checkpoint"] = True
-    local["task_inference_ready"] = local["target_task_status"].isin(
+    declared_task_checkpoint = (
+        local["task_checkpoint"].map(lambda value: True if pd.isna(value) else bool(value))
+        if "task_checkpoint" in local
+        else pd.Series(True, index=local.index)
+    )
+    declared_inference_ready = (
+        local["task_inference_ready"].map(lambda value: True if pd.isna(value) else bool(value))
+        if "task_inference_ready" in local
+        else pd.Series(True, index=local.index)
+    )
+    declared_route_eligible = (
+        local["route_eligible"].map(lambda value: True if pd.isna(value) else bool(value))
+        if "route_eligible" in local
+        else pd.Series(True, index=local.index)
+    )
+    local["task_checkpoint"] = declared_task_checkpoint
+    local["task_inference_ready"] = declared_inference_ready & local["target_task_status"].isin(
         {"direct_inference", "offline_replay"}
     )
-    local["route_eligible"] = local["task_inference_ready"]
+    local["route_eligible"] = (
+        declared_route_eligible
+        & local["task_checkpoint"]
+        & local["task_inference_ready"]
+    )
     local["task_compatibility_status"] = local["target_task_status"]
 
     provider_catalog = build_provider_catalog(
@@ -450,7 +469,7 @@ def build_unified_model_catalog(
                 "dataset_source": record.provider_id,
                 "artifact_id": record.source_checkpoint_id or record.source_model_id,
                 "model_family": record.family_id,
-                "architecture": record.source_model_id,
+                "architecture": record.architecture,
                 "label_space": "",
                 "n_classes": 0,
                 "prediction_source": "missing",
@@ -474,6 +493,34 @@ def build_unified_model_catalog(
                 "task_inference_ready": False,
                 "route_eligible": False,
                 "task_checkpoint": False,
+                "model_name": record.model_name,
+                "year": record.year,
+                "venue": record.venue,
+                "model_category": record.model_category,
+                "modalities": "|".join(record.modalities),
+                "capabilities": "|".join(record.capabilities),
+                "pretraining_data_summary": record.pretraining_data_summary,
+                "pretraining_strategy": record.pretraining_strategy,
+                "reported_summary": record.reported_summary,
+                "paper_url": record.paper_url,
+                "code_url": record.code_url,
+                "runtime_phase": record.runtime_phase,
+                "verification_status": record.verification_status,
+                "license": record.license,
+                "license_verified": record.license_verified,
+                "checkpoint_id": record.source_checkpoint_id or "",
+                "checkpoint_name": record.checkpoint_name,
+                "checkpoint_provider": record.checkpoint_provider,
+                "weight_url": record.weight_url,
+                "access_type": record.access_type,
+                "requires_auth": record.requires_auth,
+                "framework": record.framework,
+                "input_size": record.input_size,
+                "normalization": record.normalization,
+                "embedding_dim": record.embedding_dim,
+                "sha256": record.sha256,
+                "last_verified": record.last_verified,
+                "checkpoint_verification_status": record.checkpoint_verification_status,
             }
         )
     external = pd.DataFrame(external_rows)

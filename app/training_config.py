@@ -29,6 +29,8 @@ TOP_LEVEL_FIELDS = {
     "evaluation",
     "runtime",
     "output",
+    "foundation",
+    "classifier",
 }
 SECTION_FIELDS = {
     "identity": {"task_id", "dataset_id", "artifact_id", "source_artifact_id", "source_task_id", "trainer_adapter"},
@@ -52,7 +54,17 @@ SECTION_FIELDS = {
     "augmentation": {"random_resized_crop", "horizontal_flip_probability", "rotation_degrees", "color_jitter"},
     "evaluation": {"save_best_by", "metrics"},
     "runtime": {"device", "num_workers"},
-    "output": {"run_dir"},
+    "output": {"run_dir", "output_root"},
+    "foundation": {
+        "base_model_provider",
+        "base_model_id",
+        "base_checkpoint_id",
+        "encoder_checkpoint_path",
+        "encoder_checkpoint_sha256",
+        "encoder_frozen",
+        "adapter_version",
+    },
+    "classifier": {"type", "c_candidates", "max_iter", "selection_metric"},
 }
 INITIALIZATION_FIELDS = {"source", "checkpoint_path", "source_num_classes"}
 SUPPORTED_OPTIMIZERS = {"adamw", "adam", "sgd"}
@@ -299,6 +311,12 @@ def save_training_recipe(
 
 
 def _initialization_from_context(context: dict[str, Any]) -> dict[str, Any]:
+    if context.get("trainer_adapter") == "ophbench_retfound_linear_probe_v1":
+        return {
+            "source": "registered_checkpoint",
+            "checkpoint_path": str(context.get("source_checkpoint_path", "")),
+            "source_num_classes": 0,
+        }
     cross_task = str(context.get("source_task_id", "")) != str(context["task_id"])
     if cross_task:
         return {"source": "timm_pretrained", "checkpoint_path": None, "source_num_classes": 0}
@@ -342,7 +360,15 @@ def build_training_draft(base_recipe: dict[str, Any], context: dict[str, Any]) -
     evaluation = deepcopy(draft.get("evaluation", {}))
     evaluation["metrics"] = list(context.get("display_metrics", ["accuracy", "macro_f1"]))
     draft["evaluation"] = evaluation
-    draft["output"] = {"run_dir": str(context["output_dir"])}
+    foundation = deepcopy(draft.get("foundation", {}))
+    if str(context.get("source_checkpoint_path", "")).strip():
+        foundation["encoder_checkpoint_path"] = str(context["source_checkpoint_path"])
+    if str(context.get("encoder_checkpoint_sha256", "")).strip():
+        foundation["encoder_checkpoint_sha256"] = str(context["encoder_checkpoint_sha256"])
+    draft["foundation"] = foundation
+    output = deepcopy(draft.get("output", {}))
+    output["run_dir"] = str(context["output_dir"])
+    draft["output"] = output
     return draft
 
 
@@ -358,6 +384,8 @@ def _reject_unknown_fields(payload: dict[str, Any]) -> None:
     if unknown_top:
         raise TrainingConfigError(f"未知字段：{sorted(unknown_top)}")
     for section, allowed in SECTION_FIELDS.items():
+        if section in {"foundation", "classifier"} and section not in payload:
+            continue
         mapping = _require_mapping(payload, section)
         unknown = set(mapping) - allowed
         if unknown:
@@ -381,6 +409,9 @@ def _assert_locked_fields(submitted: dict[str, Any], context: dict[str, Any]) ->
             "augmentation": deepcopy(submitted["augmentation"]),
             "evaluation": {"save_best_by": submitted["evaluation"].get("save_best_by")},
             "runtime": deepcopy(submitted["runtime"]),
+            "foundation": deepcopy(submitted.get("foundation", {})),
+            "classifier": deepcopy(submitted.get("classifier", {})),
+            "output": {"output_root": submitted.get("output", {}).get("output_root", "")},
         },
         context,
     )
@@ -390,7 +421,10 @@ def _assert_locked_fields(submitted: dict[str, Any], context: dict[str, Any]) ->
         "model.family": (submitted["model"].get("family"), expected["model"]["family"]),
         "model.architecture": (submitted["model"].get("architecture"), expected["model"]["architecture"]),
         "model.initialization": (submitted["model"].get("initialization"), expected["model"]["initialization"]),
-        "output": (submitted["output"], expected["output"]),
+        "output.run_dir": (
+            submitted["output"].get("run_dir"),
+            expected["output"].get("run_dir"),
+        ),
         "evaluation.metrics": (submitted["evaluation"].get("metrics"), expected["evaluation"]["metrics"]),
     }
     changed = [name for name, (actual, wanted) in checks.items() if actual != wanted]
@@ -417,11 +451,40 @@ def compile_effective_config(
     _assert_locked_fields(submitted, context)
     recipe = submitted["recipe"]
     adapter = str(recipe.get("trainer_adapter", ""))
-    if adapter != "timm_imagefolder_v1" or submitted["identity"]["trainer_adapter"] != adapter:
+    supported_adapters = {"timm_imagefolder_v1", "ophbench_retfound_linear_probe_v1"}
+    if adapter not in supported_adapters or submitted["identity"]["trainer_adapter"] != adapter:
         raise TrainingConfigError(f"当前不支持 trainer_adapter={adapter}")
     supported_families = recipe.get("supported_model_families")
     if not isinstance(supported_families, list) or str(context["model_family"]) not in supported_families:
         raise TrainingConfigError("recipe 不支持当前模型家族")
+
+    if adapter == "ophbench_retfound_linear_probe_v1":
+        foundation = submitted["foundation"]
+        classifier = submitted["classifier"]
+        required_foundation = {
+            "base_model_provider": "ophbench",
+            "base_model_id": "retfound",
+            "base_checkpoint_id": "retfound-cfp",
+            "encoder_frozen": True,
+        }
+        for field, expected in required_foundation.items():
+            if foundation.get(field) != expected:
+                raise TrainingConfigError(f"foundation.{field} 必须为 {expected!r}")
+        if not str(foundation.get("encoder_checkpoint_path", "")).strip():
+            raise TrainingConfigError("foundation.encoder_checkpoint_path 不能为空")
+        digest = str(foundation.get("encoder_checkpoint_sha256", ""))
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise TrainingConfigError("foundation.encoder_checkpoint_sha256 必须为 64 位 SHA256")
+        if str(classifier.get("type")) != "logistic_regression":
+            raise TrainingConfigError("classifier.type 必须为 logistic_regression")
+        candidates = classifier.get("c_candidates")
+        if not isinstance(candidates, list) or not candidates:
+            raise TrainingConfigError("classifier.c_candidates 必须为非空列表")
+        for index, value in enumerate(candidates):
+            _positive_number(value, f"classifier.c_candidates[{index}]")
+        _positive_number(classifier.get("max_iter"), "classifier.max_iter")
+        if str(classifier.get("selection_metric")) != "macro_f1":
+            raise TrainingConfigError("classifier.selection_metric 必须为 macro_f1")
 
     training = submitted["training"]
     for field in ("epochs", "batch_size", "image_size", "grad_accum_steps"):

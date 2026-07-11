@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -33,6 +34,7 @@ from app.training_jobs import (
     TrainingRequest,
     archive_training_job,
     build_adaptation_request,
+    build_training_context,
     build_retry_request,
     cancel_training_job,
     delete_training_job_and_outputs,
@@ -47,6 +49,7 @@ from app.training_jobs import (
 )
 from scripts.training.run_training_job import execute_job
 from app.training_config import build_training_draft, compile_effective_config, dump_yaml, load_yaml
+from app.training_config import discover_training_recipes
 
 
 def create_imagefolder(root: Path, classes: tuple[str, ...] = ("class_a", "class_b")) -> None:
@@ -55,6 +58,108 @@ def create_imagefolder(root: Path, classes: tuple[str, ...] = ("class_a", "class
             directory = root / split / class_name
             directory.mkdir(parents=True, exist_ok=True)
             (directory / f"{split}_{class_name}.png").write_bytes(b"fixture")
+
+
+def create_aptos_imagefolder(root: Path) -> None:
+    classes = ("anodr", "bmilddr", "cmoderatedr", "dseveredr", "eproliferativedr")
+    for split in ("train", "val", "test"):
+        for index, class_name in enumerate(classes):
+            directory = root / split / class_name
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / f"{split}_{index}.png").write_bytes(b"fixture")
+
+
+def test_retfound_standard_recipe_is_discoverable_and_compilable(tmp_path: Path) -> None:
+    recipe_root = ROOT / "experiments/model_hub/registry/training_recipes"
+    recipes = discover_training_recipes(recipe_root)
+    base = next(
+        item for item in recipes if item["recipe"]["recipe_id"] == "ophbench_retfound_linear_probe_v1"
+    )
+    checkpoint = tmp_path / "retfound.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    context = {
+        "task_id": "aptos_dr_5class",
+        "dataset_id": "APTOS2019",
+        "artifact_id": "aptos2019-retfound-cfp-linear-probe-v2",
+        "source_artifact_id": "retfound-cfp",
+        "source_task_id": "",
+        "trainer_adapter": "ophbench_retfound_linear_probe_v1",
+        "model_family": "retfound",
+        "architecture": "retfound-mae-vit-large-patch16-256",
+        "data_root": str(tmp_path / "data"),
+        "num_classes": 5,
+        "class_to_idx": {
+            "anodr": 0,
+            "bmilddr": 1,
+            "cmoderatedr": 2,
+            "dseveredr": 3,
+            "eproliferativedr": 4,
+        },
+        "label_space": "dr_icdr_0_4",
+        "label_structure": "ordinal",
+        "output_dir": str(tmp_path / "run"),
+        "display_metrics": ["accuracy", "macro_f1", "quadratic_kappa"],
+        "source_checkpoint_path": str(checkpoint),
+        "encoder_checkpoint_sha256": "a" * 64,
+        "source_num_classes": 0,
+    }
+    draft = build_training_draft(base, context)
+    effective, report = compile_effective_config(draft, context)
+
+    assert report["trainer_adapter"] == "ophbench_retfound_linear_probe_v1"
+    assert effective["classifier"]["c_candidates"] == [0.01, 0.1, 1.0]
+    assert effective["classifier"]["max_iter"] == 2000
+
+
+def test_retfound_standard_job_can_be_submitted_to_background_runner(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data_root = tmp_path / "APTOS2019"
+    create_aptos_imagefolder(data_root)
+    checkpoint = tmp_path / "retfound.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    output_dir = tmp_path / "run-v2"
+    base = load_yaml(
+        ROOT / "experiments/model_hub/registry/training_recipes/ophbench_retfound_linear_probe_v1.yaml"
+    )
+    request = TrainingRequest(
+        task_id="aptos_dr_5class",
+        dataset_id="APTOS2019",
+        artifact_id="aptos2019-retfound-cfp-linear-probe-v2",
+        source_artifact_id="retfound-cfp",
+        model_family="retfound",
+        architecture="retfound-mae-vit-large-patch16-256",
+        data_root=str(data_root),
+        num_classes=5,
+        output_dir=str(output_dir),
+        recipe_id="ophbench_retfound_linear_probe_v1",
+        label_space="dr_icdr_0_4",
+        label_structure="ordinal",
+        source_checkpoint_path=str(checkpoint),
+        encoder_checkpoint_sha256="a" * 64,
+        trainer_adapter="ophbench_retfound_linear_probe_v1",
+        display_metrics=["accuracy", "macro_f1", "quadratic_kappa"],
+        base_recipe=base,
+    )
+    inspection = inspect_imagefolder_dataset(data_root)
+    context = build_training_context(request, inspection)
+    request = replace(request, submitted_config=build_training_draft(base, context))
+    monkeypatch.setattr(
+        "scripts.training.train_ophbench_retfound_linear_probe.strict_preflight",
+        lambda config: {"strict_preflight": True},
+    )
+
+    class FakeProcess:
+        pid = 4321
+
+    monkeypatch.setattr("app.training_jobs.subprocess.Popen", lambda *args, **kwargs: FakeProcess())
+    job_id = submit_training_job(request, tmp_path / "jobs", tmp_path / "unused.csv")
+
+    assert job_id
+    assert (output_dir / "base_recipe.yaml").is_file()
+    assert (output_dir / "submitted_config.yaml").is_file()
+    assert (output_dir / "effective_config.yaml").is_file()
+    assert (output_dir / "validation_report.json").is_file()
 
 
 def create_recipe_registry(path: Path) -> Path:

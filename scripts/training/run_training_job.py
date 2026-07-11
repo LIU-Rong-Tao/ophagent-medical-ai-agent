@@ -10,13 +10,15 @@ from pathlib import Path
 import sys
 from typing import Callable
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.training_jobs import read_job_status, update_job_status
-from scripts.training.train_timm_classifier import run_training
+from app.training_jobs import read_job_status, update_job_status  # noqa: E402
+from scripts.training.train_timm_classifier import run_training  # noqa: E402
 
 
 def _utc_now() -> str:
@@ -25,12 +27,26 @@ def _utc_now() -> str:
 
 def execute_job(
     job_dir: Path | str,
-    training_callable: Callable[[Path], Path] = run_training,
+    training_callable: Callable[[Path], Path] | None = None,
 ) -> Path:
     directory = Path(job_dir)
     queued_status = read_job_status(directory)
     configured_path = str(queued_status.get("effective_config_path", "")).strip()
     config_path = Path(configured_path) if configured_path else directory / "generated_config.json"
+    if training_callable is None:
+        if config_path.suffix in {".yaml", ".yml"}:
+            payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            adapter = str(payload.get("identity", {}).get("trainer_adapter", ""))
+        else:
+            adapter = "timm_imagefolder_v1"
+        if adapter == "ophbench_retfound_linear_probe_v1":
+            from scripts.training.train_ophbench_retfound_linear_probe import (
+                run_training as run_retfound_linear_probe,
+            )
+
+            training_callable = run_retfound_linear_probe
+        else:
+            training_callable = run_training
     update_job_status(directory, "running", pid=os.getpid(), started_at_utc=_utc_now())
     try:
         output_dir = training_callable(config_path)

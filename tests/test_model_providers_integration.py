@@ -39,3 +39,15 @@ def test_real_retfound_provider_statuses_are_safe():
         for record in checkpoints
     )
     assert not any(record.route_eligible for record in checkpoints)
+
+
+def test_real_flair_metadata_and_checkpoint_are_preserved():
+    record = OphBenchProvider().get_model("ophbench::flair::flair-default")
+
+    assert record.model_name == "FLAIR"
+    assert record.architecture == "ResNet-50图像编码器 + BioClinicalBERT文本编码器"
+    assert record.source_checkpoint_id == "flair-default"
+    assert record.checkpoint_name == "Default"
+    assert record.paper_url and record.code_url
+    assert record.modalities
+    assert record.pretraining_strategy

@@ -60,6 +60,10 @@ class TrainingRequest:
     display_metrics: list[str] = field(default_factory=list)
     base_recipe: dict[str, Any] = field(default_factory=dict)
     submitted_config: dict[str, Any] = field(default_factory=dict)
+    base_model_provider: str = ""
+    base_model_id: str = ""
+    base_checkpoint_id: str = ""
+    encoder_checkpoint_sha256: str = ""
 
 
 @dataclass(frozen=True)
@@ -344,6 +348,7 @@ def build_training_context(
         "display_metrics": list(request.display_metrics),
         "source_checkpoint_path": request.source_checkpoint_path,
         "source_num_classes": request.source_num_classes,
+        "encoder_checkpoint_sha256": request.encoder_checkpoint_sha256,
     }
 
 
@@ -384,6 +389,10 @@ def validate_training_request(
     if request.submitted_config:
         context = build_training_context(request, inspection)
         effective, report = compile_effective_config(request.submitted_config, context)
+        if request.trainer_adapter == "ophbench_retfound_linear_probe_v1":
+            from scripts.training.train_ophbench_retfound_linear_probe import strict_preflight
+
+            report.update(strict_preflight(effective))
         return TrainingPreflight(
             request=request,
             recipe=request.base_recipe.get("recipe", {}),
@@ -486,7 +495,9 @@ def submit_training_job(
     _write_json_atomic(job_dir / "request.json", asdict(request))
     effective_config_path: Path
     if request.submitted_config:
-        configs_dir = Path(request.output_dir) / "configs"
+        configs_dir = Path(request.output_dir)
+        if request.trainer_adapter != "ophbench_retfound_linear_probe_v1":
+            configs_dir = configs_dir / "configs"
         configs_dir.mkdir(parents=True, exist_ok=False)
         dump_yaml(configs_dir / "base_recipe.yaml", preflight.base_recipe)
         dump_yaml(configs_dir / "submitted_config.yaml", preflight.submitted_config)

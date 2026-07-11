@@ -33,6 +33,7 @@ from app.training_config import (
     save_training_recipe,
 )
 from app.model_hub_ui import human_family, human_model, human_pretraining_source, task_label
+from app.ophbench_task_adapter import STANDARD_ARTIFACT_ID
 from app.training_jobs import (
     TrainingRequest,
     adaptation_artifact_id,
@@ -233,6 +234,64 @@ def filter_global_model_catalog(
     return filtered.reset_index(drop=True)
 
 
+def partition_model_catalog(catalog: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """按实际可执行层级拆分目录；候选基础模型永不进入任务模型视图。"""
+
+    task_ready = catalog["task_checkpoint"].astype(bool) & catalog[
+        "task_inference_ready"
+    ].astype(bool)
+    adaptable = (
+        ~catalog["task_checkpoint"].astype(bool)
+        & catalog["base_adapter_ready"].astype(bool)
+        & ~catalog["task_inference_ready"].astype(bool)
+    )
+    return {
+        "可用任务模型": catalog.loc[task_ready].reset_index(drop=True),
+        "可适配基础模型": catalog.loc[adaptable].reset_index(drop=True),
+        "候选基础模型库": catalog.loc[~task_ready & ~adaptable].reset_index(drop=True),
+    }
+
+
+def ui_value(value: object, *, empty: str = "尚未登记") -> str:
+    """禁止把 pandas/内部状态的缺失标记直接暴露给用户。"""
+
+    if value is None or (not isinstance(value, (list, tuple, dict)) and pd.isna(value)):
+        return empty
+    text = str(value).strip()
+    if text.lower() in {"", "nan", "none", "missing", "unknown"}:
+        return empty
+    return text
+
+
+def source_access_display(row: pd.Series) -> str:
+    status = str(row.get("source_access_status", ""))
+    verification = str(row.get("checkpoint_verification_status", ""))
+    if status == "open" and verification == "seed_unverified":
+        return "登记为开放，尚未核验"
+    return {
+        "open": "开放获取",
+        "authentication_required": "需要认证或授权",
+        "weights_missing": "尚未登记可用权重",
+        "unavailable": "暂不可用",
+    }.get(status, "尚未核验")
+
+
+def adapter_status_display(value: object) -> str:
+    return {
+        "not_implemented": "Adapter 尚未实现",
+        "implemented_not_tested": "Adapter 已实现，尚未通过 smoke",
+        "smoke_test_passed": "基础 Adapter 已通过 smoke",
+        "failed": "Adapter 验证失败",
+    }.get(str(value), "尚未核验")
+
+
+def architecture_display(value: object) -> str:
+    text = ui_value(value, empty="架构尚未登记")
+    return text.replace("ResNet-50图像", "ResNet-50 图像").replace(
+        "BioClinicalBERT文本", "BioClinicalBERT 文本"
+    )
+
+
 TARGET_STATUS_LABELS = {
     "direct_inference": ("当前任务可直接推理", "badge-live"),
     "offline_replay": ("当前任务仅离线回放", "badge-replay"),
@@ -300,6 +359,8 @@ def _catalog_summary_html(catalog: pd.DataFrame) -> str:
 
 def _render_model_entry(row: pd.Series) -> None:
     artifact_id = str(row["artifact_id"])
+    is_candidate = not bool(row.get("task_checkpoint", False))
+    display_name = ui_value(row.get("model_name"), empty=human_model(artifact_id))
     model_id = str(row.get("model_id", f"{row.get('task_id')}::{artifact_id}"))
     status, css_class = TARGET_STATUS_LABELS.get(
         str(row.get("target_task_status", "blocked")),
@@ -311,7 +372,7 @@ def _render_model_entry(row: pd.Series) -> None:
         with columns[0]:
             st.markdown(
                 f'<span class="model-entry-label">模型资产</span>'
-                f'<span class="model-entry-title">{html.escape(human_model(artifact_id))}</span>'
+                f'<span class="model-entry-title">{html.escape(display_name)}</span>'
                 f'<span class="model-entry-copy">{html.escape(human_pretraining_source(row.get("pretraining_source")))} · '
                 f'{html.escape(task_label(row.get("task_id")))}</span>',
                 unsafe_allow_html=True,
@@ -320,7 +381,7 @@ def _render_model_entry(row: pd.Series) -> None:
             parameter_count = _format_parameter_count(_model_parameter_count(row))
             st.markdown(
                 f'<span class="model-entry-label">架构</span>'
-                f'<span class="model-entry-title">{html.escape(str(row.get("architecture", "未识别架构")))}</span>'
+                f'<span class="model-entry-title">{html.escape(architecture_display(row.get("architecture")))}</span>'
                 f'<span class="model-entry-copy">{html.escape(parameter_count)}</span>',
                 unsafe_allow_html=True,
             )
@@ -333,7 +394,8 @@ def _render_model_entry(row: pd.Series) -> None:
                 unsafe_allow_html=True,
             )
         with columns[3]:
-            if st.button("已选择" if selected else "选择", key=f"select_model_{model_id}", disabled=selected, width="stretch"):
+            button_label = "已打开" if selected else ("查看模型卡" if is_candidate else "选择")
+            if st.button(button_label, key=f"select_model_{model_id}", disabled=selected, width="stretch"):
                 st.session_state["selected_model_id"] = model_id
                 st.rerun()
 
@@ -449,9 +511,21 @@ def _render_training_wizard(
 
         st.markdown("**2. 模型与训练配置**")
         cross_task = str(row.get("task_id", "")) != str(target_task_id)
+        is_retfound_probe = (
+            str(row.get("provider_id", "")) == "ophbench"
+            and str(row.get("source_model_id", "")) == "retfound"
+            and str(row.get("source_checkpoint_id", "")) == "retfound-cfp"
+        )
         checkpoint_path = str(row.get("checkpoint_path", "") or "").strip()
+        if is_retfound_probe:
+            checkpoint_path = str(
+                PROJECT_ROOT / "models/checkpoints/retfound/RETFound_mae_natureCFP.pth"
+            )
         checkpoint_available = str(row.get("checkpoint_status", "")) == "found" and bool(checkpoint_path)
-        initialization_options = ["timm_pretrained"]
+        checkpoint_available = checkpoint_available or (
+            is_retfound_probe and Path(checkpoint_path).is_file()
+        )
+        initialization_options = ["registered_checkpoint"] if is_retfound_probe else ["timm_pretrained"]
         if checkpoint_available:
             initialization_options.append("registered_checkpoint")
         initialization_labels = {
@@ -618,11 +692,15 @@ def _render_training_wizard(
         if not supported:
             st.warning(reason)
             return
-        target_artifact_id = adaptation_artifact_id(
-            source_artifact_id,
-            target_task_id,
-            initialization_source=initialization_source,
-            architecture=str(row.get("architecture", "")),
+        target_artifact_id = (
+            STANDARD_ARTIFACT_ID
+            if is_retfound_probe
+            else adaptation_artifact_id(
+                source_artifact_id,
+                target_task_id,
+                initialization_source=initialization_source,
+                architecture=str(row.get("architecture", "")),
+            )
         )
         if initialization_source == "timm_pretrained" and target_artifact_id != f"{source_artifact_id}__{target_task_id}__adapter":
             st.caption(
@@ -633,14 +711,33 @@ def _render_training_wizard(
         if output_key not in st.session_state:
             st.session_state[output_key] = _default_training_output(target_task_id, target_artifact_id)
         output_dir = str(st.session_state[output_key])
+        request_row = row.copy()
+        if is_retfound_probe:
+            request_row["checkpoint_path"] = checkpoint_path
+            request_row["checkpoint_status"] = "found"
+            request_row["n_classes"] = 0
         base_request = build_adaptation_request(
-            row,
+            request_row,
             target_task,
             data_root=data_root,
             recipe_id=recipe_id,
             output_dir=output_dir,
             initialization_source=initialization_source,
         )
+        trainer_adapter = str(base_recipe.get("recipe", {}).get("trainer_adapter", ""))
+        if is_retfound_probe:
+            base_request = replace(
+                base_request,
+                artifact_id=STANDARD_ARTIFACT_ID,
+                output_dir=output_dir,
+                trainer_adapter=trainer_adapter,
+                source_checkpoint_path=checkpoint_path,
+                source_num_classes=0,
+                base_model_provider="ophbench",
+                base_model_id="retfound",
+                base_checkpoint_id="retfound-cfp",
+                encoder_checkpoint_sha256=str(row.get("sha256", "")),
+            )
         inspection = DatasetInspection(
             class_to_idx=dict(selected_dataset["class_to_idx"]),
             split_sizes=dict(selected_dataset["split_sizes"]),
@@ -669,7 +766,7 @@ def _render_training_wizard(
             base_request,
             base_recipe=base_recipe,
             submitted_config=submitted_config,
-            trainer_adapter="timm_imagefolder_v1",
+            trainer_adapter=trainer_adapter,
         )
         changed_paths = _config_diff_paths(draft, submitted_config) if submitted_config else []
         with st.expander(f"配置差异 · {len(changed_paths)} 项"):
@@ -694,9 +791,14 @@ def _render_training_wizard(
             else:
                 st.success(f"已保存：{saved_recipe}")
         effective_path = Path(output_dir) / "configs" / "effective_config.yaml"
+        trainer_script = (
+            "scripts/training/train_ophbench_retfound_linear_probe.py"
+            if trainer_adapter == "ophbench_retfound_linear_probe_v1"
+            else "scripts/training/train_timm_classifier.py"
+        )
         export_command = (
             "/data/conda_envs/ophagent/bin/python "
-            "scripts/training/train_timm_classifier.py "
+            f"{trainer_script} "
             f"--config {effective_path}"
         )
         with action_cols[2].expander("导出命令"):
@@ -768,16 +870,43 @@ def _render_model_access(models: pd.DataFrame) -> None:
     for health in catalog.attrs.get("provider_health", ()):
         if health.provider_id == "ophbench" and not health.available:
             st.info(f"OphBench 注册表暂不可用：{health.message} 本地模型与 timm 仍可继续使用。")
-    st.markdown(_catalog_summary_html(catalog), unsafe_allow_html=True)
+    layers = partition_model_catalog(catalog)
+    foundation = catalog.loc[catalog["provider_id"].astype(str).eq("ophbench")]
+    summary_cards = [
+        ("基础模型", int(foundation["source_model_id"].nunique()), "OphBench 模型"),
+        ("Checkpoint", len(foundation), "官方或登记权重"),
+        ("已验证基础 Adapter", int(foundation["base_adapter_ready"].astype(bool).sum()), "checkpoint 级"),
+        ("当前任务可用", len(layers["可用任务模型"]), "可推理、可路由"),
+    ]
+    st.markdown(
+        '<div class="hub-mini-strip">'
+        + "".join(
+            '<div class="hub-mini-stat">'
+            f'<span>{html.escape(label)}</span><b>{value}</b><small>{html.escape(note)}</small></div>'
+            for label, value, note in summary_cards
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
     st.markdown(
         f'<div class="hub-band"><strong>数据集：</strong>{html.escape(str(first.get("dataset_display_name", first.get("dataset_id", "—"))))}　'
         f'<strong>来源：</strong>{html.escape(str(first.get("dataset_source", "待核实")))}　'
-        f'<strong>全局已发现模型：</strong>{len(catalog)}</div>',
+        f'<strong>任务模型与候选记录：</strong>{len(catalog)}</div>',
         unsafe_allow_html=True,
     )
     if st.button("重新扫描受控目录", icon=":material/refresh:"):
         st.info("扫描由受控 inventory runner 执行；当前页面不会扫描服务器全盘。")
 
+    selected_layer = st.segmented_control(
+        "模型层级",
+        list(layers),
+        default="可用任务模型",
+        key="model_access_layer",
+    )
+    layer_catalog = layers[str(selected_layer)]
+    if layer_catalog.empty:
+        st.info(f"当前没有{selected_layer}。")
+        return
     status_options = ["direct_inference", "offline_replay", "adaptable", "blocked"]
     filter_cols = st.columns(3)
     selected_status = filter_cols[0].selectbox(
@@ -785,20 +914,20 @@ def _render_model_access(models: pd.DataFrame) -> None:
         [""] + status_options,
         format_func=lambda value: "全部状态" if not value else TARGET_STATUS_LABELS[value][0],
     )
-    provider_options = sorted(catalog["provider_id"].dropna().astype(str).unique())
+    provider_options = sorted(layer_catalog["provider_id"].dropna().astype(str).unique())
     selected_provider = filter_cols[1].selectbox(
         "模型来源",
         [""] + provider_options,
         format_func=lambda value: "全部来源" if not value else value,
     )
-    family_options = sorted(catalog["model_family"].dropna().astype(str).unique())
+    family_options = sorted(layer_catalog["model_family"].dropna().astype(str).unique())
     selected_family = filter_cols[2].selectbox(
         "模型家族",
         [""] + family_options,
         format_func=lambda value: "全部家族" if not value else human_family(value),
     )
     visible_models = filter_global_model_catalog(
-        catalog,
+        layer_catalog,
         status=selected_status or None,
         family=selected_family or None,
         provider=selected_provider or None,
@@ -813,10 +942,16 @@ def _render_model_access(models: pd.DataFrame) -> None:
 
     library_col, detail_col = st.columns([1.15, 0.85], gap="large")
     with library_col:
-        st.markdown("#### 模型家族")
-        for family, family_models in visible_models.groupby("model_family", sort=True):
+        st.markdown("#### " + str(selected_layer))
+        group_column = "source_model_id" if selected_layer != "可用任务模型" else "model_family"
+        for family, family_models in visible_models.groupby(group_column, sort=True):
             usable_n = int(family_models["target_task_status"].astype(str).isin({"direct_inference", "offline_replay"}).sum())
-            with st.expander(f"{human_family(family)} · {len(family_models)} 个 · {usable_n} 个当前任务可用", expanded=len(family_models) == 1):
+            model_name = ui_value(family_models.iloc[0].get("model_name"), empty=human_family(family))
+            checkpoint_note = f"{len(family_models)} 个 checkpoint" if group_column == "source_model_id" else f"{len(family_models)} 个任务模型"
+            with st.expander(
+                f"{model_name} · {checkpoint_note} · {usable_n} 个当前任务可用",
+                expanded=False,
+            ):
                 for _, row in family_models.sort_values("artifact_id").iterrows():
                     _render_model_entry(row)
     with detail_col:
@@ -827,20 +962,37 @@ def _render_model_access(models: pd.DataFrame) -> None:
         st.markdown("#### 模型操作")
         parameter_count = _model_parameter_count(row)
         detail_cells = [
-            ("Provider", str(row.get("provider_id", "—"))),
+            ("模型名称", ui_value(row.get("model_name"), empty=human_model(selected_id))),
+            ("Provider", ui_value(row.get("provider_id"))),
             ("模型家族", human_family(row.get("model_family"))),
-            ("来源任务", task_label(row.get("task_id"))),
-            ("架构", str(row.get("architecture", "—"))),
+            ("来源任务", "不适用" if not bool(row.get("task_checkpoint", False)) else task_label(row.get("task_id"))),
+            ("架构", architecture_display(row.get("architecture"))),
             ("参数量", _format_parameter_count(parameter_count)),
             ("Checkpoint 大小", _checkpoint_size_text(row)),
-            ("预训练来源", human_pretraining_source(row.get("pretraining_source"))),
-            ("Checkpoint", str(row.get("checkpoint_status", "未登记"))),
-            ("现有结果", str(row.get("prediction_source", "missing"))),
-            ("来源访问", str(row.get("source_access_status", "unknown"))),
-            ("基础 Adapter", str(row.get("base_adapter_status", "unknown"))),
-            ("任务推理", "ready" if bool(row.get("task_inference_ready", False)) else "not ready"),
-            ("路由资格", "eligible" if bool(row.get("route_eligible", False)) else "ineligible"),
+            ("Checkpoint", f"{ui_value(row.get('checkpoint_id'))} / {ui_value(row.get('checkpoint_name'))}"),
+            ("现有结果", "已有任务结果" if bool(row.get("task_inference_ready", False)) else "暂未产生任务结果"),
+            ("来源访问", source_access_display(row)),
+            ("基础 Adapter", adapter_status_display(row.get("base_adapter_status"))),
+            ("任务推理", "当前任务可推理" if bool(row.get("task_inference_ready", False)) else "当前任务暂不可推理"),
+            ("路由资格", "具备路由资格" if bool(row.get("route_eligible", False)) else "不具备路由资格"),
         ]
+        for label, field in (
+            ("年份", "year"),
+            ("发表平台", "venue"),
+            ("模型类别", "model_category"),
+            ("模态", "modalities"),
+            ("预训练数据", "pretraining_data_summary"),
+            ("预训练策略", "pretraining_strategy"),
+            ("论文报告摘要", "reported_summary"),
+            ("Checkpoint Provider", "checkpoint_provider"),
+            ("框架", "framework"),
+            ("输入规格", "input_size"),
+            ("归一化", "normalization"),
+            ("Embedding 维度", "embedding_dim"),
+        ):
+            value = ui_value(row.get(field), empty="")
+            if value:
+                detail_cells.append((label, value))
         detail_grid = "".join(
             '<div class="model-detail-cell">'
             f'<span>{html.escape(label)}</span><b>{html.escape(str(value))}</b>'
@@ -848,7 +1000,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
             for label, value in detail_cells
         )
         st.markdown(
-            f'<div class="detail-panel"><h3>{html.escape(human_model(selected_id))}</h3>'
+            f'<div class="detail-panel"><h3>{html.escape(ui_value(row.get("model_name"), empty=human_model(selected_id)))}</h3>'
             f'<span class="badge {css_class}">{html.escape(status)}</span>'
             f'<span class="badge badge-live">{html.escape(_role_text(row.get("role_candidates")))}</span>'
             f'<div class="model-detail-grid">{detail_grid}</div>'
@@ -856,16 +1008,29 @@ def _render_model_access(models: pd.DataFrame) -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-        if st.button("检查兼容性", width="stretch"):
+        is_candidate = not bool(row.get("task_checkpoint", False)) and not bool(row.get("base_adapter_ready", False))
+        if is_candidate:
+            st.caption("该记录用于模型调研与 Adapter 规划，不是可运行任务模型。")
+            links = []
+            if ui_value(row.get("paper_url"), empty=""):
+                links.append(f"[查看论文]({row.get('paper_url')})")
+            if ui_value(row.get("code_url"), empty=""):
+                links.append(f"[查看官方代码]({row.get('code_url')})")
+            if ui_value(row.get("weight_url"), empty=""):
+                links.append(f"[查看权重条件]({row.get('weight_url')})")
+            if links:
+                st.markdown("　".join(links))
+            st.button("规划 Adapter 接入", width="stretch", disabled=True)
+        elif st.button("检查兼容性", width="stretch"):
             if str(row.get("target_task_status")) in {"direct_inference", "offline_replay"}:
                 st.success(str(row.get("target_task_reason")))
             else:
                 st.warning(str(row.get("target_task_reason")))
         can_prepare, prepare_reason = training_capability(row, recipes)
-        if st.button("准备微调", width="stretch", disabled=not can_prepare):
+        if not is_candidate and st.button("准备微调", width="stretch", disabled=not can_prepare):
             st.session_state["training_wizard_model"] = selected_model_id
             st.rerun()
-        if not can_prepare:
+        if not is_candidate and not can_prepare:
             st.caption(prepare_reason)
     if st.session_state.get("training_wizard_model") == str(row["model_id"]):
         _render_training_wizard(row, recipes, target_task_id=task_id)

@@ -42,7 +42,7 @@ def test_prediction_frame_uses_normalized_ophagent_schema(tmp_path, monkeypatch)
     assert {"confidence", "margin", "entropy"}.issubset(frame.columns)
 
 
-def test_registration_is_a_route_eligible_local_task_artifact(tmp_path):
+def test_v1_registration_is_superseded_integration_smoke(tmp_path):
     record = registration_record(
         output_dir=tmp_path,
         prediction_path=tmp_path / "predictions.csv",
@@ -52,6 +52,8 @@ def test_registration_is_a_route_eligible_local_task_artifact(tmp_path):
     assert record["artifact_id"] == ARTIFACT_ID
     assert record["base_model_provider"] == "ophbench"
     assert record["task_checkpoint"] is True
-    assert record["task_inference_ready"] is True
-    assert record["route_eligible"] is True
+    assert record["evaluation_role"] == "integration_smoke"
+    assert record["lifecycle_status"] == "superseded"
+    assert record["task_inference_ready"] is False
+    assert record["route_eligible"] is False
     assert Path(record["checkpoint_path"]).name == "head.joblib"

@@ -14,6 +14,7 @@ from scripts.routing.timm_adapter_runtime import normalize_prediction_frame
 
 
 ARTIFACT_ID = "aptos2019-retfound-cfp-linear-probe-v1"
+STANDARD_ARTIFACT_ID = "aptos2019-retfound-cfp-linear-probe-v2"
 LABELS = ("No DR", "Mild DR", "Moderate DR", "Severe DR", "Proliferative DR")
 
 
@@ -69,14 +70,25 @@ def build_prediction_frame(image_paths, true_labels, probabilities) -> pd.DataFr
         return normalize_prediction_frame(temporary, num_classes=probabilities.shape[1])
 
 
-def registration_record(*, output_dir, prediction_path, head_checkpoint, encoder_sha256):
-    return {
-        "model_id": f"aptos_dr_5class::{ARTIFACT_ID}",
+def registration_record(
+    *,
+    output_dir,
+    prediction_path,
+    head_checkpoint,
+    encoder_sha256,
+    artifact_id=ARTIFACT_ID,
+    evaluation_role="integration_smoke",
+    lifecycle_status="superseded",
+    route_eligible=False,
+    provenance=None,
+):
+    record = {
+        "model_id": f"aptos_dr_5class::{artifact_id}",
         "task_id": "aptos_dr_5class",
         "dataset_id": "APTOS2019",
         "dataset_display_name": "APTOS 2019",
         "dataset_source": "public",
-        "artifact_id": ARTIFACT_ID,
+        "artifact_id": artifact_id,
         "model_family": "retfound",
         "architecture": "retfound-mae-vit-large-patch16-256",
         "label_space": "dr_icdr_0_4",
@@ -93,7 +105,11 @@ def registration_record(*, output_dir, prediction_path, head_checkpoint, encoder
         "base_checkpoint_id": "retfound-cfp",
         "encoder_checkpoint_sha256": encoder_sha256,
         "task_checkpoint": True,
-        "task_inference_ready": True,
-        "route_eligible": True,
+        "task_inference_ready": bool(route_eligible),
+        "route_eligible": bool(route_eligible),
         "output_dir": str(output_dir),
+        "evaluation_role": evaluation_role,
+        "lifecycle_status": lifecycle_status,
     }
+    record.update(dict(provenance or {}))
+    return record

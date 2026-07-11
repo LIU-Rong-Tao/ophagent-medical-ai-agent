@@ -6,7 +6,13 @@ from app.model_hub_data import (
     build_unified_model_catalog,
     route_eligible_model_ids,
 )
-from app.model_hub_engineering import filter_global_model_catalog
+from app.model_hub_engineering import (
+    architecture_display,
+    filter_global_model_catalog,
+    partition_model_catalog,
+    source_access_display,
+    ui_value,
+)
 from app.model_providers import OphBenchProvider, TimmProvider
 
 
@@ -114,3 +120,48 @@ def test_provider_filter_and_dependency_health_are_preserved():
     health = {item.provider_id: item for item in catalog.attrs["provider_health"]}
     assert health["ophbench"].code == "dependency_unavailable"
     assert health["timm"].available is True
+
+
+def test_default_layer_contains_only_ready_task_checkpoints():
+    catalog = build_unified_model_catalog(
+        _models(),
+        target_task_id="aptos2019",
+        recipes=pd.DataFrame(),
+        providers=[OphBenchProvider(snapshot_loader=_snapshot)],
+    )
+    layers = partition_model_catalog(catalog)
+
+    assert list(layers) == ["可用任务模型", "可适配基础模型", "候选基础模型库"]
+    assert layers["可用任务模型"]["task_checkpoint"].all()
+    assert layers["可用任务模型"]["task_inference_ready"].all()
+    assert not layers["候选基础模型库"]["route_eligible"].any()
+
+
+def test_ui_missing_and_unverified_open_values_are_human_readable():
+    assert ui_value(float("nan")) == "尚未登记"
+    assert ui_value(None) == "尚未登记"
+    assert ui_value("missing") == "尚未登记"
+    row = pd.Series(
+        {"source_access_status": "open", "checkpoint_verification_status": "seed_unverified"}
+    )
+    assert source_access_display(row) == "登记为开放，尚未核验"
+    assert architecture_display("ResNet-50图像编码器 + BioClinicalBERT文本编码器") == (
+        "ResNet-50 图像编码器 + BioClinicalBERT 文本编码器"
+    )
+
+
+def test_superseded_task_artifact_cannot_be_reenabled_by_catalog_classification():
+    models = _models()
+    models["task_inference_ready"] = False
+    models["route_eligible"] = False
+    models["lifecycle_status"] = "superseded"
+    catalog = build_unified_model_catalog(
+        models,
+        target_task_id="aptos2019",
+        recipes=pd.DataFrame(),
+        providers=[],
+    )
+    row = catalog.iloc[0]
+    assert row["task_checkpoint"] == True  # noqa: E712
+    assert row["task_inference_ready"] == False  # noqa: E712
+    assert row["route_eligible"] == False  # noqa: E712
