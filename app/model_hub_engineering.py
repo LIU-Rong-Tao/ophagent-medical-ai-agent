@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from app.model_hub_data import build_global_model_catalog
+from app.model_hub_data import build_unified_model_catalog
 from app.model_hub_research import render_research_workspace
 from app.model_hub_scan_jobs import (
     list_global_scan_jobs,
@@ -221,12 +221,15 @@ def filter_global_model_catalog(
     *,
     status: str | None = None,
     family: str | None = None,
+    provider: str | None = None,
 ) -> pd.DataFrame:
     filtered = catalog.copy()
     if status:
         filtered = filtered.loc[filtered["target_task_status"].astype(str).eq(str(status))]
     if family:
         filtered = filtered.loc[filtered["model_family"].astype(str).eq(str(family))]
+    if provider:
+        filtered = filtered.loc[filtered["provider_id"].astype(str).eq(str(provider))]
     return filtered.reset_index(drop=True)
 
 
@@ -759,9 +762,12 @@ def _render_model_access(models: pd.DataFrame) -> None:
     st.caption("显示受控目录中发现的全部模型；目标任务只决定兼容状态，不会隐藏跨任务模型。")
     task_id = _task_selector(models, "engineering_task")
     recipes = _load_training_recipes()
-    catalog = build_global_model_catalog(models, target_task_id=task_id, recipes=recipes)
+    catalog = build_unified_model_catalog(models, target_task_id=task_id, recipes=recipes)
     target_models = catalog.loc[catalog["task_id"].astype(str).eq(task_id)]
     first = target_models.iloc[0]
+    for health in catalog.attrs.get("provider_health", ()):
+        if health.provider_id == "ophbench" and not health.available:
+            st.info(f"OphBench 注册表暂不可用：{health.message} 本地模型与 timm 仍可继续使用。")
     st.markdown(_catalog_summary_html(catalog), unsafe_allow_html=True)
     st.markdown(
         f'<div class="hub-band"><strong>数据集：</strong>{html.escape(str(first.get("dataset_display_name", first.get("dataset_id", "—"))))}　'
@@ -773,14 +779,20 @@ def _render_model_access(models: pd.DataFrame) -> None:
         st.info("扫描由受控 inventory runner 执行；当前页面不会扫描服务器全盘。")
 
     status_options = ["direct_inference", "offline_replay", "adaptable", "blocked"]
-    filter_cols = st.columns(2)
+    filter_cols = st.columns(3)
     selected_status = filter_cols[0].selectbox(
         "当前任务状态",
         [""] + status_options,
         format_func=lambda value: "全部状态" if not value else TARGET_STATUS_LABELS[value][0],
     )
+    provider_options = sorted(catalog["provider_id"].dropna().astype(str).unique())
+    selected_provider = filter_cols[1].selectbox(
+        "模型来源",
+        [""] + provider_options,
+        format_func=lambda value: "全部来源" if not value else value,
+    )
     family_options = sorted(catalog["model_family"].dropna().astype(str).unique())
-    selected_family = filter_cols[1].selectbox(
+    selected_family = filter_cols[2].selectbox(
         "模型家族",
         [""] + family_options,
         format_func=lambda value: "全部家族" if not value else human_family(value),
@@ -789,6 +801,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
         catalog,
         status=selected_status or None,
         family=selected_family or None,
+        provider=selected_provider or None,
     )
     if visible_models.empty:
         st.info("当前筛选条件下没有模型。")
@@ -814,6 +827,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
         st.markdown("#### 模型操作")
         parameter_count = _model_parameter_count(row)
         detail_cells = [
+            ("Provider", str(row.get("provider_id", "—"))),
             ("模型家族", human_family(row.get("model_family"))),
             ("来源任务", task_label(row.get("task_id"))),
             ("架构", str(row.get("architecture", "—"))),
@@ -822,6 +836,10 @@ def _render_model_access(models: pd.DataFrame) -> None:
             ("预训练来源", human_pretraining_source(row.get("pretraining_source"))),
             ("Checkpoint", str(row.get("checkpoint_status", "未登记"))),
             ("现有结果", str(row.get("prediction_source", "missing"))),
+            ("来源访问", str(row.get("source_access_status", "unknown"))),
+            ("基础 Adapter", str(row.get("base_adapter_status", "unknown"))),
+            ("任务推理", "ready" if bool(row.get("task_inference_ready", False)) else "not ready"),
+            ("路由资格", "eligible" if bool(row.get("route_eligible", False)) else "ineligible"),
         ]
         detail_grid = "".join(
             '<div class="model-detail-cell">'

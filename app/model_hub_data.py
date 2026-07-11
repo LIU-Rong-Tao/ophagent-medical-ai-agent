@@ -13,6 +13,12 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score
 
+from app.model_providers import (
+    OphBenchProvider,
+    ProviderHealth,
+    TimmProvider,
+    build_provider_catalog,
+)
 from scripts.routing.model_metadata import canonical_timm_artifact_id, timm_pretraining_source
 from scripts.routing.timm_adapter_runtime import normalize_prediction_frame
 
@@ -379,6 +385,117 @@ def build_global_model_catalog(
     catalog["target_task_status"] = classifications.map(lambda value: value[0])
     catalog["target_task_reason"] = classifications.map(lambda value: value[1])
     return catalog
+
+
+def _default_external_providers(models: pd.DataFrame):
+    inventory = []
+    for architecture, rows in models.groupby("architecture", dropna=True):
+        architecture = str(architecture).strip()
+        if architecture:
+            inventory.append(
+                {
+                    "model_id": architecture,
+                    "display_name": architecture,
+                    "family_id": str(rows.iloc[0].get("model_family", architecture)),
+                }
+            )
+    return [TimmProvider(inventory), OphBenchProvider()]
+
+
+def build_unified_model_catalog(
+    models: pd.DataFrame,
+    *,
+    target_task_id: str,
+    recipes: pd.DataFrame,
+    providers=None,
+) -> pd.DataFrame:
+    """聚合本地任务产物与外部基础模型，但仅允许任务 checkpoint 进入路由。"""
+
+    local = build_global_model_catalog(
+        models, target_task_id=target_task_id, recipes=recipes
+    ).copy()
+    local["provider_id"] = "local_artifact"
+    local["source_model_id"] = local["model_family"].astype(str)
+    local["source_checkpoint_id"] = local["artifact_id"].astype(str)
+    local["model_id"] = "local_artifact::" + local["artifact_id"].astype(str)
+    local["unified_model_id"] = local["model_id"]
+    local["source_access_status"] = "open"
+    local["base_adapter_status"] = local["adapter_status"].map(
+        lambda value: "smoke_test_passed" if str(value) == "completed" else "not_implemented"
+    )
+    local["base_adapter_ready"] = local["adapter_status"].astype(str).eq("completed")
+    local["task_checkpoint"] = True
+    local["task_inference_ready"] = local["target_task_status"].isin(
+        {"direct_inference", "offline_replay"}
+    )
+    local["route_eligible"] = local["task_inference_ready"]
+    local["task_compatibility_status"] = local["target_task_status"]
+
+    provider_catalog = build_provider_catalog(
+        providers if providers is not None else _default_external_providers(models)
+    )
+    external_rows = []
+    for record in provider_catalog.records:
+        adaptable = record.base_adapter_ready
+        external_rows.append(
+            {
+                "model_id": record.unified_model_id,
+                "unified_model_id": record.unified_model_id,
+                "provider_id": record.provider_id,
+                "source_model_id": record.source_model_id,
+                "source_checkpoint_id": record.source_checkpoint_id or "",
+                "task_id": "",
+                "dataset_id": "",
+                "dataset_display_name": "",
+                "dataset_source": record.provider_id,
+                "artifact_id": record.source_checkpoint_id or record.source_model_id,
+                "model_family": record.family_id,
+                "architecture": record.source_model_id,
+                "label_space": "",
+                "n_classes": 0,
+                "prediction_source": "missing",
+                "adapter_status": record.base_adapter_status.value,
+                "compatibility_status": "blocked",
+                "role_candidates": "",
+                "pretraining_source": record.provider_id,
+                "target_task_id": str(target_task_id),
+                "target_label_space": local.iloc[0]["target_label_space"],
+                "target_n_classes": local.iloc[0]["target_n_classes"],
+                "target_task_status": "adaptable" if adaptable else "blocked",
+                "target_task_reason": (
+                    "基础模型 Adapter 已验证；需创建当前任务 checkpoint 后方可推理与路由"
+                    if adaptable
+                    else "仅提供注册信息；基础 Adapter 与当前任务 checkpoint 尚未就绪"
+                ),
+                "source_access_status": record.source_access_status.value,
+                "base_adapter_status": record.base_adapter_status.value,
+                "task_compatibility_status": record.task_compatibility_status.value,
+                "base_adapter_ready": record.base_adapter_ready,
+                "task_inference_ready": False,
+                "route_eligible": False,
+                "task_checkpoint": False,
+            }
+        )
+    external = pd.DataFrame(external_rows)
+    catalog = pd.concat([local, external], ignore_index=True, sort=False)
+    if catalog["model_id"].duplicated().any():
+        raise ValueError("Unified Model Hub catalog contains duplicate model IDs")
+    catalog.attrs["provider_health"] = (
+        ProviderHealth("local_artifact", True, "available", "local artifact provider available"),
+        *provider_catalog.health,
+    )
+    return catalog
+
+
+def route_eligible_model_ids(catalog: pd.DataFrame) -> list[str]:
+    """返回经过任务 checkpoint 与推理就绪双重门控的路由候选。"""
+
+    eligible = (
+        catalog["route_eligible"].astype(bool)
+        & catalog["task_checkpoint"].astype(bool)
+        & catalog["task_inference_ready"].astype(bool)
+    )
+    return sorted(catalog.loc[eligible, "model_id"].astype(str).tolist())
 
 
 def dr_risk_summary(
