@@ -29,10 +29,11 @@ def test_real_retfound_provider_statuses_are_safe():
         record.source_access_status is SourceAccessStatus.AUTHENTICATION_REQUIRED
         for record in checkpoints
     )
-    assert all(
-        record.base_adapter_status is BaseAdapterStatus.NOT_IMPLEMENTED
-        for record in checkpoints
-    )
+    statuses = {record.source_checkpoint_id: record.base_adapter_status for record in checkpoints}
+    assert statuses == {
+        "retfound-cfp": BaseAdapterStatus.SMOKE_TEST_PASSED,
+        "retfound-oct": BaseAdapterStatus.NOT_IMPLEMENTED,
+    }
     assert all(
         record.task_compatibility_status is TaskCompatibilityStatus.ADAPTATION_REQUIRED
         for record in checkpoints

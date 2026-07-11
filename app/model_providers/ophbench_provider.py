@@ -95,7 +95,12 @@ class OphBenchProvider(BaseModelProvider):
         implementation = _value(model, "implementation", {})
         adapter = str(_value(implementation, "adapter_status", "not_started"))
         smoke = str(_value(implementation, "smoke_test_status", "not_run"))
-        if adapter == "failed" or smoke == "failed":
+        checkpoint_verification = str(
+            _value(checkpoint, "verification_status", "seed_unverified")
+        )
+        if checkpoint_verification == "seed_unverified":
+            adapter_status = BaseAdapterStatus.NOT_IMPLEMENTED
+        elif adapter == "failed" or smoke == "failed":
             adapter_status = BaseAdapterStatus.FAILED
         elif adapter == "implemented" and smoke == "passed":
             adapter_status = BaseAdapterStatus.SMOKE_TEST_PASSED
@@ -136,7 +141,7 @@ class OphBenchProvider(BaseModelProvider):
                 "schema_version": str(snapshot.schema_version),
                 "registry_source": str(snapshot.registry_source),
                 "verification_status": str(
-                    _value(checkpoint, "verification_status", "seed_unverified")
+                    checkpoint_verification
                 ),
             },
         )
