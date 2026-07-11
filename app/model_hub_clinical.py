@@ -61,6 +61,34 @@ def _plain_reason(row: pd.Series) -> str:
     return "路由模型的不确定性较高，本次策略将它交给专家模型接管。"
 
 
+def _case_summary_html(cases: pd.DataFrame, *, research_mode: bool) -> str:
+    total = len(cases)
+    reviewed = int(cases.get("is_reviewed_by_expert", pd.Series(dtype=bool)).astype(bool).sum())
+    disagreement = int(cases.get("scout_disagreement", pd.Series(dtype=bool)).astype(bool).sum())
+    values = [
+        ("当前回放病例", f"{total:,}", "当前组合输出"),
+        ("送专家调用", f"{reviewed:,}", f"{reviewed / total:.0%}" if total else "0%"),
+        ("路由模型分歧", f"{disagreement:,}", f"{disagreement / total:.0%}" if total else "0%"),
+    ]
+    if research_mode and "was_final_correct" in cases.columns:
+        mismatches = int(cases["was_final_correct"].eq(False).sum())
+        values.append(("研究审计不一致", f"{mismatches:,}", f"{mismatches / total:.0%}" if total else "0%"))
+    else:
+        adopted_by_expert = int(
+            cases.get("final_source", pd.Series(dtype=object)).astype(str).eq("expert").sum()
+            if "final_source" in cases.columns
+            else reviewed
+        )
+        values.append(("系统采用专家输出", f"{adopted_by_expert:,}", "模型轨迹"))
+    cards = "".join(
+        '<div class="hub-mini-stat">'
+        f'<span>{html.escape(label)}</span><b>{html.escape(value)}</b><small>{html.escape(note)}</small>'
+        "</div>"
+        for label, value, note in values
+    )
+    return f'<div class="hub-mini-strip">{cards}</div>'
+
+
 @st.dialog("病例路由解释", width="large")
 def _case_dialog(
     row: pd.Series,
@@ -90,9 +118,11 @@ def _case_dialog(
             else "结果不一致" if bool(row.get("is_reviewed_by_expert", False)) else "未调用专家"
         )
         st.markdown(
-            f'<div class="result-card"><small>路由模型结果</small><br><b>{html.escape(route_result)}</b></div><br>'
-            f'<div class="result-card"><small>专家模型结果</small><br><b>{html.escape(expert_result)}</b></div><br>'
-            f'<div class="result-card"><small>当前模型输出</small><br><b>{html.escape(final_result)}</b><br><small>{agreement}</small></div>',
+            '<div class="case-result-grid">'
+            f'<div class="case-result-card"><small>路由模型结果</small><b>{html.escape(route_result)}</b><span>默认模型输出</span></div>'
+            f'<div class="case-result-card"><small>专家模型结果</small><b>{html.escape(expert_result)}</b><span>{"已调用专家" if bool(row.get("is_reviewed_by_expert", False)) else "未进入专家调用额度"}</span></div>'
+            f'<div class="case-result-card"><small>系统采用输出</small><b>{html.escape(final_result)}</b><span>{html.escape(agreement)}</span></div>'
+            '</div>',
             unsafe_allow_html=True,
         )
         st.markdown("#### 路由依据")
@@ -125,7 +155,7 @@ def _case_dialog(
             )
     if research_mode and "true_label" in row.index:
         st.markdown("#### 回顾性研究审计")
-        st.caption("以下信息依赖公开测试标签或冻结事件定义，不参与在线路由，也不是临床金标准。")
+        st.caption("以下信息依赖公开测试标签或冻结事件定义，不参与在线路由，不提供诊断或患者分流决定。")
         audit_columns = st.columns(2)
         audit_columns[0].metric("参考标签", grade_label(task_id, row.get("true_label")))
         audit_columns[1].metric(
@@ -133,13 +163,13 @@ def _case_dialog(
             "是" if bool(row.get("was_final_correct", False)) else "否",
         )
         event_labels = {
-            "dr_large_undergrading_final_residual": "大跨度低估代理事件",
-            "dr_referable_miss_final_residual": "可转诊漏检代理事件",
-            "dr_severe_pdr_miss_final_residual": "重症漏检代理事件",
+            "dr_large_undergrading_final_residual": "大跨度低估研究审计代理事件",
+            "dr_referable_miss_final_residual": "可转诊漏检研究审计代理事件",
+            "dr_severe_pdr_miss_final_residual": "重症漏检研究审计代理事件",
         }
         residual_events = [event for column, event in event_labels.items() if bool(row.get(column, False))]
         if residual_events:
-            st.warning("冻结风险代理事件：" + "、".join(residual_events))
+            st.warning("研究审计代理事件：" + "、".join(residual_events))
         else:
             st.info("当前病例未命中已登记的冻结风险代理事件。")
 
@@ -154,7 +184,7 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
     )
     research_mode = display_mode == "研究审计"
     st.caption(
-        "研究审计会显示公开测试标签和冻结风险代理事件，不参与在线路由，也不是临床金标准。"
+        "研究审计会显示公开测试标签和研究审计代理事件，不参与在线路由，不提供诊断或患者分流决定。"
         if research_mode
         else "仅展示推理时可获得的图像、模型结果、模型分歧和专家调用原因。"
     )
@@ -167,6 +197,18 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
         st.info("请先在“模型工程 → 研究评测”中运行一个组合。")
         return
     task_id = str(metrics.get("task_id", ""))
+    st.markdown(_case_summary_html(cases, research_mode=research_mode), unsafe_allow_html=True)
+    st.markdown(
+        '<div class="case-list-note">'
+        f'<strong>当前组合：</strong>{html.escape(str(label))}。'
+        + (
+            "本视图显示公开测试标签与研究审计代理事件，仅用于回顾性分析。"
+            if research_mode
+            else "本视图只展示推理时可获得的模型输出、路由依据和专家调用轨迹。"
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
     view = cases.copy()
     filter_options = ["已调用专家", "模型分歧"]
     if research_mode and "was_final_correct" in view.columns:
@@ -206,9 +248,9 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
         lambda row: grade_label(task_id, row["expert_pred_label"]) if bool(row["is_reviewed_by_expert"]) else "—",
         axis=1,
     )
-    table["最终结果"] = table["final_pred_label"].map(lambda value: grade_label(task_id, value))
+    table["系统采用输出"] = table["final_pred_label"].map(lambda value: grade_label(task_id, value))
     table["调用原因"] = table.apply(_plain_reason, axis=1)
-    display_columns = ["image_key", "routing_score", "路由模型结果", "调用专家", "专家结果", "最终结果", "调用原因"]
+    display_columns = ["image_key", "routing_score", "路由模型结果", "调用专家", "专家结果", "系统采用输出", "调用原因"]
     rename_columns = {"image_key": "病例编号", "routing_score": "路由分数"}
     if research_mode and "true_label" in table.columns:
         table["参考标签"] = table["true_label"].map(lambda value: grade_label(task_id, value))

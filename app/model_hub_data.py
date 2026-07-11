@@ -128,7 +128,7 @@ def enrich_cost_curve(curve: pd.DataFrame, *, metric_column: str = "accuracy") -
         return enriched
     baseline = float(positive.min())
     enriched["relative_cost"] = valid_costs / baseline
-    enriched = enriched.sort_values(["relative_cost", metric_column], ascending=[True, False]).reset_index(drop=True)
+    enriched = enriched.sort_values(["relative_cost", metric_column], ascending=[True, False])
     best_metric = -np.inf
     pareto: list[bool] = []
     for metric_value in pd.to_numeric(enriched[metric_column], errors="coerce"):

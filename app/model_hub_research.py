@@ -75,6 +75,20 @@ DR_PROXY_EVENT_HELP = {
     "重症漏检": "公式：参考标签 >= 3 且默认输出 <= 2。公开测试标签达到重度或增殖期，而默认输出不高于中度 DR。",
 }
 
+DR_PROXY_EVENT_LABELS = {
+    "large_undergrading": "大跨度低估",
+    "referable_miss": "可转诊漏检",
+    "severe_pdr_miss": "重症漏检",
+}
+
+DR_PROXY_EVENT_WEIGHTS = {
+    "severe_pdr_miss": 0.45,
+    "referable_miss": 0.35,
+    "large_undergrading": 0.20,
+}
+
+AUDIT_PROXY_PENALTY_WEIGHT = 0.03
+
 
 def build_proxy_event_table_html(rows: pd.DataFrame) -> str:
     headers = ["事件", "总事件", "送专家", "纠正", "残余"]
@@ -366,8 +380,8 @@ def _render_task_evaluation(task_id: str, metrics: dict[str, object], cases: pd.
     if summary["profile"] == "unavailable":
         return
     if summary["profile"] == "disease_proxy":
-        st.markdown("#### 标签依赖的任务安全代理评测")
-        st.caption("仅在公开测试标签可用时计算，不进入在线路由，也不是临床金标准。")
+        st.markdown("#### 标签依赖安全代理事件评测")
+        st.caption("仅在公开测试标签可用时计算，不进入在线路由，也不是临床金标准，不提供诊断或患者分流决定。")
         st.markdown(build_proxy_event_table_html(summary["rows"]), unsafe_allow_html=True)
         st.caption(
             "总事件按默认输出计算；送专家是其中进入专家调用的数量；纠正表示最终输出不再命中该代理事件；"
@@ -401,14 +415,15 @@ def _evaluate_curve(models: pd.DataFrame, config: dict[str, object]) -> pd.DataF
             requested_budget=budget,
         )
         rows.append(metrics)
-    return enrich_cost_curve(pd.DataFrame(rows))
+    return enrich_cost_curve(pd.DataFrame(rows), metric_column=str(config["primary_metric"]))
 
 
-def _render_tradeoff(curve: pd.DataFrame) -> None:
-    points = select_operating_points(curve)
+def _render_tradeoff(curve: pd.DataFrame, primary_metric: str) -> None:
+    points = select_operating_points(curve, metric_column=primary_metric)
     if not points:
         st.info("当前组合缺少完整的 forward-only 成本，无法计算相对成本操作点。")
         return
+    primary_label = METRIC_LABELS.get(primary_metric, primary_metric)
     labels = {"efficient": "省算力", "balanced": "推荐折中", "performance": "最高性能"}
     columns = st.columns(3)
     for column, name in zip(columns, ("efficient", "balanced", "performance")):
@@ -417,17 +432,17 @@ def _render_tradeoff(curve: pd.DataFrame) -> None:
             labels[name],
             f"{float(point['realized_budget']):.0%} 调用",
             delta=(
-                f"Accuracy {float(point['accuracy']):.3f} · "
+                f"{primary_label} {float(point[primary_metric]):.3f} · "
                 f"成本 {float(point['estimated_total_compute_ms_per_image']):.3f} ms/图"
             ),
             delta_color="off",
         )
-    plot = curve.dropna(subset=["estimated_total_compute_ms_per_image", "accuracy"]).copy()
+    plot = curve.dropna(subset=["estimated_total_compute_ms_per_image", primary_metric]).copy()
     plot["调用比例"] = plot["realized_budget"].map(lambda value: f"{float(value):.0%}")
     plot["专家接管方式"] = plot["expert_handoff_mode"].map(lambda value: HANDOFF_LABELS.get(str(value), str(value)))
     base = alt.Chart(plot).encode(
         x=alt.X("estimated_total_compute_ms_per_image:Q", title="估算 forward-only 成本（ms/图）", scale=alt.Scale(zero=False)),
-        y=alt.Y("accuracy:Q", title="Accuracy", scale=alt.Scale(zero=False)),
+        y=alt.Y(f"{primary_metric}:Q", title=primary_label, scale=alt.Scale(zero=False)),
         color=alt.Color(
             "realized_budget:Q",
             title="专家调用比例",
@@ -437,7 +452,7 @@ def _render_tradeoff(curve: pd.DataFrame) -> None:
         shape=alt.Shape("专家接管方式:N"),
         tooltip=[
             alt.Tooltip("调用比例:N"),
-            alt.Tooltip("accuracy:Q", title="Accuracy", format=".4f"),
+            alt.Tooltip(f"{primary_metric}:Q", title=primary_label, format=".4f"),
             alt.Tooltip("relative_cost:Q", title="相对成本", format=".2f"),
             alt.Tooltip("estimated_total_compute_ms_per_image:Q", title="forward-only ms/图", format=".3f"),
         ],
@@ -477,8 +492,371 @@ def _global_scan_table(scan: pd.DataFrame, display_metrics: list[str]) -> pd.Dat
     table["专家调用比例"] = pd.to_numeric(completed["realized_budget"], errors="coerce")
     table["估算前向成本（ms/图）"] = pd.to_numeric(completed["estimated_total_compute_ms_per_image"], errors="coerce")
     table["相对成本"] = pd.to_numeric(completed["relative_cost"], errors="coerce")
+    if "audit_proxy_score" in completed.columns:
+        table["审计代理事件评分"] = pd.to_numeric(completed["audit_proxy_score"], errors="coerce")
     table["Pareto 前沿"] = completed["is_pareto"].map(lambda value: "是" if bool(value) else "否")
     return table.sort_values(["全局排名", "估算前向成本（ms/图）"], na_position="last")
+
+
+def _metric_value(row: pd.Series, column: str) -> float:
+    value = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
+    return float(value) if pd.notna(value) else float("nan")
+
+
+def _metric_text(row: pd.Series, column: str, *, percent: bool = False, unit: str = "") -> str:
+    value = _metric_value(row, column)
+    if pd.isna(value):
+        return "不适用"
+    if percent:
+        return f"{value:.0%}"
+    if unit:
+        return f"{value:.3f} {unit}"
+    return f"{value:.3f}"
+
+
+def _primary_metric_explanation(task_id: str, primary_label: str) -> str:
+    if task_id == "aptos_dr_5class" and primary_label == "QWK":
+        return (
+            "当前任务为 DR 五级有序分级，主指标采用 QWK；"
+            "Accuracy 与 Macro-F1 作为辅助观察指标。"
+        )
+    return f"当前主指标为 {primary_label}，来自任务注册协议；其他指标仅作辅助观察。"
+
+
+def _same_operating_context(left: pd.Series, right: pd.Series) -> bool:
+    text_columns = ["scout_ids", "active_expert_ids", "expert_handoff_mode"]
+    same_text = all(str(left.get(column, "")) == str(right.get(column, "")) for column in text_columns)
+    same_budget = abs(_metric_value(left, "realized_budget") - _metric_value(right, "realized_budget")) < 1e-9
+    same_cost = (
+        abs(
+            _metric_value(left, "estimated_total_compute_ms_per_image")
+            - _metric_value(right, "estimated_total_compute_ms_per_image")
+        )
+        < 1e-9
+    )
+    return same_text and same_budget and same_cost
+
+
+def _near_tie_note(
+    title: str,
+    row: pd.Series,
+    *,
+    primary_metric: str,
+    performance: pd.Series,
+    balanced: pd.Series,
+) -> str:
+    if title not in {"最高性能", "推荐折中"}:
+        return ""
+    if row.name == performance.name == balanced.name:
+        return "同一组合：本次扫描中同一个候选同时满足最高性能和推荐折中公式。"
+    delta = abs(_metric_value(performance, primary_metric) - _metric_value(balanced, primary_metric))
+    if delta > 0.002 or not _same_operating_context(performance, balanced):
+        return ""
+    other = "推荐折中" if title == "最高性能" else "最高性能"
+    return (
+        f"近似并列：与{other}主指标仅差 {delta:.3f}，模型、调用比例和成本相同；"
+        "主要差别来自路由机制。"
+    )
+
+
+def _selection_overlap_note(
+    title: str,
+    row: pd.Series,
+    *,
+    primary_metric: str,
+    performance: pd.Series,
+    balanced: pd.Series,
+    audit_priority: pd.Series | None,
+) -> str:
+    peers = {
+        "最高性能": performance,
+        "推荐折中": balanced,
+    }
+    if audit_priority is not None:
+        peers["代理事件优先"] = audit_priority
+    exact_matches = [name for name, peer in peers.items() if name != title and peer.name == row.name]
+    if exact_matches:
+        return f"同一组合：本次扫描中该候选同时满足{'、'.join(exact_matches)}公式。"
+    return _near_tie_note(
+        title,
+        row,
+        primary_metric=primary_metric,
+        performance=performance,
+        balanced=balanced,
+    )
+
+
+def _global_scan_reason(
+    title: str,
+    row: pd.Series,
+    *,
+    primary_label: str,
+) -> tuple[str, str]:
+    if title == "最高性能":
+        pareto_note = "Pareto 前沿" if bool(row.get("is_pareto")) else "非 Pareto"
+        return (
+            "QWK 最优" if primary_label == "QWK" else f"{primary_label} 最优",
+            f"主指标最大，用作性能上界参考；当前为{pareto_note}，代理事件残余不一定更优。",
+        )
+    if title == "推荐折中":
+        return (
+            "综合推荐",
+            "综合主指标、相对成本和标签依赖审计代理事件评分后推荐。",
+        )
+    if title == "代理事件优先":
+        return (
+            "代理事件最低",
+            "按标签依赖审计代理事件评分从低到高选择，用于观察公开标签研究审计口径下的残余事件。",
+        )
+    return (
+        "最低成本",
+        "作为无专家或低专家调用基线进入候选视图，用来锚定最低成本能达到的表现。",
+    )
+
+
+def _risk_proxy_rows_from_metrics(metrics: dict[str, object] | pd.Series) -> pd.DataFrame:
+    rows = []
+    metric_series = pd.Series(metrics)
+
+    def metric_int(column: str) -> int:
+        value = _metric_value(metric_series, column)
+        return int(value) if pd.notna(value) else 0
+
+    for name, label in DR_PROXY_EVENT_LABELS.items():
+        rows.append(
+            {
+                "事件": label,
+                "总事件": metric_int(f"dr_{name}_event_total"),
+                "送专家": metric_int(f"dr_{name}_selected_n"),
+                "纠正": metric_int(f"dr_{name}_resolved_n"),
+                "残余": metric_int(f"dr_{name}_residual_n"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _audit_proxy_score(metrics: dict[str, object] | pd.Series) -> float:
+    metric_series = pd.Series(metrics)
+    if str(metric_series.get("risk_semantics", "")) != "label_based_safety_proxy_not_clinical_gold_standard":
+        return float("nan")
+    weighted_sum = 0.0
+    observed_weight = 0.0
+    for event, weight in DR_PROXY_EVENT_WEIGHTS.items():
+        total = _metric_value(metric_series, f"dr_{event}_event_total")
+        residual = _metric_value(metric_series, f"dr_{event}_residual_n")
+        if pd.isna(total) or total <= 0 or pd.isna(residual):
+            continue
+        weighted_sum += weight * max(float(residual), 0.0) / float(total)
+        observed_weight += weight
+    if observed_weight <= 0:
+        return float("nan")
+    return weighted_sum / observed_weight
+
+
+def _audit_proxy_score_text(row: pd.Series) -> str:
+    score = _metric_value(row, "audit_proxy_score")
+    if pd.isna(score):
+        return "不适用"
+    return f"{score:.1%}"
+
+
+def _refresh_global_scan_derived(completed: pd.DataFrame, primary_metric: str) -> pd.DataFrame:
+    refreshed = completed.copy()
+    if refreshed.empty or primary_metric not in refreshed.columns:
+        return refreshed
+    refreshed[primary_metric] = pd.to_numeric(refreshed[primary_metric], errors="coerce")
+    refreshed["estimated_total_compute_ms_per_image"] = pd.to_numeric(
+        refreshed["estimated_total_compute_ms_per_image"], errors="coerce"
+    )
+    try:
+        curve = enrich_cost_curve(refreshed, metric_column=primary_metric)
+    except ValueError:
+        curve = refreshed.copy()
+        curve["relative_cost"] = pd.to_numeric(curve.get("relative_cost"), errors="coerce")
+        curve["is_pareto"] = curve.get("is_pareto", False)
+    for column in ["relative_cost", "is_pareto"]:
+        if column in curve.columns:
+            refreshed.loc[curve.index, column] = curve[column]
+    rank_source = refreshed.dropna(subset=[primary_metric]).sort_values(
+        [primary_metric, "estimated_total_compute_ms_per_image"],
+        ascending=[False, True],
+        na_position="last",
+    )
+    refreshed["global_rank_primary"] = pd.NA
+    refreshed.loc[rank_source.index, "global_rank_primary"] = range(1, len(rank_source) + 1)
+    refreshed["global_utility"] = pd.to_numeric(refreshed[primary_metric], errors="coerce") - 0.01 * pd.to_numeric(
+        refreshed["relative_cost"], errors="coerce"
+    )
+    refreshed["audit_proxy_score"] = refreshed.apply(_audit_proxy_score, axis=1)
+    refreshed["audit_adjusted_utility"] = refreshed["global_utility"] - AUDIT_PROXY_PENALTY_WEIGHT * pd.to_numeric(
+        refreshed["audit_proxy_score"], errors="coerce"
+    )
+    return refreshed
+
+
+def _render_selection_note(text: str, *, muted: bool = False, label: str = "近似并列") -> None:
+    if not text:
+        text = "当前组合与相邻候选没有达到近似并列阈值，主要按本卡片公式入选。"
+        muted = True
+        label = "选择说明"
+    elif text.startswith("同一组合："):
+        label = "同一组合"
+    css_class = "hub-selection-note hub-selection-note-muted" if muted else "hub-selection-note"
+    content = text.removeprefix("近似并列：").removeprefix("同一组合：")
+    st.markdown(
+        f'<div class="{css_class}"><b>{html.escape(label)}</b><span>{html.escape(content)}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _formula_help_text(title: str, *, primary_label: str) -> str:
+    if title == "最高性能":
+        return f"按 {primary_label} 从高到低排序；并列时选择估算前向成本更低的组合。"
+    if title == "推荐折中":
+        return (
+            f"综合效用 = {primary_label} - 0.01 × 相对成本 - "
+            f"{AUDIT_PROXY_PENALTY_WEIGHT:.2f} × 标签依赖审计代理事件评分；"
+            "若没有代理事件字段，则退回为主指标 - 0.01 × 相对成本。"
+        )
+    if title == "代理事件优先":
+        return (
+            "代理事件评分 = 0.45 × 重症漏检残余率 + 0.35 × 可转诊漏检残余率 + "
+            "0.20 × 大跨度低估残余率；数值越低越好；并列时优先主指标更高、成本更低。"
+        )
+    return "先取 Pareto 前沿中的最低估算前向成本；若没有 Pareto 标记，则取全量最低成本候选。"
+
+
+def _formula_pill_html(title: str, *, primary_label: str) -> str:
+    help_text = (
+        _formula_help_text(title, primary_label=primary_label)
+        + " 代理事件评分仅用于公开标签研究审计，不进入在线路由，也不是临床金标准。"
+    )
+    return (
+        '<span class="hub-formula-pill">'
+        f'{html.escape(title)}'
+        f'<span class="hub-help-icon" tabindex="0" title="{html.escape(help_text)}" '
+        f'aria-label="{html.escape(help_text)}">?</span>'
+        "</span>"
+    )
+
+
+def _render_formula_hint(titles: list[str], *, primary_label: str) -> None:
+    pills = "".join(_formula_pill_html(title, primary_label=primary_label) for title in titles)
+    st.markdown(
+        f'<div class="hub-formula-line"><span class="hub-formula-label">命中公式</span>{pills}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _audit_proxy_score_help(score_text: str) -> str:
+    return (
+        "标签依赖审计代理事件评分 = 0.45 × 重症漏检残余率 + 0.35 × 可转诊漏检残余率 + "
+        f"0.20 × 大跨度低估残余率。这里的 {score_text} 表示按上述权重加权后的残余比例，"
+        "越低越好；它不是模型置信度，也不是临床风险概率。"
+    )
+
+
+def _selection_groups(cards: list[tuple[str, pd.Series]]) -> list[tuple[list[str], pd.Series]]:
+    groups: list[tuple[list[str], pd.Series]] = []
+    index_to_group: dict[object, int] = {}
+    for title, row in cards:
+        key = row.name
+        if key in index_to_group:
+            groups[index_to_group[key]][0].append(title)
+        else:
+            index_to_group[key] = len(groups)
+            groups.append(([title], row))
+    return groups
+
+
+def _selection_group_title(titles: list[str]) -> str:
+    if len(titles) == 1:
+        return titles[0]
+    return "多公式命中推荐"
+
+
+def _selection_group_reason(titles: list[str], row: pd.Series, *, primary_label: str) -> str:
+    if len(titles) == 1:
+        return _global_scan_reason(titles[0], row, primary_label=primary_label)[1]
+    return (
+        f"同一候选同时命中{'、'.join(titles)}，页面已合并展示，避免把同一组合重复成多张卡。"
+        "可打开审计卡片查看该组合下的标签依赖代理事件。"
+    )
+
+
+def _selection_group_badges(titles: list[str], row: pd.Series, *, primary_label: str) -> list[str]:
+    if len(titles) == 1:
+        return [_global_scan_reason(titles[0], row, primary_label=primary_label)[0]]
+    return [_global_scan_reason(title, row, primary_label=primary_label)[0] for title in titles]
+
+
+@st.dialog("组合审计卡片", width="large")
+def _global_scan_audit_dialog(
+    title: str,
+    row: pd.Series,
+    *,
+    task_id: str,
+    primary_metric: str,
+    display_metrics: list[str],
+    performance: pd.Series,
+    balanced: pd.Series,
+    formula_titles: list[str] | None = None,
+) -> None:
+    primary_label = METRIC_LABELS.get(primary_metric, primary_metric)
+    formula_titles = formula_titles or [title]
+    reason = _selection_group_reason(formula_titles, row, primary_label=primary_label)
+    tie_note = (
+        f"同一组合：本次扫描中该候选同时满足{'、'.join(formula_titles)}公式。"
+        if len(formula_titles) > 1
+        else _near_tie_note(
+            title,
+            row,
+            primary_metric=primary_metric,
+            performance=performance,
+            balanced=balanced,
+        )
+    )
+    suffix = "（近似并列）" if tie_note and title in {"最高性能", "推荐折中"} else ""
+    st.markdown(f"### {title}{suffix}")
+    st.caption(_global_scan_label(row))
+    _render_formula_hint(formula_titles, primary_label=primary_label)
+    st.markdown(
+        f'<div class="hub-band"><strong>为什么入选：</strong>{html.escape(reason)}</div>',
+        unsafe_allow_html=True,
+    )
+    _render_selection_note(tie_note)
+    metric_columns = st.columns(min(6, max(1, len(display_metrics) + 3)))
+    values: list[tuple[str, str]] = []
+    for metric in display_metrics:
+        if metric in row.index:
+            values.append((METRIC_LABELS.get(metric, metric), _metric_text(row, metric)))
+    values.extend(
+        [
+            ("专家调用", _metric_text(row, "realized_budget", percent=True)),
+            ("估算成本（ms/图）", _metric_text(row, "estimated_total_compute_ms_per_image")),
+            ("代理事件评分", _audit_proxy_score_text(row)),
+        ]
+    )
+    for column, (label, value) in zip(metric_columns, values):
+        column.metric(label, value)
+    detail_rows = [
+        ("主指标", primary_label),
+        ("路由模型", _human_model_list(row.get("scout_ids", ""))),
+        ("专家模型", _human_model_list(row.get("active_expert_ids", ""))),
+        ("专家接管方式", HANDOFF_LABELS.get(str(row.get("expert_handoff_mode", "")), str(row.get("expert_handoff_mode", "")))),
+        ("路由机制", POLICY_LABELS.get(str(row.get("routing_policy", "")), str(row.get("routing_policy", "")))),
+        ("Pareto 前沿", "是" if bool(row.get("is_pareto")) else "否"),
+        ("综合效用", _metric_text(row, "global_utility")),
+        ("代理事件调整效用", _metric_text(row, "audit_adjusted_utility")),
+    ]
+    st.markdown("#### 组合策略")
+    st.dataframe(pd.DataFrame(detail_rows, columns=["字段", "内容"]), hide_index=True, width="stretch")
+    if str(row.get("risk_semantics", "")) == "label_based_safety_proxy_not_clinical_gold_standard":
+        st.markdown("#### 标签依赖安全代理事件")
+        st.caption("仅公开测试标签研究审计，不进入在线路由，也不是临床金标准，不提供诊断或患者分流决定。")
+        st.markdown(build_proxy_event_table_html(_risk_proxy_rows_from_metrics(row)), unsafe_allow_html=True)
+    else:
+        st.info("当前组合没有可展示的标签依赖安全代理事件。")
 
 
 def _render_global_scan(models: pd.DataFrame, config: dict[str, object]) -> None:
@@ -612,21 +990,37 @@ def _render_global_scan(models: pd.DataFrame, config: dict[str, object]) -> None
     completed["estimated_total_compute_ms_per_image"] = pd.to_numeric(
         completed["estimated_total_compute_ms_per_image"], errors="coerce"
     )
+    completed = _refresh_global_scan_derived(completed, primary_metric)
     primary_label = METRIC_LABELS.get(primary_metric, primary_metric)
     st.caption(
-        f"当前主指标：{primary_label}（来自任务注册协议）。"
-        "Pareto 前沿表示：在本次扫描结果中，不存在另一个组合同时做到更低成本且更高主指标。"
+        _primary_metric_explanation(task_id, primary_label)
+        + " Pareto 前沿表示：在本次扫描结果中，不存在另一个组合同时做到更低成本且更高主指标。"
+        "页面会按当前任务主指标即时重算扫描派生列，避免旧结果文件中的派生字段错位。"
     )
     performance = completed.sort_values(
         [primary_metric, "estimated_total_compute_ms_per_image"],
         ascending=[False, True],
         na_position="last",
     ).iloc[0]
-    valid_utility = completed.dropna(subset=["global_utility"]).copy()
+    utility_column = (
+        "audit_adjusted_utility"
+        if "audit_adjusted_utility" in completed.columns and completed["audit_adjusted_utility"].notna().any()
+        else "global_utility"
+    )
+    valid_utility = completed.dropna(subset=[utility_column]).copy()
     balanced = (
-        valid_utility.sort_values(["global_utility", "estimated_total_compute_ms_per_image"], ascending=[False, True]).iloc[0]
+        valid_utility.sort_values([utility_column, "estimated_total_compute_ms_per_image"], ascending=[False, True]).iloc[0]
         if not valid_utility.empty
         else performance
+    )
+    valid_audit = completed.dropna(subset=["audit_proxy_score"]).copy()
+    audit_priority = (
+        valid_audit.sort_values(
+            ["audit_proxy_score", primary_metric, "estimated_total_compute_ms_per_image"],
+            ascending=[True, False, True],
+        ).iloc[0]
+        if not valid_audit.empty
+        else None
     )
     pareto = completed.loc[completed["is_pareto"].astype(bool)].copy()
     efficient = (
@@ -638,34 +1032,85 @@ def _render_global_scan(models: pd.DataFrame, config: dict[str, object]) -> None
     cards = [
         ("最高性能", performance),
         ("推荐折中", balanced),
-        ("最低成本前沿", efficient),
     ]
-    columns = st.columns(3)
-    for column, (title, row) in zip(columns, cards):
+    if audit_priority is not None:
+        cards.append(("代理事件优先", audit_priority))
+    cards.append(("最低成本前沿", efficient))
+    selection_groups = _selection_groups(cards)
+    columns = st.columns(len(selection_groups))
+    for column, (titles, row) in zip(columns, selection_groups):
         with column.container(border=True):
+            title = _selection_group_title(titles)
+            badges = _selection_group_badges(titles, row, primary_label=primary_label)
+            reason = _selection_group_reason(titles, row, primary_label=primary_label)
             st.metric(
                 title,
                 f"{float(row[primary_metric]):.3f}",
                 delta=f"{float(row['realized_budget']):.0%} 调用 · {float(row['estimated_total_compute_ms_per_image']):.3f} ms/图",
                 delta_color="off",
             )
+            badge_html = " ".join(f'<span class="hub-chip hub-chip-blue">{html.escape(badge)}</span>' for badge in badges)
+            st.markdown(
+                f'<span class="hub-chip hub-chip-{"teal" if bool(row.get("is_pareto")) else "amber"}">'
+                f'{"Pareto" if bool(row.get("is_pareto")) else "非 Pareto"}</span> '
+                f"{badge_html}",
+                unsafe_allow_html=True,
+            )
             st.caption(_global_scan_label(row))
-            with st.expander("查看组合细节"):
-                detail_rows = [
-                    ("主指标", primary_label),
-                    ("路由模型", _human_model_list(row.get("scout_ids", ""))),
-                    ("专家模型", _human_model_list(row.get("active_expert_ids", ""))),
-                    ("专家接管方式", HANDOFF_LABELS.get(str(row.get("expert_handoff_mode", "")), str(row.get("expert_handoff_mode", "")))),
-                    ("路由机制", POLICY_LABELS.get(str(row.get("routing_policy", "")), str(row.get("routing_policy", "")))),
-                    ("专家调用比例", f"{float(row['realized_budget']):.0%}"),
-                    ("估算前向成本", f"{float(row['estimated_total_compute_ms_per_image']):.3f} ms/图"),
-                    ("Pareto 前沿", "是" if bool(row.get("is_pareto")) else "否"),
-                ]
-                st.dataframe(pd.DataFrame(detail_rows, columns=["字段", "内容"]), hide_index=True, width="stretch")
+            _render_formula_hint(titles, primary_label=primary_label)
+            st.markdown(
+                f'<div class="hub-card-reason">{html.escape(reason)}</div>',
+                unsafe_allow_html=True,
+            )
+            score_text = _audit_proxy_score_text(row)
+            score_help = html.escape(_audit_proxy_score_help(score_text))
+            st.markdown(
+                '<div class="hub-audit-score"><span>审计代理事件评分'
+                f'<span class="hub-help-icon" tabindex="0" title="{score_help}" aria-label="{score_help}">?</span>'
+                f'</span><b>{score_text}</b></div>',
+                unsafe_allow_html=True,
+            )
+            tie_note = (
+                f"同一组合：本次扫描中该候选同时满足{'、'.join(titles)}公式。"
+                if len(titles) > 1
+                else _selection_overlap_note(
+                    titles[0],
+                    row,
+                    primary_metric=primary_metric,
+                    performance=performance,
+                    balanced=balanced,
+                    audit_priority=audit_priority,
+                )
+            )
+            _render_selection_note(tie_note)
+            if st.button(
+                "打开审计卡片",
+                key=f"global_scan_audit_{task_id}_{'_'.join(titles)}_{row.name}",
+                icon=":material/open_in_new:",
+                width="stretch",
+                help="查看组合细节已升级为审计卡片弹窗，重点展示标签依赖安全代理事件。",
+            ):
+                _global_scan_audit_dialog(
+                    title,
+                    row,
+                    task_id=task_id,
+                    primary_metric=primary_metric,
+                    display_metrics=list(config["display_metrics"]),
+                    performance=performance,
+                    balanced=balanced,
+                    formula_titles=titles,
+                )
 
     table = _global_scan_table(completed, list(config["display_metrics"])).head(int(top_n))
     metric_formats = {METRIC_LABELS[metric]: "{:.4f}" for metric in config["display_metrics"] if metric in METRIC_LABELS}
-    metric_formats.update({"专家调用比例": "{:.0%}", "估算前向成本（ms/图）": "{:.3f}", "相对成本": "{:.2f}"})
+    metric_formats.update(
+        {
+            "专家调用比例": "{:.0%}",
+            "估算前向成本（ms/图）": "{:.3f}",
+            "相对成本": "{:.2f}",
+            "审计代理事件评分": "{:.1%}",
+        }
+    )
     st.dataframe(table.style.format(metric_formats), hide_index=True, width="stretch")
 
     plot = completed.dropna(subset=[primary_metric, "estimated_total_compute_ms_per_image"]).copy()
@@ -805,7 +1250,7 @@ def render_research_workspace(models: pd.DataFrame) -> None:
     _render_summary(metrics, list(config["display_metrics"]))
     if st.button("加入组合对比", icon=":material/add_chart:", width="stretch"):
         _add_comparison(label, metrics)
-    _render_tradeoff(curve)
+    _render_tradeoff(curve, str(config["primary_metric"]))
     _render_global_scan(models, config)
     _render_task_evaluation(str(config["task_id"]), metrics, cases)
     _render_comparison(str(config["task_id"]), list(config["display_metrics"]))

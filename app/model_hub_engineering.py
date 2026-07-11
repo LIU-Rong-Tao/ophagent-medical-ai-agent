@@ -275,6 +275,26 @@ def split_training_log_messages(log_text: str) -> tuple[str, list[str]]:
     return "\n".join(visible_lines).strip(), sorted(set(hidden_warning_labels))
 
 
+def _catalog_summary_html(catalog: pd.DataFrame) -> str:
+    status_counts = catalog["target_task_status"].astype(str).value_counts().to_dict()
+    cards = [
+        ("可直接推理", int(status_counts.get("direct_inference", 0)), "当前任务在线链"),
+        ("仅离线回放", int(status_counts.get("offline_replay", 0)), "已有冻结输出"),
+        ("可适配", int(status_counts.get("adaptable", 0)), "需受控训练"),
+        ("不可接入", int(status_counts.get("blocked", 0)), "缺少协议或产物"),
+    ]
+    return (
+        '<div class="hub-mini-strip">'
+        + "".join(
+            '<div class="hub-mini-stat">'
+            f'<span>{html.escape(label)}</span><b>{value}</b><small>{html.escape(note)}</small>'
+            "</div>"
+            for label, value, note in cards
+        )
+        + "</div>"
+    )
+
+
 def _render_model_entry(row: pd.Series) -> None:
     artifact_id = str(row["artifact_id"])
     model_id = str(row.get("model_id", f"{row.get('task_id')}::{artifact_id}"))
@@ -283,20 +303,36 @@ def _render_model_entry(row: pd.Series) -> None:
         ("当前任务状态待核验", "badge-wait"),
     )
     selected = st.session_state.get("selected_model_id") == model_id
-    left, right = st.columns([4, 1])
-    with left:
-        st.markdown(
-            f"**{html.escape(human_model(artifact_id))}**　"
-            f'<span class="badge {css_class}">{html.escape(status)}</span><br>'
-            f"<small>{html.escape(task_label(row.get('task_id')))} · "
-            f"{html.escape(_role_text(row.get('role_candidates')))} · "
-            f"{html.escape(str(row.get('architecture', '未识别架构')))}</small>",
-            unsafe_allow_html=True,
-        )
-    with right:
-        if st.button("已选择" if selected else "选择", key=f"select_model_{model_id}", disabled=selected):
-            st.session_state["selected_model_id"] = model_id
-            st.rerun()
+    with st.container(border=True):
+        columns = st.columns([1.35, 1.05, 1.35, 0.7])
+        with columns[0]:
+            st.markdown(
+                f'<span class="model-entry-label">模型资产</span>'
+                f'<span class="model-entry-title">{html.escape(human_model(artifact_id))}</span>'
+                f'<span class="model-entry-copy">{html.escape(human_pretraining_source(row.get("pretraining_source")))} · '
+                f'{html.escape(task_label(row.get("task_id")))}</span>',
+                unsafe_allow_html=True,
+            )
+        with columns[1]:
+            parameter_count = _format_parameter_count(_model_parameter_count(row))
+            st.markdown(
+                f'<span class="model-entry-label">架构</span>'
+                f'<span class="model-entry-title">{html.escape(str(row.get("architecture", "未识别架构")))}</span>'
+                f'<span class="model-entry-copy">{html.escape(parameter_count)}</span>',
+                unsafe_allow_html=True,
+            )
+        with columns[2]:
+            st.markdown(
+                f'<span class="model-entry-label">当前任务状态</span>'
+                f'<span class="model-entry-title">{html.escape(status)}</span>'
+                f'<span class="badge {css_class}">{html.escape(_role_text(row.get("role_candidates")))}</span>'
+                f'<span class="model-entry-copy">{html.escape(str(row.get("target_task_reason", "")))}</span>',
+                unsafe_allow_html=True,
+            )
+        with columns[3]:
+            if st.button("已选择" if selected else "选择", key=f"select_model_{model_id}", disabled=selected, width="stretch"):
+                st.session_state["selected_model_id"] = model_id
+                st.rerun()
 
 
 def _default_training_output(task_id: str, artifact_id: str) -> str:
@@ -726,6 +762,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
     catalog = build_global_model_catalog(models, target_task_id=task_id, recipes=recipes)
     target_models = catalog.loc[catalog["task_id"].astype(str).eq(task_id)]
     first = target_models.iloc[0]
+    st.markdown(_catalog_summary_html(catalog), unsafe_allow_html=True)
     st.markdown(
         f'<div class="hub-band"><strong>数据集：</strong>{html.escape(str(first.get("dataset_display_name", first.get("dataset_id", "—"))))}　'
         f'<strong>来源：</strong>{html.escape(str(first.get("dataset_source", "待核实")))}　'
@@ -776,19 +813,29 @@ def _render_model_access(models: pd.DataFrame) -> None:
         status, css_class = TARGET_STATUS_LABELS[str(row["target_task_status"])]
         st.markdown("#### 模型操作")
         parameter_count = _model_parameter_count(row)
+        detail_cells = [
+            ("模型家族", human_family(row.get("model_family"))),
+            ("来源任务", task_label(row.get("task_id"))),
+            ("架构", str(row.get("architecture", "—"))),
+            ("参数量", _format_parameter_count(parameter_count)),
+            ("Checkpoint 大小", _checkpoint_size_text(row)),
+            ("预训练来源", human_pretraining_source(row.get("pretraining_source"))),
+            ("Checkpoint", str(row.get("checkpoint_status", "未登记"))),
+            ("现有结果", str(row.get("prediction_source", "missing"))),
+        ]
+        detail_grid = "".join(
+            '<div class="model-detail-cell">'
+            f'<span>{html.escape(label)}</span><b>{html.escape(str(value))}</b>'
+            "</div>"
+            for label, value in detail_cells
+        )
         st.markdown(
             f'<div class="detail-panel"><h3>{html.escape(human_model(selected_id))}</h3>'
             f'<span class="badge {css_class}">{html.escape(status)}</span>'
-            f'<span class="badge badge-live">{html.escape(_role_text(row.get("role_candidates")))}</span><hr>'
-            f'<b>模型家族：</b>{html.escape(human_family(row.get("model_family")))}<br>'
-            f'<b>来源任务：</b>{html.escape(task_label(row.get("task_id")))}<br>'
-            f'<b>架构：</b>{html.escape(str(row.get("architecture", "—")))}<br>'
-            f'<b>参数量：</b>{html.escape(_format_parameter_count(parameter_count))}<br>'
-            f'<b>Checkpoint 大小：</b>{html.escape(_checkpoint_size_text(row))}<br>'
-            f'<b>预训练来源：</b>{html.escape(human_pretraining_source(row.get("pretraining_source")))}<br>'
-            f'<b>Checkpoint：</b>{html.escape(str(row.get("checkpoint_status", "未登记")))}<br>'
-            f'<b>现有结果：</b>{html.escape(str(row.get("prediction_source", "missing")))}<br>'
-            f'<b>目标任务判断：</b>{html.escape(str(row.get("target_task_reason", "待核验")))}</div>',
+            f'<span class="badge badge-live">{html.escape(_role_text(row.get("role_candidates")))}</span>'
+            f'<div class="model-detail-grid">{detail_grid}</div>'
+            f'<div class="case-list-note"><strong>目标任务判断：</strong>{html.escape(str(row.get("target_task_reason", "待核验")))}</div>'
+            "</div>",
             unsafe_allow_html=True,
         )
         if st.button("检查兼容性", width="stretch"):

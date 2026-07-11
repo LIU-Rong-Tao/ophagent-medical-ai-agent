@@ -77,22 +77,90 @@ GRADE_LABELS = {
 }
 
 
+OPHAGENT_MARK_SVG = """
+<svg class="hub-brand-svg" viewBox="0 0 128 128" role="img" aria-label="OphAgent Retina Router">
+  <defs>
+    <linearGradient id="ophagent-mark-bg" x1="18" y1="14" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4ED8"/>
+      <stop offset=".52" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <radialGradient id="ophagent-mark-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(82 34) rotate(120) scale(66)">
+      <stop stop-color="#FFFFFF" stop-opacity=".55"/>
+      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ophagent-mark-eye" x1="24" y1="58" x2="101" y2="72" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E0F2FE"/>
+      <stop offset=".5" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#CCFBF1"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="url(#ophagent-mark-bg)"/>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="url(#ophagent-mark-glow)"/>
+  <path d="M25 65C34 50 47 42 64 42C81 42 94 50 103 65C94 80 81 88 64 88C47 88 34 80 25 65Z" fill="url(#ophagent-mark-eye)" fill-opacity=".96"/>
+  <path d="M34 65C42 55 52 50 64 50C76 50 86 55 94 65C86 75 76 80 64 80C52 80 42 75 34 65Z" fill="#0F172A" fill-opacity=".14"/>
+  <circle cx="64" cy="65" r="15" fill="#0F172A" fill-opacity=".76"/>
+  <circle cx="64" cy="65" r="8" fill="#5EEAD4"/>
+  <circle cx="60" cy="61" r="3.4" fill="#FFFFFF" fill-opacity=".88"/>
+  <path d="M78 52H96C101 52 104 55 104 60V62" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M78 78H96C101 78 104 75 104 70V68" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M80 65H108" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="104" cy="60" r="6" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="108" cy="65" r="6" fill="#60A5FA" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="104" cy="70" r="6" fill="#34D399" stroke="#FFFFFF" stroke-width="3"/>
+  <path d="M33 50C41 33 55 25 74 24" stroke="#A7F3D0" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="M31 82C43 98 59 104 80 101" stroke="#BFDBFE" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+</svg>
+"""
+
+
 def inject_model_hub_css() -> None:
     st.markdown(
         f"""
         <style>
-        .hub-title{{font-size:2rem;font-weight:780;color:{COLORS['navy']};margin:.1rem 0 .3rem;letter-spacing:0}}
+        .hub-brand{{display:flex;align-items:center;gap:.85rem;margin:.1rem 0 .35rem}}
+        .hub-brand-mark{{width:3.1rem;height:3.1rem;flex:0 0 auto;border-radius:12px;filter:drop-shadow(0 14px 22px rgba(15,23,42,.16))}}
+        .hub-brand-svg{{display:block;width:100%;height:100%}}
+        .hub-kicker{{color:{COLORS['teal']};font-size:.76rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.12rem}}
+        .hub-title{{font-size:2rem;font-weight:780;color:{COLORS['navy']};margin:0;letter-spacing:0;line-height:1.18}}
         .hub-subtitle{{color:{COLORS['muted']};max-width:1050px;line-height:1.65;margin-bottom:1rem}}
         .hub-strip{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:1rem 0 1.35rem}}
         .hub-stat{{background:#fff;border:1px solid {COLORS['border']};border-top:3px solid {COLORS['teal']};border-radius:6px;padding:.8rem .9rem}}
         .hub-stat span{{display:block;color:{COLORS['muted']};font-size:.76rem}} .hub-stat b{{display:block;color:{COLORS['navy']};font-size:1.5rem;margin-top:.2rem}}
+        .hub-mini-strip{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;margin:.75rem 0 1rem}}
+        .hub-mini-stat{{background:#fff;border:1px solid {COLORS['border']};border-radius:6px;padding:.65rem .75rem;min-height:74px}}
+        .hub-mini-stat span{{display:block;color:{COLORS['muted']};font-size:.72rem;font-weight:750;line-height:1.35}}
+        .hub-mini-stat b{{display:block;color:{COLORS['navy']};font-size:1.28rem;line-height:1.2;margin-top:.18rem;font-variant-numeric:tabular-nums}}
+        .hub-mini-stat small{{display:block;color:{COLORS['muted']};font-size:.7rem;line-height:1.3;margin-top:.1rem}}
         .hub-band{{background:#fff;border:1px solid {COLORS['border']};border-left:4px solid {COLORS['teal']};padding:.85rem 1rem;border-radius:0 6px 6px 0;line-height:1.65;margin:.4rem 0 1rem}}
         .hub-warning{{background:#fff8e8;border-left:4px solid {COLORS['amber']};padding:.75rem 1rem;color:#5e4617;line-height:1.6}}
         .detail-panel{{background:#fff;border:1px solid {COLORS['border']};border-radius:6px;padding:1rem}}
         .badge{{display:inline-block;padding:.16rem .48rem;margin:0 .25rem .3rem 0;border-radius:4px;font-size:.72rem;font-weight:650}}
         .badge-live{{background:#e4f5ef;color:#08745f}} .badge-replay{{background:#e8f0fb;color:#245f9e}} .badge-wait{{background:#fff1d8;color:#8a5a0a}}
+        .hub-chip{{display:inline-flex;align-items:center;gap:.35rem;padding:.16rem .5rem;border-radius:999px;font-size:.72rem;font-weight:750;background:#eef2f7;color:#475569}}
+        .hub-chip-teal{{background:#dff7f3;color:{COLORS['teal']}}}
+        .hub-chip-blue{{background:#e8f0ff;color:#2563eb}}
+        .hub-chip-amber{{background:#fff4dc;color:#b45309}}
+        .hub-chip-red{{background:#fff1f0;color:{COLORS['red']}}}
+        .hub-selection-note{{display:flex;gap:.55rem;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:6px;padding:.55rem .65rem;font-size:.78rem;line-height:1.45;margin:.55rem 0;min-height:3.2rem}}
+        .hub-selection-note-muted{{background:#f8fafc;border-color:#e6edf5;color:#64748b}}
+        .hub-selection-note b{{white-space:nowrap}}
+        .hub-card-reason{{background:#f8fafc;border:1px solid #e6edf5;border-radius:6px;padding:.62rem .7rem;color:#465569;font-size:.82rem;line-height:1.5;margin:.55rem 0;min-height:4.2rem}}
+        .hub-card-formula{{font-size:.78rem;color:#64748b;line-height:1.55;margin:.25rem 0 .45rem}}
+        .hub-formula-line{{display:flex;align-items:center;gap:.42rem;flex-wrap:wrap;margin:.55rem 0 .45rem;color:#475569;font-size:.8rem;line-height:1.5}}
+        .hub-formula-label{{font-weight:750;color:{COLORS['navy']}}}
+        .hub-formula-pill{{display:inline-flex;align-items:center;gap:.18rem;background:#f8fafc;border:1px solid #e6edf5;border-radius:999px;padding:.12rem .42rem;color:#475569;font-weight:650}}
+        .hub-audit-score{{display:flex;gap:.5rem;align-items:center;background:#ecfeff;border:1px solid #bae6fd;color:#155e75;border-radius:6px;padding:.55rem .65rem;font-size:.8rem;line-height:1.45;margin:.55rem 0}}
+        .hub-audit-score span{{display:inline-flex;align-items:center}}
+        .hub-audit-score b{{font-variant-numeric:tabular-nums;color:#0f766e}}
         .result-card{{background:#fff;border:1px solid {COLORS['border']};border-radius:6px;padding:.85rem;min-height:92px}}
         .result-card small{{color:{COLORS['muted']}}} .result-card b{{color:{COLORS['navy']};font-size:1.08rem}}
+        .case-result-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;margin:.4rem 0 .8rem}}
+        .case-result-card{{background:#fff;border:1px solid {COLORS['border']};border-radius:6px;padding:.75rem;min-height:104px}}
+        .case-result-card small{{display:block;color:{COLORS['muted']};font-weight:700;margin-bottom:.35rem}}
+        .case-result-card b{{display:block;color:{COLORS['navy']};font-size:1.02rem;line-height:1.35}}
+        .case-result-card span{{display:block;color:{COLORS['muted']};font-size:.74rem;margin-top:.35rem;line-height:1.35}}
         .proxy-event-cards{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:.75rem 0}}
         .proxy-event-card{{background:#fff;border:1px solid {COLORS['border']};border-left:4px solid {COLORS['teal']};border-radius:6px;padding:.8rem .9rem}}
         .proxy-event-card-title{{font-weight:750;color:{COLORS['navy']};margin-bottom:.6rem}}
@@ -109,10 +177,19 @@ def inject_model_hub_css() -> None:
         .proxy-table tbody tr:last-child td{{border-bottom:0}}
         .proxy-event-name{{color:{COLORS['navy']};font-weight:650;white-space:nowrap}}
         .proxy-event-value{{text-align:right;font-variant-numeric:tabular-nums;color:{COLORS['text']}}}
-        .proxy-help-icon{{display:inline-flex;align-items:center;justify-content:center;width:1.05rem;height:1.05rem;margin-left:.25rem;border:1px solid {COLORS['muted']};border-radius:50%;color:{COLORS['muted']};font-size:.72rem;font-weight:750;cursor:help;vertical-align:middle}}
-        .proxy-help-icon:focus{{outline:2px solid {COLORS['teal']};outline-offset:2px}}
+        .hub-help-icon,.proxy-help-icon{{display:inline-flex;align-items:center;justify-content:center;width:1.05rem;height:1.05rem;margin-left:.2rem;border:2px solid #6b7280;border-radius:50%;color:#6b7280;font-size:.72rem;font-weight:800;line-height:1;cursor:help;vertical-align:middle;background:transparent}}
+        .hub-help-icon:focus,.proxy-help-icon:focus{{outline:2px solid {COLORS['teal']};outline-offset:2px}}
+        .model-entry-row{{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr) minmax(0,1.15fr) auto;gap:.75rem;align-items:center;background:#fff;border:1px solid {COLORS['border']};border-radius:6px;padding:.85rem .9rem;margin:.55rem 0}}
+        .model-entry-label{{display:block;color:{COLORS['muted']};font-size:.72rem;font-weight:750;margin-bottom:.2rem}}
+        .model-entry-title{{display:block;color:{COLORS['navy']};font-weight:780;line-height:1.35}}
+        .model-entry-copy{{display:block;color:{COLORS['muted']};font-size:.78rem;line-height:1.4;margin-top:.1rem}}
+        .model-detail-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem;margin:.75rem 0}}
+        .model-detail-cell{{background:#f8fafc;border:1px solid #e6edf5;border-radius:6px;padding:.55rem .65rem;min-height:64px}}
+        .model-detail-cell span{{display:block;color:{COLORS['muted']};font-size:.72rem;font-weight:750;line-height:1.35}}
+        .model-detail-cell b{{display:block;color:{COLORS['navy']};font-size:.86rem;line-height:1.35;margin-top:.18rem;word-break:break-word}}
+        .case-list-note{{background:#fff;border:1px solid {COLORS['border']};border-left:4px solid {COLORS['teal']};border-radius:0 6px 6px 0;padding:.65rem .8rem;color:{COLORS['muted']};line-height:1.55;margin:.45rem 0 .9rem}}
         [data-testid="stMetric"]{{background:#fff;border:1px solid {COLORS['border']};padding:.65rem .8rem;border-radius:6px}}
-        @media(max-width:760px){{.hub-strip{{grid-template-columns:1fr 1fr}}.proxy-event-cards{{grid-template-columns:1fr}}}}
+        @media(max-width:760px){{.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip{{grid-template-columns:1fr 1fr}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}}}
         </style>
         """,
         unsafe_allow_html=True,
@@ -120,13 +197,20 @@ def inject_model_hub_css() -> None:
 
 
 def title_block() -> None:
-    st.markdown('<div class="hub-title">眼科模型中转台</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hub-brand">'
+        f'<div class="hub-brand-mark">{OPHAGENT_MARK_SVG}</div>'
+        '<div><div class="hub-kicker">OphAgent Model Hub</div>'
+        '<div class="hub-title">眼科模型中转台</div></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown(
         '<div class="hub-subtitle">发现并接入服务器模型，提交适配或训练任务，比较路由模型与专家模型组合，并查看病例路由解释。</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="hub-warning"><strong>系统边界：</strong>模型工程与研究评测服务于研发验证；病例回放仅展示模型输出，不提供诊断或患者分流决定。</div>',
+        '<div class="hub-warning"><strong>系统边界：</strong>模型工程与研究评测服务于研发验证；病例回放仅展示模型调用轨迹，不提供诊断或患者分流决定。</div>',
         unsafe_allow_html=True,
     )
 
