@@ -1238,7 +1238,13 @@ def render_research_workspace(models: pd.DataFrame) -> None:
             "measured"
         )
         selectable = models.loc[measured].copy()
-        excluded = models.loc[~measured & models["prediction_source"].astype(str).ne("missing")]
+        st.success(f"当前有 {len(selectable)} 个已测成本模型可进入曲线比较。")
+        active = models.get("lifecycle_status", pd.Series("active", index=models.index)).fillna(
+            "active"
+        ).astype(str).ne("superseded")
+        excluded = models.loc[
+            ~measured & active & models["prediction_source"].astype(str).ne("missing")
+        ]
         if not excluded.empty:
             names = ", ".join(excluded["artifact_id"].map(human_model).astype(str).unique())
             st.info(f"以下模型尚未完成统一 forward-only 测量，本模式不可选：{names}")
