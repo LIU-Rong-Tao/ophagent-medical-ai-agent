@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
+import logging
 from typing import Any
 
 from .base import BaseModelProvider
@@ -12,6 +13,9 @@ from .records import (
     TaskCompatibilityStatus,
     UnifiedModelRecord,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _public_snapshot_loader():
@@ -66,6 +70,7 @@ class OphBenchProvider(BaseModelProvider):
                 detail=str(exc),
             )
         except Exception as exc:
+            LOGGER.exception("OphBench registry provider failed to load")
             self._health = ProviderHealth(
                 self.provider_id,
                 False,

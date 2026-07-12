@@ -906,7 +906,12 @@ def _render_model_access(models: pd.DataFrame) -> None:
     first = target_models.iloc[0]
     for health in catalog.attrs.get("provider_health", ()):
         if health.provider_id == "ophbench" and not health.available:
-            st.info(f"OphBench 注册表暂不可用：{health.message} 本地模型与 timm 仍可继续使用。")
+            detail = health.detail or "未提供详细错误。"
+            st.error(
+                f"OphBench 注册表暂不可用：{health.message}\n\n"
+                f"详细错误：`{detail}`\n\n"
+                "本地模型与 timm 仍可继续使用。"
+            )
     layers = partition_model_catalog(catalog)
     foundation = catalog.loc[catalog["provider_id"].astype(str).eq("ophbench")]
     summary_cards = [
