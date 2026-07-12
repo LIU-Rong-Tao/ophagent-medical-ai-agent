@@ -734,6 +734,31 @@ def test_cost_curve_marks_pareto_and_selects_named_operating_points() -> None:
     assert points["performance"]["realized_budget"] == 0.3
 
 
+def test_unmeasured_cost_is_excluded_from_pareto_and_recommendations() -> None:
+    curve = pd.DataFrame(
+        [
+            {
+                "name": "measured",
+                "accuracy": 0.80,
+                "estimated_total_compute_ms_per_image": 2.0,
+                "cost_status": "measured",
+            },
+            {
+                "name": "integration-only",
+                "accuracy": 0.99,
+                "estimated_total_compute_ms_per_image": 1.0,
+                "cost_status": "unmeasured",
+            },
+        ]
+    )
+    enriched = enrich_cost_curve(curve)
+    unmeasured = enriched.loc[enriched["name"].eq("integration-only")].iloc[0]
+    assert pd.isna(unmeasured["relative_cost"])
+    assert unmeasured["is_pareto"] == False  # noqa: E712
+    points = select_operating_points(enriched)
+    assert all(point["name"] == "measured" for point in points.values())
+
+
 def test_task_registry_drives_primary_and_display_metrics() -> None:
     registry = pd.read_csv(
         ROOT / "experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv"

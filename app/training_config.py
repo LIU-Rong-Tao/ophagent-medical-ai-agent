@@ -44,6 +44,7 @@ SECTION_FIELDS = {
         "trainer_adapter",
         "supported_model_families",
         "description",
+        "lifecycle_status",
     },
     "data": {"root", "num_classes", "class_to_idx", "label_space", "label_structure"},
     "model": {"family", "architecture", "initialization", "freeze_backbone"},

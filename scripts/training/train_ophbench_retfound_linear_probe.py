@@ -275,15 +275,20 @@ def run_training(config_path: Path) -> Path:
         head_checkpoint=head_path,
         encoder_sha256=preflight["encoder_checkpoint_sha256"],
         artifact_id=STANDARD_ARTIFACT_ID,
-        evaluation_role="controlled_task_adaptation",
+        evaluation_role="integration_validation",
         lifecycle_status="active",
         route_eligible=True,
+        research_claim_status="not_for_scientific_comparison",
+        cost_status="unmeasured",
         provenance=provenance,
     )
     pd.DataFrame([record]).to_csv(output_dir / "registration_record.csv", index=False)
     run_manifest = {
         **provenance,
         "artifact_id": STANDARD_ARTIFACT_ID,
+        "evaluation_role": "integration_validation",
+        "research_claim_status": "not_for_scientific_comparison",
+        "cost_status": "unmeasured",
         "base_model_provider": "ophbench",
         "base_model_id": "retfound",
         "base_checkpoint_id": "retfound-cfp",

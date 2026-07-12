@@ -127,6 +127,8 @@ def enrich_cost_curve(curve: pd.DataFrame, *, metric_column: str = "accuracy") -
         raise ValueError(f"成本曲线缺少任务主指标：{metric_column}")
     cost_column = "estimated_total_compute_ms_per_image"
     valid_costs = pd.to_numeric(enriched[cost_column], errors="coerce")
+    if "cost_status" in enriched.columns:
+        valid_costs = valid_costs.mask(enriched["cost_status"].astype(str).eq("unmeasured"))
     positive = valid_costs.loc[valid_costs > 0]
     if positive.empty:
         enriched["relative_cost"] = np.nan
@@ -137,8 +139,13 @@ def enrich_cost_curve(curve: pd.DataFrame, *, metric_column: str = "accuracy") -
     enriched = enriched.sort_values(["relative_cost", metric_column], ascending=[True, False])
     best_metric = -np.inf
     pareto: list[bool] = []
-    for metric_value in pd.to_numeric(enriched[metric_column], errors="coerce"):
-        is_better = bool(np.isfinite(metric_value) and metric_value > best_metric)
+    metric_values = pd.to_numeric(enriched[metric_column], errors="coerce")
+    for metric_value, cost_value in zip(metric_values, enriched["relative_cost"], strict=True):
+        is_better = bool(
+            np.isfinite(cost_value)
+            and np.isfinite(metric_value)
+            and metric_value > best_metric
+        )
         pareto.append(is_better)
         if is_better:
             best_metric = float(metric_value)

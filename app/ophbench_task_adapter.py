@@ -81,6 +81,8 @@ def registration_record(
     lifecycle_status="superseded",
     route_eligible=False,
     provenance=None,
+    research_claim_status="not_for_scientific_comparison",
+    cost_status="unmeasured",
 ):
     record = {
         "model_id": f"aptos_dr_5class::{artifact_id}",
@@ -110,6 +112,8 @@ def registration_record(
         "output_dir": str(output_dir),
         "evaluation_role": evaluation_role,
         "lifecycle_status": lifecycle_status,
+        "research_claim_status": research_claim_status,
+        "cost_status": cost_status,
     }
     record.update(dict(provenance or {}))
     return record

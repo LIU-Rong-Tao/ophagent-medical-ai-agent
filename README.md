@@ -1,5 +1,10 @@
 # OphAgent
 
+> **科研协议边界**：OphAgent 中现有 RETFound 线性探针 recipe 与 trainer 仅用于历史跨仓库
+> 集成验证，属于 deprecated / integration-only 资产。正式的冻结特征迁移协议、模型间公平
+> 比较和科研产物由 Ophthalmic Foundation Model Benchmark（OphBench）维护；OphAgent 只
+> 验证并消费其标准 manifest、预测和指标，再开展模型互补性与路由研究。
+
 OphAgent 是一个面向眼科医学图像模型的交互式模型中转台原型，用于管理模型发现、任务适配、路由模型、专家模型、成本-性能评测和病例级回放。
 
 本项目用于科研、工程实践和项目展示，不用于临床诊断、治疗建议或真实医疗决策。

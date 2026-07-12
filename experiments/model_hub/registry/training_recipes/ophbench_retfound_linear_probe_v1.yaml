@@ -2,11 +2,11 @@ schema_version: 1
 recipe:
   recipe_id: ophbench_retfound_linear_probe_v1
   display_name: RETFound CFP 冻结特征标准线性探针
-  recipe_kind: engineering
-  evaluation_role: controlled_task_adaptation
+  recipe_kind: integration_only
+  evaluation_role: integration_validation
   trainer_adapter: ophbench_retfound_linear_probe_v1
   supported_model_families: [retfound]
-  description: 冻结 RETFound CFP 编码器，仅用 train 拟合线性头、val 选择 C、test 最终评估一次
+  description: 已弃用的跨仓库集成验证 recipe；正式冻结特征科研评测由 OphBench 输出
 foundation:
   base_model_provider: ophbench
   base_model_id: retfound
