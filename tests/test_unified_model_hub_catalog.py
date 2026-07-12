@@ -7,6 +7,8 @@ from app.model_hub_data import (
     route_eligible_model_ids,
 )
 from app.model_hub_engineering import (
+    _format_file_size,
+    _runtime_architecture,
     architecture_display,
     filter_global_model_catalog,
     partition_model_catalog,
@@ -33,6 +35,9 @@ def _models():
                 "prediction_source": "adapter",
                 "adapter_status": "completed",
                 "compatibility_status": "ready_for_pairing",
+                "task_checkpoint": True,
+                "task_inference_ready": True,
+                "route_eligible": True,
                 "role_candidates": "scout|expert",
                 "pretraining_source": "imagenet1k",
             }
@@ -131,10 +136,33 @@ def test_default_layer_contains_only_ready_task_checkpoints():
     )
     layers = partition_model_catalog(catalog)
 
-    assert list(layers) == ["可用任务模型", "可适配基础模型", "候选基础模型库"]
-    assert layers["可用任务模型"]["task_checkpoint"].all()
-    assert layers["可用任务模型"]["task_inference_ready"].all()
+    assert list(layers) == [
+        "在线可用任务模型",
+        "离线预测回放资产",
+        "可适配基础模型",
+        "候选基础模型库",
+    ]
+    assert layers["在线可用任务模型"]["task_checkpoint"].all()
+    assert layers["在线可用任务模型"]["task_inference_ready"].all()
     assert not layers["候选基础模型库"]["route_eligible"].any()
+
+
+def test_frozen_prediction_is_replay_only_not_online() -> None:
+    models = _models()
+    models["task_inference_ready"] = False
+    models["route_eligible"] = False
+    catalog = build_unified_model_catalog(
+        models,
+        target_task_id="aptos2019",
+        recipes=pd.DataFrame(),
+        providers=[],
+    )
+    layers = partition_model_catalog(catalog)
+    assert layers["在线可用任务模型"].empty
+    assert len(layers["离线预测回放资产"]) == 1
+    row = layers["离线预测回放资产"].iloc[0]
+    assert row["replay_eligible"] == True  # noqa: E712
+    assert row["route_eligible"] == False  # noqa: E712
 
 
 def test_ui_missing_and_unverified_open_values_are_human_readable():
@@ -147,6 +175,10 @@ def test_ui_missing_and_unverified_open_values_are_human_readable():
     assert source_access_display(row) == "登记为开放，尚未核验"
     assert architecture_display("ResNet-50图像编码器 + BioClinicalBERT文本编码器") == (
         "ResNet-50 图像编码器 + BioClinicalBERT 文本编码器"
+    )
+    assert _format_file_size(40 * 1024) == "40.0 KB"
+    assert _runtime_architecture(pd.Series({"model_family": "retfound"})) == (
+        "ViT-Large/16 图像编码器"
     )
 
 

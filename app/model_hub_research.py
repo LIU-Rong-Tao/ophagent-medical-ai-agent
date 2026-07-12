@@ -14,7 +14,6 @@ from app.model_hub_inference_jobs import (
     submit_checkpoint_inference,
 )
 from app.model_hub_data import (
-    DR_RISK_EVENTS,
     available_routing_policies,
     build_online_case_view,
     enrich_cost_curve,
@@ -1224,8 +1223,26 @@ def _render_comparison(task_id: str, display_metrics: list[str]) -> None:
 
 def render_research_workspace(models: pd.DataFrame) -> None:
     st.subheader("研究评测")
-    st.caption("组合计算基于同任务、同数据集、同标签空间的冻结 prediction；结果不会覆盖正式科研产物。")
-    config = _controls(models)
+    mode = st.segmented_control(
+        "评测模式",
+        ["性能回放", "成本—性能评测"],
+        default="性能回放",
+        key="research_evaluation_mode",
+    )
+    if mode == "性能回放":
+        st.caption("使用同任务、同数据集、同标签空间的冻结 prediction；不要求成本数据。")
+        selectable = models
+    else:
+        st.caption("只显示已完成统一 forward-only 测量的模型。")
+        measured = models.get("cost_status", pd.Series("", index=models.index)).astype(str).eq(
+            "measured"
+        )
+        selectable = models.loc[measured].copy()
+        excluded = models.loc[~measured & models["prediction_source"].astype(str).ne("missing")]
+        if not excluded.empty:
+            names = ", ".join(excluded["artifact_id"].map(human_model).astype(str).unique())
+            st.info(f"以下模型尚未完成统一 forward-only 测量，本模式不可选：{names}")
+    config = _controls(selectable)
     if config is None:
         return
     _render_evaluation_inputs(models, config)
@@ -1250,7 +1267,8 @@ def render_research_workspace(models: pd.DataFrame) -> None:
     _render_summary(metrics, list(config["display_metrics"]))
     if st.button("加入组合对比", icon=":material/add_chart:", width="stretch"):
         _add_comparison(label, metrics)
-    _render_tradeoff(curve, str(config["primary_metric"]))
+    if mode == "成本—性能评测":
+        _render_tradeoff(curve, str(config["primary_metric"]))
     _render_global_scan(models, config)
     _render_task_evaluation(str(config["task_id"]), metrics, cases)
     _render_comparison(str(config["task_id"]), list(config["display_metrics"]))

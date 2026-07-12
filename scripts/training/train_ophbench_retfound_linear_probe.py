@@ -306,6 +306,27 @@ def run_training(config_path: Path) -> Path:
         json.dumps(run_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     validate_standard_run(output_dir)
+    try:
+        from scripts.routing.backfill_retfound_forward_cost import backfill_forward_cost
+
+        cost_path = backfill_forward_cost(
+            output_dir,
+            device=str(config["runtime"]["device"]),
+            batch_size=int(config["training"]["batch_size"]),
+        )
+        cost = pd.read_csv(cost_path).iloc[0]
+        run_manifest.update(
+            {
+                "cost_status": "measured",
+                "forward_cost_ms_per_image": float(cost["median_ms_per_image"]),
+                "forward_cost_path": str(cost_path.resolve()),
+            }
+        )
+    except Exception as exc:
+        run_manifest.update({"cost_status": "failed", "cost_error": str(exc)})
+    (output_dir / "run_manifest.json").write_text(
+        json.dumps(run_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return output_dir
 
 

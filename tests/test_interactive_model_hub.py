@@ -1138,7 +1138,7 @@ def test_global_model_catalog_keeps_cross_task_models_visible_and_marks_compatib
     states = catalog.set_index("model_id")["target_task_status"].to_dict()
 
     assert len(catalog) == 3
-    assert states["glaucoma::convnext"] == "direct_inference"
+    assert states["glaucoma::convnext"] == "offline_replay"
     assert states["glaucoma::legacy"] == "offline_replay"
     assert states["dr::vit"] == "adaptable"
     assert "5" in catalog.set_index("model_id").loc["dr::vit", "target_task_reason"]

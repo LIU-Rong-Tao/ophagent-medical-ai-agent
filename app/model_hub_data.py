@@ -274,6 +274,33 @@ def load_registered_training_models(model_hub_root: Path) -> pd.DataFrame:
                     )
         frame["registration_file"] = str(path.resolve())
         frame["registration_mtime_ns"] = path.stat().st_mtime_ns
+        frame["registration_dir"] = str(path.parent.resolve())
+        cost_path = path.parent / "forward_cost_summary.csv"
+        if cost_path.is_file():
+            cost = pd.read_csv(cost_path).iloc[0]
+            frame["cost_status"] = str(cost.get("cost_status", "measured"))
+            frame["forward_cost_ms_per_image"] = cost.get(
+                "estimated_forward_ms_per_image", cost.get("median_ms_per_image")
+            )
+            frame["throughput_images_per_second"] = cost.get(
+                "images_per_second", cost.get("throughput_images_per_second")
+            )
+            frame["cost_device"] = cost.get("device", "")
+            frame["cost_precision"] = cost.get("precision", "")
+            frame["cost_batch_size"] = cost.get("batch_size", "")
+            frame["timing_scope"] = cost.get("timing_scope", "forward_only")
+            frame["forward_cost_path"] = str(cost_path.resolve())
+        head_path = Path(str(frame.iloc[0].get("checkpoint_path", "") or ""))
+        if head_path.is_file():
+            frame["task_head_file"] = head_path.name
+            frame["task_head_bytes"] = head_path.stat().st_size
+        metrics_path = path.parent / "metrics.json"
+        if metrics_path.is_file():
+            payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+            test_metrics = payload.get("splits", {}).get("test", payload.get("test", {}))
+            for field in ("accuracy", "macro_f1", "quadratic_kappa"):
+                if field in test_metrics:
+                    frame[field] = test_metrics[field]
         records.append(frame)
     if not records:
         return pd.DataFrame()
@@ -369,10 +396,11 @@ def build_global_model_catalog(
         ready = str(row.get("compatibility_status", "")) == "ready_for_pairing"
         source = str(row.get("prediction_source", ""))
         adapter_complete = str(row.get("adapter_status", "")) == "completed"
-        if same_task and ready and source == "adapter" and adapter_complete:
+        declared_online = bool(row.get("task_inference_ready", False))
+        if same_task and ready and source == "adapter" and adapter_complete and declared_online:
             return "direct_inference", "当前任务在线推理链已验证"
-        if same_task and ready and source == "legacy":
-            return "offline_replay", "当前任务仅有冻结 prediction，在线加载链待验证"
+        if same_task and ready and source != "missing":
+            return "offline_replay", "当前任务仅有冻结 prediction，不具备在线推理资格"
         if has_training_adapter(row):
             source_classes = int(row.get("n_classes", 0) or 0)
             if same_task:
@@ -398,12 +426,13 @@ def _default_external_providers(models: pd.DataFrame):
     inventory = []
     for architecture, rows in models.groupby("architecture", dropna=True):
         architecture = str(architecture).strip()
-        if architecture:
+        family = str(rows.iloc[0].get("model_family", architecture)).strip()
+        if architecture and family.lower() != "retfound":
             inventory.append(
                 {
                     "model_id": architecture,
                     "display_name": architecture,
-                    "family_id": str(rows.iloc[0].get("model_family", architecture)),
+                    "family_id": family,
                 }
             )
     return [TimmProvider(inventory), OphBenchProvider()]
@@ -437,9 +466,9 @@ def build_unified_model_catalog(
         else pd.Series(True, index=local.index)
     )
     declared_inference_ready = (
-        local["task_inference_ready"].map(lambda value: True if pd.isna(value) else bool(value))
+        local["task_inference_ready"].fillna(False).astype(bool)
         if "task_inference_ready" in local
-        else pd.Series(True, index=local.index)
+        else pd.Series(False, index=local.index)
     )
     declared_route_eligible = (
         local["route_eligible"].map(lambda value: True if pd.isna(value) else bool(value))
@@ -447,8 +476,13 @@ def build_unified_model_catalog(
         else pd.Series(True, index=local.index)
     )
     local["task_checkpoint"] = declared_task_checkpoint
-    local["task_inference_ready"] = declared_inference_ready & local["target_task_status"].isin(
-        {"direct_inference", "offline_replay"}
+    local["task_inference_ready"] = declared_inference_ready & local[
+        "target_task_status"
+    ].eq("direct_inference")
+    local["replay_eligible"] = (
+        local["task_checkpoint"]
+        & local["prediction_source"].astype(str).ne("missing")
+        & local["compatibility_status"].astype(str).eq("ready_for_pairing")
     )
     local["route_eligible"] = (
         declared_route_eligible
@@ -499,6 +533,7 @@ def build_unified_model_catalog(
                 "base_adapter_ready": record.base_adapter_ready,
                 "task_inference_ready": False,
                 "route_eligible": False,
+                "replay_eligible": False,
                 "task_checkpoint": False,
                 "model_name": record.model_name,
                 "year": record.year,

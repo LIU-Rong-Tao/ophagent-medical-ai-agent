@@ -32,7 +32,7 @@ from app.training_config import (
     parse_yaml_text,
     save_training_recipe,
 )
-from app.model_hub_ui import human_family, human_model, human_pretraining_source, task_label
+from app.model_hub_ui import human_family, human_model, task_label
 from app.ophbench_task_adapter import STANDARD_ARTIFACT_ID
 from app.training_jobs import (
     TrainingRequest,
@@ -189,11 +189,35 @@ def _model_parameter_count(row: pd.Series) -> int | None:
 def _checkpoint_size_text(row: pd.Series) -> str:
     recorded = pd.to_numeric(pd.Series([row.get("checkpoint_mb")]), errors="coerce").iloc[0]
     if pd.notna(recorded):
-        return f"{float(recorded):.1f} MB"
+        return _format_file_size(float(recorded) * 1024 * 1024)
     path = Path(str(row.get("checkpoint_path", "") or ""))
     if path.is_file():
-        return f"{path.stat().st_size / 1024 / 1024:.1f} MB"
+        return _format_file_size(path.stat().st_size)
     return "未登记"
+
+
+def _format_file_size(size_bytes: float | int) -> str:
+    size = float(size_bytes)
+    if size < 1024 * 1024:
+        return f"{size / 1024:.1f} KB"
+    return f"{size / 1024 / 1024:.1f} MB"
+
+
+def _compact_number(value: object) -> str:
+    number = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(number):
+        return "尚未登记"
+    return str(int(number)) if float(number).is_integer() else str(number)
+
+
+def _runtime_architecture(row: pd.Series) -> str:
+    if str(row.get("model_family", "")).lower() == "retfound":
+        return "ViT-Large/16 图像编码器"
+    return architecture_display(row.get("architecture"))
+
+
+def _input_size_display(value: object) -> str:
+    return ui_value(value, empty="").replace("x", " × ", 1)
 
 
 def training_capability(row: pd.Series, recipes: pd.DataFrame) -> tuple[bool, str]:
@@ -240,15 +264,23 @@ def partition_model_catalog(catalog: pd.DataFrame) -> dict[str, pd.DataFrame]:
     task_ready = catalog["task_checkpoint"].astype(bool) & catalog[
         "task_inference_ready"
     ].astype(bool)
+    replay_ready = (
+        catalog["task_checkpoint"].astype(bool)
+        & catalog.get("replay_eligible", pd.Series(False, index=catalog.index)).astype(bool)
+        & ~task_ready
+    )
     adaptable = (
         ~catalog["task_checkpoint"].astype(bool)
         & catalog["base_adapter_ready"].astype(bool)
         & ~catalog["task_inference_ready"].astype(bool)
     )
     return {
-        "可用任务模型": catalog.loc[task_ready].reset_index(drop=True),
+        "在线可用任务模型": catalog.loc[task_ready].reset_index(drop=True),
+        "离线预测回放资产": catalog.loc[replay_ready].reset_index(drop=True),
         "可适配基础模型": catalog.loc[adaptable].reset_index(drop=True),
-        "候选基础模型库": catalog.loc[~task_ready & ~adaptable].reset_index(drop=True),
+        "候选基础模型库": catalog.loc[
+            ~catalog["task_checkpoint"].astype(bool) & ~adaptable
+        ].reset_index(drop=True),
     }
 
 
@@ -367,14 +399,19 @@ def _render_model_entry(row: pd.Series) -> None:
         ("当前任务状态待核验", "badge-wait"),
     )
     selected = st.session_state.get("selected_model_id") == model_id
+    if bool(row.get("route_eligible", False)):
+        role_text = _role_text(row.get("role_candidates"))
+    elif bool(row.get("replay_eligible", False)):
+        role_text = "仅离线回放"
+    else:
+        role_text = "不可路由"
     with st.container(border=True):
         columns = st.columns([1.35, 1.05, 1.35, 0.7])
         with columns[0]:
             st.markdown(
                 f'<span class="model-entry-label">模型资产</span>'
                 f'<span class="model-entry-title">{html.escape(display_name)}</span>'
-                f'<span class="model-entry-copy">{html.escape(human_pretraining_source(row.get("pretraining_source")))} · '
-                f'{html.escape(task_label(row.get("task_id")))}</span>',
+                f'<span class="model-entry-copy">{html.escape(task_label(row.get("task_id")))}</span>',
                 unsafe_allow_html=True,
             )
         with columns[1]:
@@ -389,7 +426,7 @@ def _render_model_entry(row: pd.Series) -> None:
             st.markdown(
                 f'<span class="model-entry-label">当前任务状态</span>'
                 f'<span class="model-entry-title">{html.escape(status)}</span>'
-                f'<span class="badge {css_class}">{html.escape(_role_text(row.get("role_candidates")))}</span>'
+                f'<span class="badge {css_class}">{html.escape(role_text)}</span>'
                 f'<span class="model-entry-copy">{html.escape(str(row.get("target_task_reason", "")))}</span>',
                 unsafe_allow_html=True,
             )
@@ -876,7 +913,8 @@ def _render_model_access(models: pd.DataFrame) -> None:
         ("基础模型", int(foundation["source_model_id"].nunique()), "OphBench 模型"),
         ("Checkpoint", len(foundation), "官方或登记权重"),
         ("已验证基础 Adapter", int(foundation["base_adapter_ready"].astype(bool).sum()), "checkpoint 级"),
-        ("当前任务可用", len(layers["可用任务模型"]), "可推理、可路由"),
+        ("在线任务模型", len(layers["在线可用任务模型"]), "已验证在线 loader"),
+        ("离线回放资产", len(layers["离线预测回放资产"]), "只读取冻结 prediction"),
     ]
     st.markdown(
         '<div class="hub-mini-strip">'
@@ -900,7 +938,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
     selected_layer = st.segmented_control(
         "模型层级",
         list(layers),
-        default="可用任务模型",
+        default="在线可用任务模型",
         key="model_access_layer",
     )
     layer_catalog = layers[str(selected_layer)]
@@ -943,7 +981,9 @@ def _render_model_access(models: pd.DataFrame) -> None:
     library_col, detail_col = st.columns([1.15, 0.85], gap="large")
     with library_col:
         st.markdown("#### " + str(selected_layer))
-        group_column = "source_model_id" if selected_layer != "可用任务模型" else "model_family"
+        group_column = "source_model_id" if selected_layer not in {
+            "在线可用任务模型", "离线预测回放资产"
+        } else "model_family"
         for family, family_models in visible_models.groupby(group_column, sort=True):
             usable_n = int(family_models["target_task_status"].astype(str).isin({"direct_inference", "offline_replay"}).sum())
             model_name = ui_value(family_models.iloc[0].get("model_name"), empty=human_family(family))
@@ -959,40 +999,47 @@ def _render_model_access(models: pd.DataFrame) -> None:
         row = visible_models.loc[visible_models["model_id"].astype(str).eq(selected_model_id)].iloc[0]
         selected_id = str(row["artifact_id"])
         status, css_class = TARGET_STATUS_LABELS[str(row["target_task_status"])]
+        if bool(row.get("route_eligible", False)):
+            role_text = _role_text(row.get("role_candidates"))
+        elif bool(row.get("replay_eligible", False)):
+            role_text = "仅离线回放"
+        else:
+            role_text = "不可路由"
         st.markdown("#### 模型操作")
-        parameter_count = _model_parameter_count(row)
-        detail_cells = [
-            ("模型名称", ui_value(row.get("model_name"), empty=human_model(selected_id))),
-            ("Provider", ui_value(row.get("provider_id"))),
-            ("模型家族", human_family(row.get("model_family"))),
-            ("来源任务", "不适用" if not bool(row.get("task_checkpoint", False)) else task_label(row.get("task_id"))),
-            ("架构", architecture_display(row.get("architecture"))),
-            ("参数量", _format_parameter_count(parameter_count)),
-            ("Checkpoint 大小", _checkpoint_size_text(row)),
-            ("Checkpoint", f"{ui_value(row.get('checkpoint_id'))} / {ui_value(row.get('checkpoint_name'))}"),
-            ("现有结果", "已有任务结果" if bool(row.get("task_inference_ready", False)) else "暂未产生任务结果"),
-            ("来源访问", source_access_display(row)),
-            ("基础 Adapter", adapter_status_display(row.get("base_adapter_status"))),
-            ("任务推理", "当前任务可推理" if bool(row.get("task_inference_ready", False)) else "当前任务暂不可推理"),
-            ("路由资格", "具备路由资格" if bool(row.get("route_eligible", False)) else "不具备路由资格"),
-        ]
-        for label, field in (
-            ("年份", "year"),
-            ("发表平台", "venue"),
-            ("模型类别", "model_category"),
-            ("模态", "modalities"),
-            ("预训练数据", "pretraining_data_summary"),
-            ("预训练策略", "pretraining_strategy"),
-            ("论文报告摘要", "reported_summary"),
-            ("Checkpoint Provider", "checkpoint_provider"),
-            ("框架", "framework"),
-            ("输入规格", "input_size"),
-            ("归一化", "normalization"),
-            ("Embedding 维度", "embedding_dim"),
-        ):
-            value = ui_value(row.get(field), empty="")
-            if value:
-                detail_cells.append((label, value))
+        is_task = bool(row.get("task_checkpoint", False))
+        if is_task:
+            base_size = pd.to_numeric(
+                pd.Series([row.get("base_checkpoint_mb", 1157.1)]), errors="coerce"
+            ).iloc[0]
+            head_bytes = pd.to_numeric(
+                pd.Series([row.get("task_head_bytes")]), errors="coerce"
+            ).iloc[0]
+            detail_cells = [
+                ("基础模型", human_family(row.get("base_model_id", row.get("model_family")))),
+                ("基础 Checkpoint", f"{ui_value(row.get('base_checkpoint_id'), empty='retfound-cfp')} / CFP"),
+                ("基础权重", f"{_format_file_size(float(base_size) * 1024 * 1024)} · 需要认证"),
+                ("任务头", ui_value(row.get("classifier_type"), empty="Logistic Regression")),
+                ("任务头文件", f"{ui_value(row.get('task_head_file'), empty='linear_probe.joblib')} · {_format_file_size(head_bytes) if pd.notna(head_bytes) else '尚未登记'}"),
+                ("任务 / 标签空间", f"{task_label(row.get('task_id'))} / {ui_value(row.get('label_space'))}"),
+                ("适配方法", "冻结编码器 + Logistic Regression"),
+                ("Recipe / Run", f"{ui_value(row.get('recipe_id'))} / {ui_value(row.get('run_id'))}"),
+                ("Selected C", _compact_number(row.get("selected_C"))),
+                ("主要指标", f"QWK {float(row.get('quadratic_kappa')):.4f} · Macro-F1 {float(row.get('macro_f1')):.4f}" if pd.notna(row.get("quadratic_kappa")) and pd.notna(row.get("macro_f1")) else "尚未登记"),
+                ("在线推理", "已验证" if bool(row.get("task_inference_ready", False)) else "不可用（仅离线回放）"),
+                ("Scout / Expert", "可用" if bool(row.get("route_eligible", False)) else "仅回放可用"),
+                ("Forward-only 成本", f"{float(row.get('forward_cost_ms_per_image')):.3f} ms/图" if str(row.get("cost_status")) == "measured" else "尚未完成统一测量"),
+                ("科研声明", "集成验证，不用于模型优劣比较"),
+            ]
+        else:
+            detail_cells = [
+                ("正式名称", ui_value(row.get("model_name"), empty=human_model(selected_id))),
+                ("模态", ui_value(row.get("modalities"))),
+                ("运行架构", _runtime_architecture(row)),
+                ("权重访问", source_access_display(row)),
+                ("Adapter 状态", adapter_status_display(row.get("base_adapter_status"))),
+                ("当前任务", "尚未适配" if not bool(row.get("task_inference_ready", False)) else "已适配"),
+                ("Embedding 维度", _compact_number(row.get("embedding_dim"))),
+            ]
         detail_grid = "".join(
             '<div class="model-detail-cell">'
             f'<span>{html.escape(label)}</span><b>{html.escape(str(value))}</b>'
@@ -1002,24 +1049,23 @@ def _render_model_access(models: pd.DataFrame) -> None:
         st.markdown(
             f'<div class="detail-panel"><h3>{html.escape(ui_value(row.get("model_name"), empty=human_model(selected_id)))}</h3>'
             f'<span class="badge {css_class}">{html.escape(status)}</span>'
-            f'<span class="badge badge-live">{html.escape(_role_text(row.get("role_candidates")))}</span>'
+            f'<span class="badge badge-live">{html.escape(role_text)}</span>'
             f'<div class="model-detail-grid">{detail_grid}</div>'
             f'<div class="case-list-note"><strong>目标任务判断：</strong>{html.escape(str(row.get("target_task_reason", "待核验")))}</div>'
             "</div>",
             unsafe_allow_html=True,
         )
+        if not bool(row.get("task_checkpoint", False)):
+            links = []
+            if ui_value(row.get("paper_url"), empty=""):
+                links.append(f"[论文]({row.get('paper_url')})")
+            if ui_value(row.get("code_url"), empty=""):
+                links.append(f"[官方代码]({row.get('code_url')})")
+            if links:
+                st.markdown("　".join(links))
         is_candidate = not bool(row.get("task_checkpoint", False)) and not bool(row.get("base_adapter_ready", False))
         if is_candidate:
             st.caption("该记录用于模型调研与 Adapter 规划，不是可运行任务模型。")
-            links = []
-            if ui_value(row.get("paper_url"), empty=""):
-                links.append(f"[查看论文]({row.get('paper_url')})")
-            if ui_value(row.get("code_url"), empty=""):
-                links.append(f"[查看官方代码]({row.get('code_url')})")
-            if ui_value(row.get("weight_url"), empty=""):
-                links.append(f"[查看权重条件]({row.get('weight_url')})")
-            if links:
-                st.markdown("　".join(links))
             st.button("规划 Adapter 接入", width="stretch", disabled=True)
         elif st.button("检查兼容性", width="stretch"):
             if str(row.get("target_task_status")) in {"direct_inference", "offline_replay"}:
