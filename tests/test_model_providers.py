@@ -104,6 +104,58 @@ def test_ophbench_retfound_lists_two_checkpoints():
     ]
 
 
+def test_checkpoint_evidence_prevents_model_level_adapter_status_leakage():
+    snapshot = _snapshot()
+    snapshot.models[0].implementation = SimpleNamespace(
+        adapter_status="implemented",
+        smoke_test_status="passed",
+        benchmark_status="not_run",
+    )
+    snapshot.models[0].verification_status = "partially_verified"
+    snapshot.checkpoints[0].verification_status = "partially_verified"
+    snapshot.checkpoints[0].verification = SimpleNamespace(
+        adapter="verified",
+        feature_output="verified",
+        preprocessing="verified",
+        license="pending",
+    )
+    snapshot.checkpoints[1].verification_status = "partially_verified"
+    snapshot.checkpoints[1].verification = SimpleNamespace(
+        adapter="pending",
+        feature_output="pending",
+        preprocessing="pending",
+        license="pending",
+    )
+    manifest = {
+        checkpoint.checkpoint_id: {
+            "source_provenance_status": "official_source_verified",
+            "download_status": "downloaded",
+            "local_integrity_status": "local_size_sha256_and_non_html_verified",
+            "provider_integrity_status": "provider_sha256_matched",
+            "runtime_status": "not_tested",
+            "local_asset_status": "present_and_local_integrity_verified",
+        }
+        for checkpoint in snapshot.checkpoints
+    }
+    provider = OphBenchProvider(
+        snapshot_loader=lambda: snapshot,
+        manifest_loader=lambda: manifest,
+    )
+
+    cfp = provider.get_model("ophbench::retfound::retfound-cfp")
+    oct_record = provider.get_model("ophbench::retfound::retfound-oct")
+    assert cfp.base_adapter_status is BaseAdapterStatus.SMOKE_TEST_PASSED
+    assert cfp.adapter_implemented is True
+    assert cfp.encoder_smoke_passed is True
+    assert cfp.task_inference_ready is False
+    assert cfp.route_eligible is False
+    assert oct_record.base_adapter_status is BaseAdapterStatus.NOT_IMPLEMENTED
+    assert oct_record.adapter_implemented is False
+    assert oct_record.encoder_smoke_passed is False
+    assert oct_record.task_inference_ready is False
+    assert oct_record.route_eligible is False
+
+
 def test_local_task_artifact_is_route_eligible_and_namespaced():
     provider = LocalArtifactProvider(
         [

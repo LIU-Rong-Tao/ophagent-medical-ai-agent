@@ -284,6 +284,33 @@ def partition_model_catalog(catalog: pd.DataFrame) -> dict[str, pd.DataFrame]:
     }
 
 
+TASK_MODALITY_BY_DATASET = {
+    "APTOS2019": "CFP",
+    "Glaucoma_fundus": "CFP",
+}
+
+
+def current_task_candidate_catalog(
+    catalog: pd.DataFrame,
+    *,
+    dataset_id: str,
+) -> tuple[pd.DataFrame, str | None]:
+    """Hide upstream scope exclusions and assets incompatible with the task input."""
+
+    target_modality = TASK_MODALITY_BY_DATASET.get(str(dataset_id))
+    external = catalog["provider_id"].astype(str).eq("ophbench")
+    eligible_external = external & catalog["download_status"].astype(str).eq(
+        "downloaded"
+    )
+    eligible_external &= ~catalog["artifact_type"].astype(str).eq("generative_model")
+    if target_modality:
+        eligible_external &= catalog["modalities"].fillna("").astype(str).map(
+            lambda value: target_modality in value.split("|")
+        )
+    visible = catalog.loc[~external | eligible_external].reset_index(drop=True)
+    return visible, target_modality
+
+
 def ui_value(value: object, *, empty: str = "尚未登记") -> str:
     """禁止把 pandas/内部状态的缺失标记直接暴露给用户。"""
 
@@ -297,15 +324,71 @@ def ui_value(value: object, *, empty: str = "尚未登记") -> str:
 
 def source_access_display(row: pd.Series) -> str:
     status = str(row.get("source_access_status", ""))
-    verification = str(row.get("checkpoint_verification_status", ""))
-    if status == "open" and verification == "seed_unverified":
-        return "登记为开放，尚未核验"
     return {
         "open": "开放获取",
         "authentication_required": "需要认证或授权",
         "weights_missing": "尚未登记可用权重",
         "unavailable": "暂不可用",
     }.get(status, "尚未核验")
+
+
+def artifact_type_display(row: pd.Series) -> str:
+    artifact_type = str(row.get("artifact_type", ""))
+    labels = {
+        "foundation_encoder": "基础编码器",
+        "vision_language_model": "视觉语言模型",
+        "task_checkpoint": "任务 checkpoint",
+        "generative_model": "生成模型",
+        "ablation_checkpoint": "消融 checkpoint",
+        "multimodal_full_model": "完整多模态模型",
+    }
+    label = labels.get(artifact_type, "资产类型待核验")
+    if str(row.get("source_model_id", "")) == "fmue":
+        return f"{label}（16 类 OCT）"
+    return label
+
+
+def verification_evidence_display(value: object) -> str:
+    return {
+        "verified": "已核验",
+        "pending": "待核验",
+        "blocked": "存在限制",
+        "not_applicable": "不适用",
+    }.get(str(value), "未报告")
+
+
+def upstream_download_display(value: object) -> str:
+    return {
+        "downloaded": "OphBench 建库时已下载",
+        "excluded_by_project_scope": "项目范围排除重复下载",
+    }.get(str(value), "上游未报告")
+
+
+def integrity_display(value: object) -> str:
+    return {
+        "local_size_sha256_and_non_html_verified": "OphBench 大小与 SHA256 已核验",
+        "not_applicable": "不适用",
+        "provider_sha256_matched": "官方 SHA256 已匹配",
+        "provider_revision_and_checksum_unavailable": "官方未提供版本校验值",
+        "provider_checksum_not_recorded": "官方校验值未登记",
+        "not_checked": "未核验",
+    }.get(str(value), ui_value(value, empty="未报告"))
+
+
+def readiness_value(passed: bool, passed_text: str, pending_text: str) -> str:
+    return passed_text if passed else pending_text
+
+
+def _detail_section(title: str, cells: list[tuple[str, str]]) -> str:
+    content = "".join(
+        '<div class="model-detail-cell">'
+        f'<span>{html.escape(label)}</span><b>{html.escape(value)}</b></div>'
+        for label, value in cells
+    )
+    return (
+        f'<section class="model-readiness-section"><h4>{html.escape(title)}</h4>'
+        f'<div class="model-detail-grid">{content}</div></section>'
+    )
 
 
 def adapter_status_display(value: object) -> str:
@@ -912,14 +995,42 @@ def _render_model_access(models: pd.DataFrame) -> None:
                 f"详细错误：`{detail}`\n\n"
                 "本地模型与 timm 仍可继续使用。"
             )
-    layers = partition_model_catalog(catalog)
     foundation = catalog.loc[catalog["provider_id"].astype(str).eq("ophbench")]
+    visible_catalog, target_modality = current_task_candidate_catalog(
+        catalog,
+        dataset_id=str(first.get("dataset_id", "")),
+    )
+    layers = partition_model_catalog(visible_catalog)
+    visible_foundation = visible_catalog.loc[
+        visible_catalog["provider_id"].astype(str).eq("ophbench")
+    ]
     summary_cards = [
-        ("基础模型", int(foundation["source_model_id"].nunique()), "OphBench 模型"),
-        ("Checkpoint", len(foundation), "官方或登记权重"),
-        ("已验证基础 Adapter", int(foundation["base_adapter_ready"].astype(bool).sum()), "checkpoint 级"),
-        ("在线任务模型", len(layers["在线可用任务模型"]), "已验证在线 loader"),
-        ("离线回放资产", len(layers["离线预测回放资产"]), "只读取冻结 prediction"),
+        ("模型资产", int(foundation["source_model_id"].nunique()), "OphBench 已登记模型"),
+        (
+            "可交接 Checkpoint",
+            int(foundation["download_status"].astype(str).eq("downloaded").sum()),
+            "已排除 VisionFM legacy 资产",
+        ),
+        (
+            f"当前 {target_modality or '任务'} 候选",
+            len(visible_foundation),
+            "按输入模态与资产类型筛选",
+        ),
+        (
+            "基础加载通过",
+            int(foundation["encoder_smoke_passed"].astype(bool).sum()),
+            "checkpoint 级 smoke",
+        ),
+        (
+            "中转台任务推理可用",
+            int(visible_catalog["task_inference_ready"].astype(bool).sum()),
+            "可输出标准类别概率",
+        ),
+        (
+            "中转台可进入路由池",
+            int(visible_catalog["route_eligible"].astype(bool).sum()),
+            "评测与成本门控后",
+        ),
     ]
     st.markdown(
         '<div class="hub-mini-strip">'
@@ -934,8 +1045,12 @@ def _render_model_access(models: pd.DataFrame) -> None:
     st.markdown(
         f'<div class="hub-band"><strong>数据集：</strong>{html.escape(str(first.get("dataset_display_name", first.get("dataset_id", "—"))))}　'
         f'<strong>来源：</strong>{html.escape(str(first.get("dataset_source", "待核实")))}　'
-        f'<strong>任务模型与候选记录：</strong>{len(catalog)}</div>',
+        f'<strong>任务模型与当前候选记录：</strong>{len(visible_catalog)}</div>',
         unsafe_allow_html=True,
+    )
+    st.caption(
+        "候选视图默认隐藏 OphBench 范围排除的 VisionFM legacy 资产、"
+        "与当前输入模态不匹配的 checkpoint 及生成模型；完整登记仍保留在上游 Registry。"
     )
     if st.button("重新扫描受控目录", icon=":material/refresh:"):
         st.info("扫描由受控 inventory runner 执行；当前页面不会扫描服务器全盘。")
@@ -1019,7 +1134,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
             head_bytes = pd.to_numeric(
                 pd.Series([row.get("task_head_bytes")]), errors="coerce"
             ).iloc[0]
-            detail_cells = [
+            detail_content = _detail_section("当前任务模型", [
                 ("基础模型", human_family(row.get("base_model_id", row.get("model_family")))),
                 ("基础 Checkpoint", f"{ui_value(row.get('base_checkpoint_id'), empty='retfound-cfp')} / CFP"),
                 ("基础权重", f"{_format_file_size(float(base_size) * 1024 * 1024)} · 需要认证"),
@@ -1034,28 +1149,128 @@ def _render_model_access(models: pd.DataFrame) -> None:
                 ("Scout / Expert", "可用" if bool(row.get("route_eligible", False)) else "仅回放可用"),
                 ("Forward-only 成本", f"{float(row.get('forward_cost_ms_per_image')):.3f} ms/图" if str(row.get("cost_status")) == "measured" else "尚未完成统一测量"),
                 ("科研声明", "集成验证，不用于模型优劣比较"),
-            ]
+            ])
         else:
-            detail_cells = [
+            asset_cells = [
                 ("正式名称", ui_value(row.get("model_name"), empty=human_model(selected_id))),
-                ("模态", ui_value(row.get("modalities"))),
-                ("运行架构", _runtime_architecture(row)),
+                ("Checkpoint", ui_value(row.get("checkpoint_name"))),
+                ("模型覆盖模态", ui_value(row.get("model_modalities"))),
+                ("Checkpoint 输入", ui_value(row.get("modalities"))),
+                ("架构", _runtime_architecture(row)),
+                ("资产类型", artifact_type_display(row)),
+                ("权重提供方", ui_value(row.get("checkpoint_provider"))),
                 ("权重访问", source_access_display(row)),
-                ("Adapter 状态", adapter_status_display(row.get("base_adapter_status"))),
-                ("当前任务", "尚未适配" if not bool(row.get("task_inference_ready", False)) else "已适配"),
+                (
+                    "目录登记",
+                    readiness_value(
+                        bool(row.get("catalog_registered", False)),
+                        "已登记",
+                        "未登记",
+                    ),
+                ),
+                (
+                    "官方来源",
+                    readiness_value(
+                        bool(row.get("official_source_verified", False)),
+                        "来源已核验",
+                        "来源待核验",
+                    ),
+                ),
+                ("上游下载记录", upstream_download_display(row.get("download_status"))),
+                ("上游文件核验", integrity_display(row.get("local_integrity_status"))),
+                ("Provider 核验", integrity_display(row.get("provider_verification_status"))),
+                ("许可证", ui_value(row.get("license"), empty="尚未明确")),
+                (
+                    "许可证状态",
+                    verification_evidence_display(row.get("upstream_license_status")),
+                ),
+            ]
+            readiness_cells = [
+                (
+                    "OphAgent 本地权重",
+                    readiness_value(
+                        bool(row.get("local_asset_verified", False)),
+                        "本机已核验",
+                        "本机未核验",
+                    ),
+                ),
+                ("Adapter", adapter_status_display(row.get("base_adapter_status"))),
+                (
+                    "基础加载",
+                    readiness_value(
+                        bool(row.get("encoder_smoke_passed", False)),
+                        "基础加载已通过",
+                        "基础加载待验证",
+                    ),
+                ),
+                (
+                    "特征输出",
+                    readiness_value(
+                        bool(row.get("feature_output_verified", False)),
+                        "特征输出已验证",
+                        "特征输出待验证",
+                    ),
+                ),
+                (
+                    "原生预处理",
+                    verification_evidence_display(
+                        row.get("preprocessing_verification_status")
+                    ),
+                ),
+                (
+                    "当前任务适配",
+                    readiness_value(
+                        bool(row.get("task_adapted", False)),
+                        "任务适配已完成",
+                        "任务适配待完成",
+                    ),
+                ),
                 ("Embedding 维度", _compact_number(row.get("embedding_dim"))),
             ]
-        detail_grid = "".join(
-            '<div class="model-detail-cell">'
-            f'<span>{html.escape(label)}</span><b>{html.escape(str(value))}</b>'
-            "</div>"
-            for label, value in detail_cells
-        )
+            routing_cells = [
+                (
+                    "任务推理",
+                    readiness_value(
+                        bool(row.get("task_inference_ready", False)),
+                        "可输出标准类别概率",
+                        "任务推理暂不可用",
+                    ),
+                ),
+                (
+                    "统一任务评测",
+                    readiness_value(
+                        bool(row.get("unified_evaluation_complete", False)),
+                        "统一评测已完成",
+                        "统一评测待完成",
+                    ),
+                ),
+                (
+                    "推理成本",
+                    readiness_value(
+                        bool(row.get("cost_verified", False)),
+                        "推理成本已核验",
+                        "推理成本待核验",
+                    ),
+                ),
+                (
+                    "路由资格",
+                    readiness_value(
+                        bool(row.get("route_eligible", False)),
+                        "可进入路由池",
+                        "暂不可路由",
+                    ),
+                ),
+            ]
+            detail_content = (
+                _detail_section("A. 模型资产目录", asset_cells)
+                + _detail_section("B. 接入准备度", readiness_cells)
+                + _detail_section("C. 中转台资格", routing_cells)
+            )
         st.markdown(
             f'<div class="detail-panel"><h3>{html.escape(ui_value(row.get("model_name"), empty=human_model(selected_id)))}</h3>'
             f'<span class="badge {css_class}">{html.escape(status)}</span>'
             f'<span class="badge badge-live">{html.escape(role_text)}</span>'
-            f'<div class="model-detail-grid">{detail_grid}</div>'
+            f'{detail_content}'
             f'<div class="case-list-note"><strong>目标任务判断：</strong>{html.escape(str(row.get("target_task_reason", "待核验")))}</div>'
             "</div>",
             unsafe_allow_html=True,
@@ -1066,6 +1281,8 @@ def _render_model_access(models: pd.DataFrame) -> None:
                 links.append(f"[论文]({row.get('paper_url')})")
             if ui_value(row.get("code_url"), empty=""):
                 links.append(f"[官方代码]({row.get('code_url')})")
+            if ui_value(row.get("weight_url"), empty=""):
+                links.append(f"[官方权重入口]({row.get('weight_url')})")
             if links:
                 st.markdown("　".join(links))
         is_candidate = not bool(row.get("task_checkpoint", False)) and not bool(row.get("base_adapter_ready", False))

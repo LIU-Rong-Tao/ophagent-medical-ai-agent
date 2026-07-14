@@ -189,6 +189,9 @@ def inject_model_hub_css() -> None:
         .model-detail-cell{{background:#f8fafc;border:1px solid #e6edf5;border-radius:6px;padding:.55rem .65rem;min-height:64px}}
         .model-detail-cell span{{display:block;color:{COLORS['muted']};font-size:.72rem;font-weight:750;line-height:1.35}}
         .model-detail-cell b{{display:block;color:{COLORS['navy']};font-size:.86rem;line-height:1.35;margin-top:.18rem;word-break:break-word}}
+        .model-readiness-section{{margin-top:.9rem;padding-top:.85rem;border-top:1px solid #e6edf5}}
+        .model-readiness-section:first-of-type{{margin-top:.7rem}}
+        .model-readiness-section h4{{margin:0 0 .45rem;color:{COLORS['navy']};font-size:.86rem;line-height:1.35}}
         .case-list-note{{background:#fff;border:1px solid {COLORS['border']};border-left:4px solid {COLORS['teal']};border-radius:0 6px 6px 0;padding:.65rem .8rem;color:{COLORS['muted']};line-height:1.55;margin:.45rem 0 .9rem}}
         [data-testid="stMetric"]{{background:#fff;border:1px solid {COLORS['border']};padding:.65rem .8rem;border-radius:6px}}
         @media(max-width:760px){{.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip{{grid-template-columns:1fr 1fr}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}}}

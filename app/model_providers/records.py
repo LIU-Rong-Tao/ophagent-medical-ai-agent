@@ -82,6 +82,24 @@ class UnifiedModelRecord:
     sha256: str = ""
     last_verified: str = ""
     checkpoint_verification_status: str = ""
+    artifact_type: str = ""
+    model_modalities: tuple[str, ...] = ()
+    catalog_registered: bool = False
+    official_source_verified: bool = False
+    download_status: str = ""
+    local_integrity_status: str = ""
+    provider_verification_status: str = ""
+    runtime_status: str = ""
+    local_asset_status: str = ""
+    upstream_license_status: str = ""
+    preprocessing_verification_status: str = ""
+    local_asset_verified: bool = False
+    adapter_implemented: bool = False
+    encoder_smoke_passed: bool = False
+    feature_output_verified: bool = False
+    task_adapted: bool = False
+    unified_evaluation_complete: bool = False
+    cost_verified: bool = False
 
     @property
     def runnable(self) -> bool:

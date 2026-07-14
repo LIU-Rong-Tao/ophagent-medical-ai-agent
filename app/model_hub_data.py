@@ -563,6 +563,26 @@ def build_unified_model_catalog(
                 "sha256": record.sha256,
                 "last_verified": record.last_verified,
                 "checkpoint_verification_status": record.checkpoint_verification_status,
+                "artifact_type": record.artifact_type,
+                "model_modalities": "|".join(record.model_modalities),
+                "catalog_registered": record.catalog_registered,
+                "official_source_verified": record.official_source_verified,
+                "download_status": record.download_status,
+                "local_integrity_status": record.local_integrity_status,
+                "provider_verification_status": record.provider_verification_status,
+                "runtime_status": record.runtime_status,
+                "local_asset_status": record.local_asset_status,
+                "upstream_license_status": record.upstream_license_status,
+                "preprocessing_verification_status": (
+                    record.preprocessing_verification_status
+                ),
+                "local_asset_verified": record.local_asset_verified,
+                "adapter_implemented": record.adapter_implemented,
+                "encoder_smoke_passed": record.encoder_smoke_passed,
+                "feature_output_verified": record.feature_output_verified,
+                "task_adapted": record.task_adapted,
+                "unified_evaluation_complete": record.unified_evaluation_complete,
+                "cost_verified": record.cost_verified,
             }
         )
     external = pd.DataFrame(external_rows)

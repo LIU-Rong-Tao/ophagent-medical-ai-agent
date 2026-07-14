@@ -165,14 +165,14 @@ def test_frozen_prediction_is_replay_only_not_online() -> None:
     assert row["route_eligible"] == False  # noqa: E712
 
 
-def test_ui_missing_and_unverified_open_values_are_human_readable():
+def test_ui_missing_and_open_access_values_are_human_readable():
     assert ui_value(float("nan")) == "尚未登记"
     assert ui_value(None) == "尚未登记"
     assert ui_value("missing") == "尚未登记"
     row = pd.Series(
         {"source_access_status": "open", "checkpoint_verification_status": "seed_unverified"}
     )
-    assert source_access_display(row) == "登记为开放，尚未核验"
+    assert source_access_display(row) == "开放获取"
     assert architecture_display("ResNet-50图像编码器 + BioClinicalBERT文本编码器") == (
         "ResNet-50 图像编码器 + BioClinicalBERT 文本编码器"
     )

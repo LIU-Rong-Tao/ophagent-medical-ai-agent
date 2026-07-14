@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402 - project imports follow the explicit repository path bootstrap below.
+
 import csv
 import json
 from pathlib import Path
@@ -36,6 +38,7 @@ from app.model_hub_data import (
 from app.model_hub_scan_jobs import GlobalScanRequest, run_global_scan_request
 import app.model_hub_engineering as engineering_module
 from app.model_hub_engineering import (
+    current_task_candidate_catalog,
     filter_global_model_catalog,
     _job_record_title,
     official_profile_for_model,
@@ -1211,6 +1214,59 @@ def test_filter_global_model_catalog_filters_status_and_family_without_hiding_al
     assert filtered["model_id"].tolist() == ["dr::vit"]
 
 
+def test_current_cfp_candidate_view_hides_legacy_non_cfp_and_generative_assets() -> None:
+    catalog = pd.DataFrame(
+        [
+            {
+                "model_id": "local::task",
+                "provider_id": "local_artifact",
+                "download_status": "",
+                "artifact_type": "task_checkpoint",
+                "modalities": "CFP",
+            },
+            {
+                "model_id": "ophbench::retfound::retfound-cfp",
+                "provider_id": "ophbench",
+                "download_status": "downloaded",
+                "artifact_type": "foundation_encoder",
+                "modalities": "CFP",
+            },
+            {
+                "model_id": "ophbench::retfound::retfound-oct",
+                "provider_id": "ophbench",
+                "download_status": "downloaded",
+                "artifact_type": "foundation_encoder",
+                "modalities": "OCT",
+            },
+            {
+                "model_id": "ophbench::visionfm::visionfm-fundus",
+                "provider_id": "ophbench",
+                "download_status": "excluded_by_project_scope",
+                "artifact_type": "foundation_encoder",
+                "modalities": "CFP",
+            },
+            {
+                "model_id": "ophbench::deretfound::sd-retina",
+                "provider_id": "ophbench",
+                "download_status": "downloaded",
+                "artifact_type": "generative_model",
+                "modalities": "CFP",
+            },
+        ]
+    )
+
+    visible, modality = current_task_candidate_catalog(
+        catalog,
+        dataset_id="APTOS2019",
+    )
+
+    assert modality == "CFP"
+    assert visible["model_id"].tolist() == [
+        "local::task",
+        "ophbench::retfound::retfound-cfp",
+    ]
+
+
 def test_available_routing_policies_match_route_model_count() -> None:
     assert available_routing_policies(1, 1) == ["low_confidence", "low_margin", "high_entropy"]
     assert available_routing_policies(2, 1) == ["disagreement_then_uncertainty", "mean_uncertainty"]
@@ -1264,3 +1320,24 @@ def test_engineering_ui_uses_registered_dataset_selector_instead_of_manual_root(
     assert 'st.text_input(\n            "ImageFolder 数据根目录"' not in engineering
     assert registry["data_root"].fillna("").str.strip().ne("").all()
     assert set(registry["label_structure"]) == {"nominal", "ordinal"}
+
+
+def test_model_access_ui_separates_asset_readiness_and_routing_eligibility() -> None:
+    engineering = (ROOT / "app" / "model_hub_engineering.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "A. 模型资产目录" in engineering
+    assert "B. 接入准备度" in engineering
+    assert "C. 中转台资格" in engineering
+    assert "OphBench 建库时已下载" in engineering
+    assert "OphAgent 本地权重" in engineering
+    assert "基础加载已通过" in engineering
+    assert "任务适配待完成" in engineering
+    assert "任务推理暂不可用" in engineering
+    assert "暂不可路由" in engineering
+    assert "可交接 Checkpoint" in engineering
+    assert "VisionFM legacy 资产" in engineering
+    assert "current_task_candidate_catalog" in engineering
+    assert "详细错误：`{detail}`" in engineering
+    assert "seed_unverified" not in engineering
