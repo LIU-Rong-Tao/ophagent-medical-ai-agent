@@ -10,6 +10,7 @@ PyYAML==6.0.2
 scikit-learn==1.6.1
 tqdm==4.67.1
 streamlit==1.45.1
+xlrd==2.0.1
 
 grad-cam==1.5.5
 opencv-python==4.13.0.92

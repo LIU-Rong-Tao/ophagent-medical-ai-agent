@@ -30,6 +30,7 @@ from app.model_hub_scan_jobs import (
     load_global_scan_results,
     submit_global_scan_job,
 )
+from app.model_hub_result_audit import render_result_table_risk_audit
 from app.model_hub_ui import grade_label, human_model, task_label
 
 
@@ -1221,8 +1222,7 @@ def _render_comparison(task_id: str, display_metrics: list[str]) -> None:
         st.rerun()
 
 
-def render_research_workspace(models: pd.DataFrame) -> None:
-    st.subheader("研究评测")
+def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
     mode = st.segmented_control(
         "评测模式",
         ["性能回放", "成本—性能评测"],
@@ -1282,3 +1282,17 @@ def render_research_workspace(models: pd.DataFrame) -> None:
     st.session_state["model_hub_last_research_cases"] = cases
     st.session_state["model_hub_last_metrics"] = metrics
     st.session_state["model_hub_last_label"] = label
+
+
+def render_research_workspace(models: pd.DataFrame) -> None:
+    st.subheader("研究评测")
+    workspace = st.segmented_control(
+        "研究评测功能",
+        ["路由组合评测", "结果表风险审计"],
+        default="路由组合评测",
+        key="research_workspace_layer",
+    )
+    if workspace == "结果表风险审计":
+        render_result_table_risk_audit()
+    else:
+        _render_routing_composition_workspace(models)
