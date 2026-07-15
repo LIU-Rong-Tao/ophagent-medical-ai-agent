@@ -97,7 +97,7 @@ def _case_dialog(
     *,
     research_mode: bool = False,
 ) -> None:
-    st.markdown(f"### 病例 {html.escape(str(row.get('image_key')))}")
+    st.markdown(f"### {html.escape(str(row.get('_display_case', '病例')))}")
     st.caption(label)
     image_path = Path(str(row.get("image_path", "")))
     image_col, result_col = st.columns([0.95, 1.05], gap="large")
@@ -119,8 +119,8 @@ def _case_dialog(
         )
         st.markdown(
             '<div class="case-result-grid">'
-            f'<div class="case-result-card"><small>路由模型结果</small><b>{html.escape(route_result)}</b><span>默认模型输出</span></div>'
-            f'<div class="case-result-card"><small>专家模型结果</small><b>{html.escape(expert_result)}</b><span>{"已调用专家" if bool(row.get("is_reviewed_by_expert", False)) else "未进入专家调用额度"}</span></div>'
+            f'<div class="case-result-card"><small>路由模型输出</small><b>{html.escape(route_result)}</b><span>默认模型输出</span></div>'
+            f'<div class="case-result-card"><small>专家模型输出</small><b>{html.escape(expert_result)}</b><span>{"已调用专家" if bool(row.get("is_reviewed_by_expert", False)) else "未进入专家调用额度"}</span></div>'
             f'<div class="case-result-card"><small>系统采用输出</small><b>{html.escape(final_result)}</b><span>{html.escape(agreement)}</span></div>'
             '</div>',
             unsafe_allow_html=True,
@@ -175,7 +175,7 @@ def _case_dialog(
 
 
 def render_clinical_workspace(data: dict[str, object]) -> None:
-    st.subheader("病例回放与路由解释")
+    st.markdown("#### 回放视图")
     display_mode = st.segmented_control(
         "展示层",
         ["模型输出回放", "研究审计"],
@@ -194,7 +194,7 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
     metrics = st.session_state.get("model_hub_last_metrics")
     label = st.session_state.get("model_hub_last_label", "当前组合")
     if cases is None or not isinstance(cases, pd.DataFrame) or cases.empty:
-        st.info("请先在“模型工程 → 研究评测”中运行一个组合。")
+        st.info("请先在“研究评测”中运行一个路由组合，再回到本页查看病例调用轨迹。")
         return
     task_id = str(metrics.get("task_id", ""))
     st.markdown(_case_summary_html(cases, research_mode=research_mode), unsafe_allow_html=True)
@@ -210,19 +210,33 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
         unsafe_allow_html=True,
     )
     view = cases.copy()
+    view["_display_case"] = [f"病例 {index + 1:04d}" for index in range(len(view))]
     filter_options = ["已调用专家", "模型分歧"]
     if research_mode and "was_final_correct" in view.columns:
         filter_options.append("与参考标签不一致")
-    filters = st.multiselect(
-        "病例筛选",
-        filter_options,
-        default=[],
-    )
+    filter_col, search_col, size_col = st.columns([1.2, 1.15, 0.65], gap="small")
+    with filter_col:
+        filters = st.multiselect(
+            "病例筛选",
+            filter_options,
+            default=[],
+            placeholder="全部病例",
+        )
     view = filter_case_view(view, filters, research_mode=research_mode)
-    search = st.text_input("病例编号搜索", placeholder="输入完整或部分病例编号")
+    with search_col:
+        search = st.text_input("病例搜索", placeholder="病例 0001 或底层记录键")
     if search.strip():
-        view = view.loc[view["image_key"].astype(str).str.contains(search.strip(), case=False, regex=False)]
-    page_size = int(st.selectbox("每页病例数", [25, 50, 100], index=1, key="clinical_page_size"))
+        display_match = view["_display_case"].astype(str).str.contains(
+            search.strip(), case=False, regex=False
+        )
+        key_match = view["image_key"].astype(str).str.contains(
+            search.strip(), case=False, regex=False
+        )
+        view = view.loc[display_match | key_match]
+    with size_col:
+        page_size = int(
+            st.selectbox("每页病例", [25, 50, 100], index=1, key="clinical_page_size")
+        )
     page_key = "clinical_page"
     current_page = int(st.session_state.get(page_key, 1))
     table, total_pages = paginate_cases(view, current_page, page_size)
@@ -250,8 +264,8 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
     )
     table["系统采用输出"] = table["final_pred_label"].map(lambda value: grade_label(task_id, value))
     table["调用原因"] = table.apply(_plain_reason, axis=1)
-    display_columns = ["image_key", "routing_score", "路由模型结果", "调用专家", "专家结果", "系统采用输出", "调用原因"]
-    rename_columns = {"image_key": "病例编号", "routing_score": "路由分数"}
+    display_columns = ["_display_case", "routing_score", "路由模型结果", "调用专家", "专家结果", "系统采用输出", "调用原因"]
+    rename_columns = {"_display_case": "病例", "routing_score": "路由分数"}
     if research_mode and "true_label" in table.columns:
         table["参考标签"] = table["true_label"].map(lambda value: grade_label(task_id, value))
         table["与参考标签一致"] = table["was_final_correct"].map({True: "是", False: "否"})
@@ -281,10 +295,10 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
     )
     if table.empty:
         return
-    selected = st.selectbox("选择病例", table["image_key"].astype(str).tolist())
+    selected = st.selectbox("选择病例", table["_display_case"].astype(str).tolist())
     if st.button("查看病例路由解释", icon=":material/open_in_new:"):
         _case_dialog(
-            table.loc[table["image_key"].astype(str).eq(selected)].iloc[0],
+            table.loc[table["_display_case"].astype(str).eq(selected)].iloc[0],
             task_id,
             label,
             research_mode=research_mode,

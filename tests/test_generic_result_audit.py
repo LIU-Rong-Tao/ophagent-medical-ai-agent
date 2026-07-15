@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -238,5 +239,21 @@ def test_ui_source_keeps_feature_inside_research_workspace_and_hides_raw_ids() -
     assert '["路由组合评测", "结果表风险审计"]' in research_source
     assert "默认使用会话内序号" in audit_ui_source
     assert "临床后果风险：尚未评估" in audit_ui_source
+    assert "字段自动识别完成，可直接运行审计" in audit_ui_source
+    assert "自动识别不正确时，启用手动调整" in audit_ui_source
     assert "route_eligible" not in audit_ui_source
     assert "report.html" not in audit_ui_source
+
+
+def test_frd6_display_aliases_live_in_config_not_core_audit_logic() -> None:
+    root = Path(__file__).resolve().parents[1]
+    payload = json.loads(
+        (root / "configs/result_audit_class_aliases.json").read_text(encoding="utf-8")
+    )
+    profiles = {profile["profile_id"]: profile for profile in payload["profiles"]}
+    aliases = profiles["frd6_label_names"]["aliases"]
+
+    assert aliases["CSC"] == "中心性浆液性脉络膜视网膜病变"
+    assert aliases["VKH"] == "小柳原田病"
+    core_source = (root / "app/generic_result_audit.py").read_text(encoding="utf-8")
+    assert "中心性浆液性脉络膜视网膜病变" not in core_source

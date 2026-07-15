@@ -976,12 +976,17 @@ def _render_training_wizard(
             else:
                 st.session_state["training_job_flash"] = f"已提交后台任务：{job_id}"
                 st.session_state["pending_engineering_layer"] = "任务运行记录"
+                st.session_state["pending_hub_workspace"] = "任务运行记录"
                 st.rerun()
 
 
-def _render_model_access(models: pd.DataFrame) -> None:
-    st.subheader("模型接入")
-    st.caption("显示受控目录中发现的全部模型；目标任务只决定兼容状态，不会隐藏跨任务模型。")
+def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> None:
+    if page_mode == "tasks":
+        st.markdown("#### 模型接入 · 当前任务模型")
+        st.caption("只显示已有当前任务预测产物或任务推理链的模型；离线回放与在线资格保持分离。")
+    else:
+        st.markdown("#### 模型接入 · 资产目录")
+        st.caption("显示当前输入模态下可交接的模型资产，并逐项核对来源、Adapter 和任务适配状态。")
     task_id = _task_selector(models, "engineering_task")
     recipes = _load_training_recipes()
     catalog = build_unified_model_catalog(models, target_task_id=task_id, recipes=recipes)
@@ -1004,34 +1009,48 @@ def _render_model_access(models: pd.DataFrame) -> None:
     visible_foundation = visible_catalog.loc[
         visible_catalog["provider_id"].astype(str).eq("ophbench")
     ]
-    summary_cards = [
-        ("模型资产", int(foundation["source_model_id"].nunique()), "OphBench 已登记模型"),
-        (
-            "可交接 Checkpoint",
-            int(foundation["download_status"].astype(str).eq("downloaded").sum()),
-            "已排除 VisionFM legacy 资产",
-        ),
-        (
-            f"当前 {target_modality or '任务'} 候选",
-            len(visible_foundation),
-            "按输入模态与资产类型筛选",
-        ),
-        (
-            "基础加载通过",
-            int(foundation["encoder_smoke_passed"].astype(bool).sum()),
-            "checkpoint 级 smoke",
-        ),
-        (
-            "中转台任务推理可用",
-            int(visible_catalog["task_inference_ready"].astype(bool).sum()),
-            "可输出标准类别概率",
-        ),
-        (
-            "中转台可进入路由池",
-            int(visible_catalog["route_eligible"].astype(bool).sum()),
-            "评测与成本门控后",
-        ),
-    ]
+    if page_mode == "tasks":
+        selected_layer = "当前任务模型"
+        layer_catalog = pd.concat(
+            [layers["在线可用任务模型"], layers["离线预测回放资产"]],
+            ignore_index=True,
+        )
+        summary_cards = [
+            ("任务模型", len(layer_catalog), "当前任务预测资产"),
+            ("仅离线回放", len(layers["离线预测回放资产"]), "不能推出在线推理资格"),
+            ("任务推理可用", len(layers["在线可用任务模型"]), "可输出标准类别概率"),
+            (
+                "可进入路由池",
+                int(layer_catalog.get("route_eligible", pd.Series(dtype=bool)).astype(bool).sum()),
+                "统一评测与成本门控后",
+            ),
+        ]
+        status_options = ["direct_inference", "offline_replay"]
+    else:
+        selected_layer = "当前任务候选模型资产"
+        layer_catalog = pd.concat(
+            [layers["可适配基础模型"], layers["候选基础模型库"]],
+            ignore_index=True,
+        )
+        summary_cards = [
+            ("登记模型", int(foundation["source_model_id"].nunique()), "OphBench 模型资产"),
+            (
+                "可交接 Checkpoint",
+                int(foundation["download_status"].astype(str).eq("downloaded").sum()),
+                "不等于本机权重已核验",
+            ),
+            (
+                f"当前 {target_modality or '任务'} 候选",
+                len(visible_foundation),
+                "已按模态与资产类型筛选",
+            ),
+            (
+                "基础加载通过",
+                int(foundation["encoder_smoke_passed"].astype(bool).sum()),
+                "Checkpoint 级 smoke",
+            ),
+        ]
+        status_options = ["adaptable", "blocked"]
     st.markdown(
         '<div class="hub-mini-strip">'
         + "".join(
@@ -1042,10 +1061,15 @@ def _render_model_access(models: pd.DataFrame) -> None:
         + "</div>",
         unsafe_allow_html=True,
     )
+    record_label = (
+        "当前任务模型"
+        if page_mode == "tasks"
+        else "当前目录候选记录（OphBench + 本地）"
+    )
     st.markdown(
         f'<div class="hub-band"><strong>数据集：</strong>{html.escape(str(first.get("dataset_display_name", first.get("dataset_id", "—"))))}　'
         f'<strong>来源：</strong>{html.escape(str(first.get("dataset_source", "待核实")))}　'
-        f'<strong>任务模型与当前候选记录：</strong>{len(visible_catalog)}</div>',
+        f'<strong>{html.escape(record_label)}：</strong>{len(layer_catalog)}</div>',
         unsafe_allow_html=True,
     )
     st.caption(
@@ -1054,18 +1078,9 @@ def _render_model_access(models: pd.DataFrame) -> None:
     )
     if st.button("重新扫描受控目录", icon=":material/refresh:"):
         st.info("扫描由受控 inventory runner 执行；当前页面不会扫描服务器全盘。")
-
-    selected_layer = st.segmented_control(
-        "模型层级",
-        list(layers),
-        default="在线可用任务模型",
-        key="model_access_layer",
-    )
-    layer_catalog = layers[str(selected_layer)]
     if layer_catalog.empty:
         st.info(f"当前没有{selected_layer}。")
         return
-    status_options = ["direct_inference", "offline_replay", "adaptable", "blocked"]
     filter_cols = st.columns(3)
     selected_status = filter_cols[0].selectbox(
         "当前任务状态",
@@ -1101,9 +1116,7 @@ def _render_model_access(models: pd.DataFrame) -> None:
     library_col, detail_col = st.columns([1.15, 0.85], gap="large")
     with library_col:
         st.markdown("#### " + str(selected_layer))
-        group_column = "source_model_id" if selected_layer not in {
-            "在线可用任务模型", "离线预测回放资产"
-        } else "model_family"
+        group_column = "model_family" if page_mode == "tasks" else "source_model_id"
         for family, family_models in visible_models.groupby(group_column, sort=True):
             usable_n = int(family_models["target_task_status"].astype(str).isin({"direct_inference", "offline_replay"}).sum())
             model_name = ui_value(family_models.iloc[0].get("model_name"), empty=human_family(family))
@@ -1348,6 +1361,7 @@ def _render_global_scan_job_records() -> None:
                     if st.button("载入研究评测区", key=f"load_scan_job_{job['job_id']}"):
                         st.session_state[f"model_hub_global_scan_{job.get('task_id')}"] = results
                         st.session_state["pending_engineering_layer"] = "研究评测"
+                        st.session_state["pending_hub_workspace"] = "研究评测"
                         st.rerun()
             log_tail = read_global_scan_log_tail(job["job_dir"])
             if log_tail:
@@ -1593,17 +1607,29 @@ def _render_job_records() -> None:
                         st.rerun()
 
 
-def render_engineering_workspace(data: dict[str, object]) -> None:
+def render_engineering_workspace(
+    data: dict[str, object],
+    *,
+    view: str | None = None,
+) -> None:
     models = data["models"]
     apply_pending_engineering_navigation(st.session_state)
-    view = st.segmented_control(
-        "模型工程",
-        ["模型接入", "研究评测", "任务运行记录"],
-        default="模型接入",
-        key="engineering_layer",
-    )
-    if view == "模型接入":
-        _render_model_access(models)
+    if view is None:
+        legacy_view = st.segmented_control(
+            "模型工程",
+            ["模型接入", "研究评测", "任务运行记录"],
+            default="模型接入",
+            key="engineering_layer",
+        )
+        view = {
+            "模型接入": "模型资产",
+            "研究评测": "研究评测",
+            "任务运行记录": "任务运行记录",
+        }.get(str(legacy_view), "模型资产")
+    if view == "模型资产":
+        _render_model_access(models, page_mode="assets")
+    elif view == "任务模型":
+        _render_model_access(models, page_mode="tasks")
     elif view == "研究评测":
         render_research_workspace(models)
     else:

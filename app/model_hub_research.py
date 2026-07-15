@@ -1285,7 +1285,8 @@ def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
 
 
 def render_research_workspace(models: pd.DataFrame) -> None:
-    st.subheader("研究评测")
+    st.markdown("#### 选择研究评测方式")
+    st.caption("路由组合评测使用已登记任务模型；结果表风险审计消费外部预测产物，两者不会互相授予模型资格。")
     workspace = st.segmented_control(
         "研究评测功能",
         ["路由组合评测", "结果表风险审计"],
@@ -1295,4 +1296,10 @@ def render_research_workspace(models: pd.DataFrame) -> None:
     if workspace == "结果表风险审计":
         render_result_table_risk_audit()
     else:
+        st.markdown(
+            '<div class="hub-band"><strong>评测边界：</strong>'
+            '当前页用于比较受控路由/专家组合、专家调用预算与估算成本；'
+            '公开标签研究审计代理事件不进入在线路由。</div>',
+            unsafe_allow_html=True,
+        )
         _render_routing_composition_workspace(models)
