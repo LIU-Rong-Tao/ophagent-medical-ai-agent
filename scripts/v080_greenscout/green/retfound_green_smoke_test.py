@@ -223,7 +223,7 @@ def main():
     COST_OUT.parent.mkdir(parents=True, exist_ok=True)
     smoke.to_csv(SMOKE_OUT, index=False)
 
-    ok = smoke[smoke["ok"] == True].copy()
+    ok = smoke[smoke["ok"].eq(True)].copy()
 
     cost = pd.DataFrame([{
         "model_name": MODEL_NAME,

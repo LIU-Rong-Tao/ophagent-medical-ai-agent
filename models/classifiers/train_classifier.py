@@ -152,7 +152,7 @@ def main():
 
     data_root = config["data_root"]
     backbone = config["backbone"]
-    num_classes = config["num_classes"]
+    _num_classes = config["num_classes"]
     image_size = config["image_size"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
@@ -180,7 +180,7 @@ def main():
         "label_smoothing",
         0.0,
     )
-    pretrained = config["pretrained"]
+    _pretrained = config["pretrained"]
     seed = config["seed"]
     # =================================================
     # ViT / Foundation-style base LR scaling

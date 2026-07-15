@@ -12,11 +12,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.model_hub_clinical import render_clinical_workspace
-from app.model_hub_data import load_model_hub_outputs
-from app.model_hub_engineering import render_engineering_workspace
-from app.model_hub_ui import inject_model_hub_css, stat_strip, title_block
-from app.ui import inject_app_css
+# The repository-root bootstrap above must run before these imports.
+from app.model_hub_clinical import render_clinical_workspace  # noqa: E402
+from app.model_hub_data import load_model_hub_outputs  # noqa: E402
+from app.model_hub_engineering import render_engineering_workspace  # noqa: E402
+from app.model_hub_ui import inject_model_hub_css, stat_strip, title_block  # noqa: E402
+from app.ui import inject_app_css  # noqa: E402
 
 
 OUTPUT_DIR = PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"

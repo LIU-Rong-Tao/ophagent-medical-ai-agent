@@ -14,17 +14,14 @@ as newly generated adapter predictions.
 from __future__ import annotations
 
 import argparse
-import csv
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
-import html
 import json
 import math
 import os
 from pathlib import Path
 import sys
-import time
 from typing import Any, Iterable
 
 import numpy as np
@@ -37,7 +34,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.routing.model_metadata import normalized_model_metadata
+# The repository-root bootstrap above must run before these imports.
+from scripts.routing.model_metadata import normalized_model_metadata  # noqa: E402
 
 
 TRUTHY = {"1", "true", "yes", "y", "on"}

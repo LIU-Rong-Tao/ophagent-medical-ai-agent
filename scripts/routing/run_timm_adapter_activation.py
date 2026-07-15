@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import html
 import json
 from pathlib import Path
 import sys
@@ -15,19 +14,17 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import numpy as np
-import pandas as pd
+# The repository-root bootstrap above must run before these imports.
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
-from scripts.routing.timm_adapter_runtime import (
-    AdapterBackendResult,
+from scripts.routing.timm_adapter_runtime import (  # noqa: E402
     AdapterStageError,
     Backend,
-    build_input_manifest,
     classification_metrics,
     clean_text,
     execute_timm_backend,
     normalize_prediction_frame,
-    probability_columns,
     resolve_path,
     validate_job,
     write_adapter_outputs,

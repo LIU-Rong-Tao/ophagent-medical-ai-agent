@@ -337,7 +337,6 @@ def summarize_cases(all_cases: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_overlap(all_cases: pd.DataFrame) -> pd.DataFrame:
-    rows = []
     key_cols = ["image_key", "true_label"]
 
     flags = [

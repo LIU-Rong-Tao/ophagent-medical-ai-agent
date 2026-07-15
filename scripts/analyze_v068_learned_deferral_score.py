@@ -22,7 +22,7 @@ v0.6.8 Learned Deferral Score
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -389,7 +389,6 @@ def evaluate_ranked(
 
     ranked = rank_df(g, method).reset_index(drop=True)
     reviewed = ranked.head(k)
-    released = ranked.iloc[k:]
 
     captured = int(reviewed[target].sum())
     residual = int(total - captured)

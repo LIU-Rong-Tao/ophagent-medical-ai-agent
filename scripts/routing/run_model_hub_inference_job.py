@@ -18,8 +18,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.datasets.imagefolder_classification import IMAGE_SUFFIXES, inspect_imagefolder_dataset
-from scripts.routing.timm_adapter_runtime import (
+# The repository-root bootstrap above must run before these imports.
+from models.datasets.imagefolder_classification import IMAGE_SUFFIXES, inspect_imagefolder_dataset  # noqa: E402
+from scripts.routing.timm_adapter_runtime import (  # noqa: E402
     classification_metrics,
     execute_timm_backend,
     summarize_cost_runs,

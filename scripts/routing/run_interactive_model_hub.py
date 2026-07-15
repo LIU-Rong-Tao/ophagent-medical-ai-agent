@@ -12,7 +12,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,8 +23,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.routing.timm_adapter_runtime import normalize_prediction_frame
-from scripts.routing.model_metadata import normalized_model_metadata
+# The repository-root bootstrap above must run before these imports.
+from scripts.routing.timm_adapter_runtime import normalize_prediction_frame  # noqa: E402
+from scripts.routing.model_metadata import normalized_model_metadata  # noqa: E402
 
 
 VALID_STAGES = {"model_hub", "pairing", "report", "all"}

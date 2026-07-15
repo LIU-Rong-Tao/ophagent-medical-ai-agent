@@ -14,8 +14,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.model_hub_data import load_model_hub_outputs
-from app.model_hub_scan_jobs import GlobalScanRequest, run_global_scan_request, update_global_scan_status
+# The repository-root bootstrap above must run before these imports.
+from app.model_hub_data import load_model_hub_outputs  # noqa: E402
+from app.model_hub_scan_jobs import GlobalScanRequest, run_global_scan_request, update_global_scan_status  # noqa: E402
 
 
 def main() -> int:

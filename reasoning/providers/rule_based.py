@@ -40,7 +40,7 @@ class RuleBasedReportProvider(BaseReportProvider):
         if case_findings.cam_output_path:
             lines.append("")
             lines.append(
-                f"系统已生成 CAM 热力图，用于展示模型在分类过程中较关注的图像区域。"
+                "系统已生成 CAM 热力图，用于展示模型在分类过程中较关注的图像区域。"
             )
             lines.append(
                 f"CAM 输出路径：{case_findings.cam_output_path}"

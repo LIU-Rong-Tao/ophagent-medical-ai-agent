@@ -31,7 +31,8 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from reasoning.llm_report.renderer import render_guarded_report
+# The repository-root bootstrap above must run before these imports.
+from reasoning.llm_report.renderer import render_guarded_report  # noqa: E402
 
 
 def read_manifest(path: Path) -> list[dict[str, str]]:

@@ -12,8 +12,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.ui import inject_app_css
-from app.views import (
+# The repository-root bootstrap above must run before these imports.
+from app.ui import inject_app_css  # noqa: E402
+from app.views import (  # noqa: E402
     batch_audit,
     external_evidence,
     overview,

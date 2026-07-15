@@ -11,8 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.model_hub_data import attach_retrospective_evidence, build_online_case_view
-from app.model_hub_clinical import filter_case_view, paginate_cases
+# The repository-root bootstrap above must run before these imports.
+from app.model_hub_data import attach_retrospective_evidence, build_online_case_view  # noqa: E402
+from app.model_hub_clinical import filter_case_view, paginate_cases  # noqa: E402
 
 
 def fixture_detail() -> pd.DataFrame:

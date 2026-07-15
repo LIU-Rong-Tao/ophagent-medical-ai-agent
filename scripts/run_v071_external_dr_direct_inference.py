@@ -13,7 +13,6 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from PIL import Image
 
@@ -334,7 +333,7 @@ def main() -> None:
     df = inventory[
         (inventory["dataset"].isin(["IDRiD_data", "MESSIDOR2"]))
         & (inventory["split"] == "test")
-        & (inventory["image_readable"] == True)
+        & inventory["image_readable"].eq(True)
     ].copy()
 
     if df.empty:

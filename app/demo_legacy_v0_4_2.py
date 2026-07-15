@@ -14,15 +14,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import pandas as pd
-import streamlit as st
-import timm
-import torch
-import yaml
-from PIL import Image
+# The repository-root bootstrap above must run before these imports.
+import pandas as pd  # noqa: E402
+import streamlit as st  # noqa: E402
+import timm  # noqa: E402
+import torch  # noqa: E402
+import yaml  # noqa: E402
+from PIL import Image  # noqa: E402
 
-from agent import AgentInput, run_agent
-from reasoning.report_generator import generate_report
+from agent import AgentInput, run_agent  # noqa: E402
+from reasoning.report_generator import generate_report  # noqa: E402
 
 
 st.set_page_config(

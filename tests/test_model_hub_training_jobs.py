@@ -14,10 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from models.datasets.imagefolder_classification import inspect_imagefolder_dataset, should_pin_memory
-import app.training_jobs as training_jobs_module
-from app.model_hub_inference_jobs import checkpoint_inference_capability, checkpoint_loader_spec
-from scripts.training.train_timm_classifier import (
+# The repository-root bootstrap above must run before these imports.
+from models.datasets.imagefolder_classification import inspect_imagefolder_dataset, should_pin_memory  # noqa: E402
+import app.training_jobs as training_jobs_module  # noqa: E402
+from app.model_hub_inference_jobs import checkpoint_inference_capability, checkpoint_loader_spec  # noqa: E402
+from scripts.training.train_timm_classifier import (  # noqa: E402
     TrainingConfig,
     build_optimizer,
     build_scheduler,
@@ -29,8 +30,8 @@ from scripts.training.train_timm_classifier import (
     publish_training_run,
     summarize_forward_cost,
 )
-from scripts.routing.timm_adapter_runtime import timm_model_create_kwargs
-from app.training_jobs import (
+from scripts.routing.timm_adapter_runtime import timm_model_create_kwargs  # noqa: E402
+from app.training_jobs import (  # noqa: E402
     TrainingRequest,
     archive_training_job,
     build_adaptation_request,
@@ -47,9 +48,9 @@ from app.training_jobs import (
     update_job_status,
     validate_training_request,
 )
-from scripts.training.run_training_job import execute_job
-from app.training_config import build_training_draft, compile_effective_config, dump_yaml, load_yaml
-from app.training_config import discover_training_recipes
+from scripts.training.run_training_job import execute_job  # noqa: E402
+from app.training_config import build_training_draft, compile_effective_config, dump_yaml, load_yaml  # noqa: E402
+from app.training_config import discover_training_recipes  # noqa: E402
 
 
 def create_imagefolder(root: Path, classes: tuple[str, ...] = ("class_a", "class_b")) -> None:

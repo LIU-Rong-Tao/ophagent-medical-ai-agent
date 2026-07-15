@@ -16,8 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import numpy as np
-import pandas as pd
+# The repository-root bootstrap above must run before these imports.
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
 
 SUPPORTED_ADAPTERS = {

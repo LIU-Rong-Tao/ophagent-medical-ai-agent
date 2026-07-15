@@ -37,8 +37,9 @@ from torchvision import transforms
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.classifiers.builder import build_model
-from reasoning.llm_report.renderer import render_guarded_report
+# The repository-root bootstrap above must run before these imports.
+from models.classifiers.builder import build_model  # noqa: E402
+from reasoning.llm_report.renderer import render_guarded_report  # noqa: E402
 
 
 CLASS_DISPLAY_NAMES = {

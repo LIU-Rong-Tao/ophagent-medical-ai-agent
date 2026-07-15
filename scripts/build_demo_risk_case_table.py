@@ -25,12 +25,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-import torch
-import yaml
-from PIL import Image
+# The repository-root bootstrap above must run before these imports.
+import torch  # noqa: E402
+import yaml  # noqa: E402
+from PIL import Image  # noqa: E402
 
-from models.classifiers.builder import build_model
-from torchvision import transforms
+from models.classifiers.builder import build_model  # noqa: E402
+from torchvision import transforms  # noqa: E402
 
 
 FOLDER_TO_LABEL = {

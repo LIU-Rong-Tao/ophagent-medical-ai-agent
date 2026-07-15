@@ -23,8 +23,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from findings.finding_generator import generate_case_findings
-from reasoning.report_generator import generate_report
+# The repository-root bootstrap above must run before these imports.
+from findings.finding_generator import generate_case_findings  # noqa: E402
+from reasoning.report_generator import generate_report  # noqa: E402
 
 
 RAW_CLASS_TO_LABEL = {

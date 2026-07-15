@@ -22,7 +22,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from reasoning.llm_report.provider import get_report_provider
+# The repository-root bootstrap above must run before these imports.
+from reasoning.llm_report.provider import get_report_provider  # noqa: E402
 
 
 def main() -> None:

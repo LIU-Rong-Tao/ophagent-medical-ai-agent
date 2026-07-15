@@ -9,7 +9,6 @@ declared by registries and publishes unified tables.
 from __future__ import annotations
 
 import argparse
-import csv
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib

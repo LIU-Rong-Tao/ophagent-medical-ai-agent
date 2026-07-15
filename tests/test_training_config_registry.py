@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.training_config import (
+# The repository-root bootstrap above must run before these imports.
+from app.training_config import (  # noqa: E402
     TrainingConfigError,
     build_official_trial_recipe,
     build_training_draft,
