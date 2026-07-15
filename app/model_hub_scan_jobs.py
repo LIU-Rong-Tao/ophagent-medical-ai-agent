@@ -19,7 +19,9 @@ from app.training_jobs import prepare_training_subprocess_environment
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MODEL_HUB_OUTPUT_DIR = PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"
+LEGACY_CONTROLLED_OUTPUT_DIR = (
+    PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"
+)
 SCAN_JOBS_ROOT = PROJECT_ROOT / "experiments/model_hub/runtime/global_scan_jobs"
 SCAN_RUNS_ROOT = PROJECT_ROOT / "experiments/model_hub/runs/global_scan"
 RUNNER = PROJECT_ROOT / "scripts/routing/run_model_hub_global_scan_job.py"
@@ -37,7 +39,7 @@ class GlobalScanRequest:
     primary_metric: str
     top_n: int
     output_dir: str
-    model_hub_output_dir: str = str(MODEL_HUB_OUTPUT_DIR)
+    model_hub_output_dir: str = str(LEGACY_CONTROLLED_OUTPUT_DIR)
     model_hub_root: str = str(PROJECT_ROOT / "experiments/model_hub")
     display_metrics: list[str] = field(default_factory=list)
 

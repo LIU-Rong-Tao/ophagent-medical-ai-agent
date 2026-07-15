@@ -253,6 +253,7 @@ def test_frd6_display_aliases_live_in_config_not_core_audit_logic() -> None:
     profiles = {profile["profile_id"]: profile for profile in payload["profiles"]}
     aliases = profiles["frd6_label_names"]["aliases"]
 
+    assert "frd6_class_ids" not in profiles
     assert aliases["CSC"] == "中心性浆液性脉络膜视网膜病变"
     assert aliases["VKH"] == "小柳原田病"
     core_source = (root / "app/generic_result_audit.py").read_text(encoding="utf-8")

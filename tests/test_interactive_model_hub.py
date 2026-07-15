@@ -480,9 +480,18 @@ def test_canonical_adapted_model_names_have_readable_labels() -> None:
 
 
 def test_checkpoint_generated_prediction_is_marked_as_verified_online_chain() -> None:
-    row = pd.Series({"prediction_source": "checkpoint_generated", "adapter_status": "completed"})
+    row = pd.Series(
+        {
+            "prediction_source": "checkpoint_generated",
+            "adapter_status": "completed",
+            "task_inference_ready": True,
+        }
+    )
 
     assert source_status(row) == ("在线推理链已验证", "badge-live")
+
+    row["task_inference_ready"] = False
+    assert source_status(row) == ("暂无可用预测结果", "badge-wait")
 
 
 def test_model_hub_snapshot_publishes_checkpoint_loading_metadata() -> None:
@@ -1053,6 +1062,8 @@ def test_ui_uses_routing_rank_wording_and_safety_proxy_disclaimer() -> None:
     assert "模型工程" in demo
     assert "病例回放与路由解释" in demo
     assert "临床演示" not in demo
+    assert "v0.8.6 产物不完整" not in demo
+    assert "受控路由基线产物不完整" in demo
     assert "模型接入" in engineering
     assert "研究评测" in engineering
     assert "路由候选" in engineering

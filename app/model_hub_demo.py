@@ -1,4 +1,4 @@
-"""OphAgent v0.8.6 模型中转台入口。"""
+"""OphAgent 模型中转台入口。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,9 @@ from app.model_hub_ui import (  # noqa: E402
 from app.ui import inject_app_css  # noqa: E402
 
 
-OUTPUT_DIR = PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"
+LEGACY_CONTROLLED_OUTPUT_DIR = (
+    PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"
+)
 
 
 def _set_workspace(workspace: str) -> None:
@@ -38,7 +40,7 @@ def _render_overview(data: dict[str, object]) -> None:
     models = data["models"]
     pairings = data["pairings"]
     ready = models["compatibility_status"].astype(str).eq("ready_for_pairing")
-    online = models["adapter_status"].astype(str).eq("completed")
+    online = models["task_inference_ready"].fillna(False).astype(bool)
     completed_pairings = pairings["status"].astype(str).eq("completed")
     values = [
         ("可回放任务模型", int(ready.sum()), "具有当前任务冻结预测或在线输出"),
@@ -107,9 +109,9 @@ def main() -> None:
     workspace = sidebar_navigation()
     context = "病例回放与路由解释" if workspace == "病例回放" else "模型工程 · v0.8.9"
     page_header(workspace, context=context)
-    data = load_model_hub_outputs(OUTPUT_DIR)
+    data = load_model_hub_outputs(LEGACY_CONTROLLED_OUTPUT_DIR)
     if data["missing"]:
-        st.error("v0.8.6 产物不完整：" + "、".join(data["missing"]))
+        st.error("受控路由基线产物不完整：" + "、".join(data["missing"]))
         st.code(
             "python scripts/routing/run_controlled_protocol.py --config "
             "experiments/v0_8_6_interactive_model_hub/configs/controlled_runner.yaml --resume"

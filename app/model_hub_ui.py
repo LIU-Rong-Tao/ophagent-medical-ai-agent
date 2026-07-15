@@ -437,7 +437,7 @@ def grade_label(task_id: str, value: Any) -> str:
 def source_status(row: pd.Series) -> tuple[str, str]:
     if str(row.get("prediction_source")) in {"adapter", "checkpoint_generated"} and str(
         row.get("adapter_status")
-    ) == "completed":
+    ) == "completed" and bool(row.get("task_inference_ready", False)):
         return "在线推理链已验证", "badge-live"
     if str(row.get("prediction_source")) == "legacy":
         return "仅离线结果可回放", "badge-replay"
@@ -448,7 +448,10 @@ def stat_strip(models: pd.DataFrame, pairings: pd.DataFrame) -> None:
     ready = models["compatibility_status"].astype(str).eq("ready_for_pairing")
     values = [
         ("可回放模型", int(ready.sum())),
-        ("在线链已验证", int(models["adapter_status"].astype(str).eq("completed").sum())),
+        (
+            "在线链已验证",
+            int(models["task_inference_ready"].fillna(False).astype(bool).sum()),
+        ),
         ("受控组合", pairings.loc[pairings["status"].astype(str).eq("completed"), "pairing_id"].nunique()),
         ("已登记任务", models["task_id"].nunique()),
     ]
