@@ -1,0 +1,42 @@
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f4f7f8;
+  --surface-3: #e8edef;
+  --text: #182535;
+  --muted: #627080;
+  --muted-2: #84909d;
+  --line: #d3dbe2;
+  --line-strong: #b6c1cc;
+  --primary: #0e766e;
+  --primary-strong: #095e58;
+  --primary-soft: #e3f2ef;
+  --blue: #416c99;
+  --blue-soft: #e9eff5;
+  --amber: #926200;
+  --amber-soft: #fff3d8;
+  --danger: #9d3942;
+  --danger-soft: #fae9eb;
+  --success: #29764f;
+  --success-soft: #e4f2e9;
+  --sidebar: #ffffff;
+  --sidebar-text: #182535;
+  --sidebar-muted: #667486;
+  --sidebar-active: #e3f2ef;
+  --radius: 5px;
+  --shadow: none;
+  --content-max: 1500px;
+}
+.app-shell { grid-template-columns: 238px minmax(0, 1fr); }
+.nav-link.active { box-shadow: inset 3px 0 0 var(--primary); }
+.page { padding-top: 24px; }
+.boundary { border-radius: 4px; }
+.kpi-grid { gap: 8px; }
+.kpi { min-height: 90px; border-radius: 4px; box-shadow: none; }
+.table-wrap { border-radius: 3px; box-shadow: none; }
+th { background: #e9eef1; color: #425263; }
+td { padding-block: 9px; }
+.status, .btn { border-radius: 3px; }
+.chart { background: #fbfbf8; border-radius: 4px; }
+.chart-title, .section-head h2 { font-family: Georgia, "Noto Serif SC", serif; font-weight: 650; }
+.chart-callout, .method-note { background: #edf1f0; color: #35534f; border-left-color: var(--primary); }

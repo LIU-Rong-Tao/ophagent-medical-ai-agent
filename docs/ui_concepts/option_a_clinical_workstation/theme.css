@@ -1,0 +1,59 @@
+:root {
+  --bg: #edf1f4;
+  --surface: #ffffff;
+  --surface-2: #f1f4f6;
+  --surface-3: #e2e8ed;
+  --text: #122033;
+  --muted: #5d6b7c;
+  --muted-2: #778395;
+  --line: #cbd3dc;
+  --line-strong: #aebac7;
+  --primary: #174f78;
+  --primary-strong: #123d5d;
+  --primary-soft: #e2edf4;
+  --blue: #305f8a;
+  --blue-soft: #e5edf4;
+  --amber: #8a5b00;
+  --amber-soft: #fff3d3;
+  --danger: #9b3038;
+  --danger-soft: #f9e7e9;
+  --success: #2d704c;
+  --success-soft: #e4f1e9;
+  --sidebar: #172536;
+  --sidebar-text: #f4f7fa;
+  --sidebar-muted: #a9b6c4;
+  --sidebar-active: #243c52;
+  --radius: 3px;
+  --shadow: none;
+  --content-max: 1540px;
+}
+.app-shell { grid-template-columns: 218px minmax(0, 1fr); }
+.sidebar { border-right-color: #32465a; }
+.brand { border-bottom-color: #32465a; min-height: 68px; padding: 11px 14px; }
+.brand-mark { width: 38px; height: 38px; }
+.nav { padding: 10px 8px; }
+.nav-group { margin-bottom: 12px; }
+.nav-link { min-height: 37px; padding: 7px 9px; border-radius: 2px; }
+.nav-link:hover { background: #203449; }
+.nav-link.active { color: #ffffff; border-left: 3px solid #70c4bc; background: var(--sidebar-active); }
+.nav-index { color: #7f90a2; }
+.sidebar-foot { border-top-color: #32465a; }
+.topbar { height: 52px; padding-inline: 20px; background: #ffffff; }
+.page { padding: 20px 22px 40px; }
+.page-head { margin-bottom: 16px; }
+h1 { font-size: 23px; }
+.kpi-grid { gap: 0; border: 1px solid var(--line); background: var(--surface); }
+.kpi { min-height: 82px; border: 0; border-right: 1px solid var(--line); border-radius: 0; }
+.kpi:last-child { border-right: 0; }
+.kpi.danger, .kpi.attention { border-top: 0; border-left: 3px solid var(--danger); }
+.kpi.attention { border-left-color: var(--amber); }
+.kpi-value { font-size: 22px; }
+.section { margin-bottom: 19px; }
+.panel, .table-wrap, .toolbar, .workflow, .readiness-grid, .mode-grid, .chart, .check-list, .risk-summary { border-radius: 2px; }
+th { background: #e8edf1; color: #435264; }
+td { padding-block: 8px; }
+.status { border-radius: 2px; }
+.btn { border-radius: 2px; }
+.chart { padding-top: 15px; }
+.boundary { border-radius: 0; }
+@media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .kpi:nth-child(3) { border-right: 0; } .kpi:nth-child(-n+3) { border-bottom: 1px solid var(--line); } }

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OphAgent UI 方案同页对比</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#eef2f5;color:#172235;font:14px/1.5 "Microsoft YaHei",sans-serif;letter-spacing:0}.sheet{width:1800px;padding:22px 30px 26px}.head{display:flex;align-items:end;justify-content:space-between;margin-bottom:14px}.head h1{font-size:24px;margin:0}.head p{margin:4px 0 0;color:#667387}.badge{padding:5px 9px;border:1px solid #ccd5df;background:#fff;color:#59687b;border-radius:4px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.option{background:#fff;border:1px solid #ccd5df;border-radius:5px;overflow:hidden}.label{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid #dbe2ea}.label strong{font-size:15px}.label span{color:#667387;font-size:12px}.shot{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top;background:#f6f8fa}
+</style></head><body><main class="sheet"><header class="head"><div><h1 id="title">同页面视觉方案对比</h1><p>同一套虚构数据、同一 1440×900 视口；用于比较导航、密度与层级，不代表生产实现。</p></div><span class="badge">A / B / C</span></header><section class="grid" id="grid"></section></main>
+<script>
+const pages={home:'模型中转台首页',assets:'模型资产目录',readiness:'任务模型与接入状态',research:'研究评测主页',import:'结果表上传与字段映射',overview:'风险审计总体表现',risk:'错误风险分析',cases:'病例清单',leakage:'数据与泄漏检查'};
+const key=new URLSearchParams(location.search).get('page')||'home';document.getElementById('title').textContent=`${pages[key]} · 同页面对比`;
+const options=[['方案 A','临床工作站','option_a_clinical_workstation'],['方案 B','研究分析台','option_b_research_console'],['方案 C','现代模型中转台','option_c_modern_model_hub']];
+document.getElementById('grid').innerHTML=options.map(([name,desc,folder])=>`<article class="option"><div class="label"><strong>${name}</strong><span>${desc}</span></div><img class="shot" alt="${name} ${pages[key]}" src="../${folder}/screenshots/${key}.png"></article>`).join('');
+</script></body></html>
