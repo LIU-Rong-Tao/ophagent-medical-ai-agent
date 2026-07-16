@@ -46,7 +46,7 @@ HUB_WORKSPACES = {
         "icon": ":material/history:",
         "group": "operations",
         "title": "任务运行记录",
-        "subtitle": "查看后台训练与全局扫描任务的状态、曲线、日志和本地产物。",
+        "subtitle": "查看后台训练、全局扫描与模型资产 Smoke 的状态、日志和本地产物。",
     },
 }
 

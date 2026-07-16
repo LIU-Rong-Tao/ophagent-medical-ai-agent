@@ -1,0 +1,42 @@
+model_id: eyeclip
+checkpoint_id: eyeclip-default
+artifact_type: vision_language_model
+modalities: [CFP, OCT, FFA, ICGA, FAF, ultrasound, external_eye, slit_lamp, specular_microscopy, corneal_photography, RetCam, text]
+official_source:
+  repository: https://github.com/Michi-3000/EyeCLIP
+  commit_or_tag: 2fcf6034552e6006c94bd84cbdc6f4a5897b29c0
+  paper: https://www.nature.com/articles/s41746-025-01772-2
+  weight_page: official Google Drive link in OphBench
+model:
+  constructor: eyeclip.model.build_model
+  source_file: eyeclip/model.py
+  architecture: ViT-B/32 CLIP
+checkpoint:
+  filename: eyeclip.pt
+  container: torch checkpoint
+  state_dict_key: model_state_dict
+  strict_load: true
+  key_transform: build_model contract
+preprocessing:
+  input_size: [224, 224]
+  resize: bicubic
+  crop: center
+  normalization: CLIP mean/std
+  tokenizer: eyeclip.tokenize
+  prompt_template: free text
+forward:
+  method: encode_image + encode_text
+  input_contract: RGB image + tokenized text
+  output_node: projected image/text embeddings
+  expected_shape: image=[1,512]; text=[1,512]
+  output_semantics: aligned image and text embeddings
+downstream:
+  official_protocol_status: partially_verified
+  script: official repository examples
+  config: not_provided
+evidence:
+  verification_status: verified
+  source_path: eyeclip/model.py; eyeclip/clip.py
+  source_symbol_or_config_key: build_model; _transform; tokenize
+  conflicts: none
+  unresolved_items: dataset-specific downstream recipes are incomplete

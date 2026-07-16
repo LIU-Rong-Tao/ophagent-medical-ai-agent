@@ -1,0 +1,11 @@
+model_id: preti
+checkpoint_id: preti-default
+artifact_type: foundation_encoder
+modalities: [CFP]
+official_source: {repository: https://github.com/MICV-yonsei/PRETI, commit_or_tag: 2ac2b0f123d69151877ebd44a33edfb026cdac45, paper: https://link.springer.com/chapter/10.1007/978-3-032-04927-8_50, weight_page: official Google Drive link in OphBench}
+model: {constructor: "models.PRETI_model.SIAM_MODELS[vitb]", source_file: models/PRETI_model.py, architecture: ViT-B paired fundus pretraining, artifact_type: foundation_encoder}
+checkpoint: {filename: PRETI.pth, container: torch checkpoint, state_dict_key: model, strict_load: false, key_transform: ignore unused perceptual training-loss module}
+preprocessing: {input_size: [224, 224], resize: official transform, crop: official transform, normalization: official transform, tokenizer: not_applicable, prompt_template: not_applicable}
+forward: {method: forward_encoder, input_contract: CFP tensor, output_node: encoder feature, expected_shape: "[1,768]", output_semantics: visual embedding}
+downstream: {official_protocol_status: partially_verified, script: repository downstream scripts, config: not_provided}
+evidence: {verification_status: verified, source_path: models/PRETI_model.py, source_symbol_or_config_key: "SIAM_MODELS[vitb]", conflicts: unused VGG loss module requires isolation, unresolved_items: image-only downstream recipe is incomplete}

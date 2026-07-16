@@ -1,0 +1,11 @@
+model_id: retfound-green
+checkpoint_id: retfound-green-v0.1
+artifact_type: foundation_encoder
+modalities: [CFP]
+official_source: {repository: https://github.com/justinengelmann/RETFound_Green, commit_or_tag: 767c77ecc6ad2656ace051b17bf22d2b47485c6c, paper: https://www.nature.com/articles/s41467-025-62123-z, weight_page: https://github.com/justinengelmann/RETFound_Green/releases/tag/v0.1}
+model: {constructor: timm.create_model, source_file: README and release contract, architecture: vit_small_patch14_reg4_dinov2, artifact_type: foundation_encoder}
+checkpoint: {filename: model.safetensors, container: safetensors checkpoint, state_dict_key: root, strict_load: timm checkpoint loader, key_transform: none}
+preprocessing: {input_size: [392, 392], resize: antialiased_direct_resize, crop: none, normalization: mean=0.5 std=0.5, tokenizer: not_applicable, prompt_template: not_applicable}
+forward: {method: timm model forward with global_pool=avg, input_contract: RGB CFP tensor, output_node: pooled embedding, expected_shape: "[1,384]", output_semantics: visual embedding}
+downstream: {official_protocol_status: partially_verified, script: repository examples, config: not_provided}
+evidence: {verification_status: verified, source_path: README and release metadata, source_symbol_or_config_key: vit_small_patch14_reg4_dinov2, conflicts: none, unresolved_items: unified downstream recipe pending}

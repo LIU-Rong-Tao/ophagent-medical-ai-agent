@@ -107,7 +107,7 @@ def main() -> None:
     inject_app_css()
     inject_model_hub_css()
     workspace = sidebar_navigation()
-    context = "病例回放与路由解释" if workspace == "病例回放" else "模型工程 · v0.8.9"
+    context = "病例回放与路由解释" if workspace == "病例回放" else "模型工程 · v0.8.10"
     page_header(workspace, context=context)
     data = load_model_hub_outputs(LEGACY_CONTROLLED_OUTPUT_DIR)
     if data["missing"]:

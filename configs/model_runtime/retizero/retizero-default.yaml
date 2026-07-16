@@ -1,0 +1,11 @@
+model_id: retizero
+checkpoint_id: retizero-default
+artifact_type: vision_language_model
+modalities: [CFP, text]
+official_source: {repository: https://github.com/LooKing9218/RetiZero, commit_or_tag: d72aadc692fbe33b182c79711bccb397edffb419, paper: https://www.nature.com/articles/s41467-025-60577-9, weight_page: official Google Drive link in OphBench}
+model: {constructor: zeroshot.CLIPRModel, source_file: Zeroshot.py; zeroshot/modeling/model.py, architecture: LoRA ViT-L/16 + Bio_ClinicalBERT, artifact_type: vision_language_model}
+checkpoint: {filename: RetiZero.pth, container: torch state dictionary, state_dict_key: root, strict_load: true, key_transform: none}
+preprocessing: {input_size: [224, 224], resize: direct_resize, crop: none, normalization: ImageNet mean/std, tokenizer: emilyalsentzer/Bio_ClinicalBERT, prompt_template: "A fundus photograph of [CLS]"}
+forward: {method: CLIPRModel.forward, input_contract: PIL CFP image + disease text list, output_node: probabilities and logits, expected_shape: "[number_of_prompts]", output_semantics: zero-shot disease similarities}
+downstream: {official_protocol_status: partially_verified, script: Zeroshot.py; ImageRetrieval.py; Finetuning.py, config: source constants and scripts}
+evidence: {verification_status: verified, source_path: Zeroshot.py; zeroshot/modeling/model.py, source_symbol_or_config_key: CLIPRModel R=8, conflicts: official environment pins older torch and transformers, unresolved_items: dataset split details need separate audit}

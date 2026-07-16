@@ -1,0 +1,11 @@
+model_id: ret-clip
+checkpoint_id: ret-clip-default
+artifact_type: vision_language_model
+modalities: [CFP, text]
+official_source: {repository: https://github.com/sStonemason/RET-CLIP, commit_or_tag: 1ddb9a1d331eba9e0a2675f3273e7cbcea0914bd, paper: https://doi.org/10.1007/978-3-031-72390-2_66, weight_page: official Google Drive link in OphBench}
+model: {constructor: RET_CLIP.clip.model.CLIP, source_file: RET_CLIP/clip/model.py, architecture: ViT-B/16 + RoBERTa-wwm-ext-base-chinese, artifact_type: vision_language_model}
+checkpoint: {filename: ret-clip.pt, container: torch state dictionary, state_dict_key: root, strict_load: true, key_transform: remove module. prefix and omit bert.pooler}
+preprocessing: {input_size: [224, 224], resize: bicubic, crop: none, normalization: CLIP mean/std, tokenizer: RET_CLIP.clip.tokenize, prompt_template: free Chinese clinical text}
+forward: {method: CLIP.forward, input_contract: left/right CFP tensors + tokenized text, output_node: image/text embeddings and logit scales, expected_shape: "embeddings=[1,512]", output_semantics: paired retinal image-text representation}
+downstream: {official_protocol_status: partially_verified, script: RET_CLIP/eval and training scripts, config: RET-CLIP_example.sh}
+evidence: {verification_status: verified, source_path: RET_CLIP/clip/utils.py; RET_CLIP/eval/extract_features.py, source_symbol_or_config_key: ViT-B-16 and RoBERTa-wwm-ext-base-chinese, conflicts: FP32 conversion order required by official script, unresolved_items: dataset-specific downstream split protocols are incomplete}

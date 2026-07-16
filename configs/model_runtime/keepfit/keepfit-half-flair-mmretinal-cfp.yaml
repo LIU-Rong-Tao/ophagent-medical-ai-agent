@@ -1,0 +1,11 @@
+model_id: keepfit
+checkpoint_id: keepfit-half-flair-mmretinal-cfp
+artifact_type: ablation_checkpoint
+modalities: [CFP, text]
+official_source: {repository: https://github.com/lxirich/MM-Retinal, commit_or_tag: dbbb1f05b9d27278b01e15e5f837b44b22d32cee, paper: https://link.springer.com/chapter/10.1007/978-3-031-72378-0_67, weight_page: official Google Drive link in OphBench}
+model: {constructor: keepfit.modeling.model.KeepFITModel, source_file: KeepFIT/KeepFIT-CFP/keepfit/modeling/model.py, architecture: ResNet-50 + Bio_ClinicalBERT, artifact_type: ablation_checkpoint}
+checkpoint: {filename: "KeepFIT (50%flair+MM).pth", container: torch state dictionary, state_dict_key: root, strict_load: true, key_transform: none}
+preprocessing: {input_size: [512, 512], resize: preserve_aspect_then_pad_canvas, crop: none, normalization: "scale_to_[0,1]", tokenizer: emilyalsentzer/Bio_ClinicalBERT, prompt_template: "A fundus photograph of [CLS]"}
+forward: {method: KeepFITModel.forward, input_contract: CFP image array + category text list, output_node: probabilities and logits, expected_shape: "[1,number_of_prompts]", output_semantics: ablation zero-shot similarities}
+downstream: {official_protocol_status: partially_verified, script: repository task scripts, config: not_provided}
+evidence: {verification_status: verified, source_path: KeepFIT/KeepFIT-CFP/keepfit/modeling/model.py, source_symbol_or_config_key: KeepFITModel, conflicts: none, unresolved_items: must remain separated from the default CFP checkpoint}

@@ -1,0 +1,42 @@
+model_id: fmue
+checkpoint_id: fmue-default
+artifact_type: task_checkpoint
+modalities: [OCT]
+official_source:
+  repository: https://github.com/yuanyuanpeng0129/FMUE
+  commit_or_tag: b07ba8a797d6440826f3870f73faf567963ffc15
+  paper: https://doi.org/10.1016/j.xcrm.2024.101876
+  weight_page: official Google Drive link in OphBench
+model:
+  constructor: vit_model.vit_large_patch16
+  source_file: inference.py; vit_model.py
+  architecture: ViT-L/16 with 16-class head
+checkpoint:
+  filename: FMUE.pth
+  container: torch checkpoint
+  state_dict_key: model
+  strict_load: true
+  key_transform: none
+preprocessing:
+  input_size: [224, 224]
+  resize: bicubic_resize_then_center_crop
+  crop: center_224
+  normalization: ImageNet mean/std
+  tokenizer: not_applicable
+  prompt_template: not_applicable
+forward:
+  method: forward_features then head
+  input_contract: RGB OCT tensor
+  output_node: 16-class logits
+  expected_shape: [1,16]
+  output_semantics: original 16-class OCT task logits
+downstream:
+  official_protocol_status: partially_verified
+  script: inference.py
+  config: command_line_arguments
+evidence:
+  verification_status: verified
+  source_path: inference.py; vit_model.py
+  source_symbol_or_config_key: vit_large_patch16; num_classes=16
+  conflicts: current timm base forward adds attn_mask
+  unresolved_items: not verified as a reusable generic encoder

@@ -14,6 +14,19 @@ import pandas as pd
 import streamlit as st
 import yaml
 
+from app.model_asset_runtime import RUNTIME_ROOT, build_asset_readiness, latest_smoke_run
+from app.model_asset_smoke_jobs import (
+    ASSET_SMOKE_JOBS_ROOT,
+    archive_asset_smoke_job,
+    cancel_asset_smoke_job,
+    checkpoint_smoke_evidence,
+    import_legacy_smoke_run,
+    list_asset_smoke_jobs,
+    read_asset_smoke_log_tail,
+    resume_asset_smoke_job,
+    retry_asset_smoke_subset,
+    submit_asset_smoke_job,
+)
 from app.model_hub_data import build_unified_model_catalog
 from app.model_hub_research import render_research_workspace
 from app.model_hub_scan_jobs import (
@@ -86,6 +99,251 @@ KNOWN_TRAINING_LOG_WARNINGS = {
     "scheduler.step()": "PyTorch 学习率调度器弃用提示",
     "EPOCH_DEPRECATION_WARNING": "PyTorch 学习率调度器弃用提示",
 }
+
+ASSET_PROBE_PROFILE_LABELS = {
+    "deretfound_mae_runtime": "RETFound-DE MAE 原生前向",
+    "deretfound_sd_runtime": "RETFound-DE 生成 UNet 前向",
+    "eyeclip_runtime": "EyeCLIP 图文前向",
+    "flair_runtime": "FLAIR 图文前向",
+    "fmue_runtime": "FMUE 16 类 OCT 前向",
+    "keepfit_runtime": "KeepFIT 图文前向",
+    "mirage_runtime": "MIRAGE 配对模态前向",
+    "preti_runtime": "PRETI 编码前向",
+    "ret_clip_runtime": "RET-CLIP 图文前向",
+    "retfound_runtime": "RETFound 编码前向",
+    "retfound_green_runtime": "RETFound-Green 编码前向",
+    "retizero_runtime": "RetiZero 图文前向",
+    "urfound_runtime": "UrFound 原生前向",
+    "vilref_runtime": "ViLReF 图文前向",
+    "visionunite_resource_audit": "VisionUnite 资源契约审计",
+    "torch_checkpoint_structure": "PyTorch checkpoint 结构",
+    "safetensors_structure": "safetensors 结构",
+    "zip_structure": "ZIP 资产结构",
+    "metadata_only": "仅元数据",
+}
+
+ASSET_SMOKE_STATUS_LABELS = {
+    "queued": "等待启动",
+    "running": "运行中",
+    "succeeded": "已完成",
+    "completed_with_blockers": "已完成，有阻塞项",
+    "failed": "任务框架失败",
+    "cancelled": "已取消",
+    "pending": "等待运行",
+    "runtime_smoke_passed": "完整前向通过",
+    "asset_probe_passed": "资产探测通过",
+    "resource_blocked": "资源阻塞",
+    "timeout": "运行超时",
+    "not_applicable": "不适用",
+}
+
+
+def _ensure_historical_asset_smoke_job() -> str | None:
+    source = RUNTIME_ROOT / "20260716T021348Z-all"
+    if not source.is_dir():
+        return None
+    return import_legacy_smoke_run(source, jobs_root=ASSET_SMOKE_JOBS_ROOT)
+
+
+def _render_asset_runtime_readiness() -> None:
+    readiness = build_asset_readiness()
+    local_count = int(readiness["local_asset_exists"].sum())
+    try:
+        _ensure_historical_asset_smoke_job()
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        st.warning(f"历史 Smoke 证据暂时无法登记：{exc}")
+    jobs = list_asset_smoke_jobs(include_archived=False)
+    latest_job = jobs[0] if jobs else None
+    summary = dict(latest_job.get("summary", {})) if latest_job else {}
+    _, legacy_results = latest_smoke_run()
+    evidence = checkpoint_smoke_evidence()
+    results = pd.DataFrame(
+        [entry["latest"] for entry in evidence.values() if entry.get("latest")]
+    )
+    if results.empty:
+        results = legacy_results
+    asset_probe_passed = (
+        int(results.get("asset_probe_passed", pd.Series(dtype=bool)).fillna(False).sum())
+        if not results.empty
+        else 0
+    )
+    runtime_smoke_passed = (
+        int(results.get("runtime_smoke_passed", pd.Series(dtype=bool)).fillna(False).sum())
+        if not results.empty
+        else 0
+    )
+    resource_blocked = int(
+        results.get("status", pd.Series(dtype=str))
+        .isin(["resource_blocked", "skipped"])
+        .sum()
+    )
+    failed_count = int(
+        results.get("status", pd.Series(dtype=str)).isin(["failed", "timeout"]).sum()
+    )
+    waiting_count = max(0, local_count - runtime_smoke_passed - resource_blocked - failed_count)
+    first_row = st.columns(4, gap="small")
+    first_row[0].metric("Registry 登记", f"{len(readiness):,}")
+    first_row[1].metric("本机资产", f"{local_count:,}")
+    first_row[2].metric("资产探测通过", f"{asset_probe_passed:,}")
+    first_row[3].metric("完整 runtime smoke", f"{runtime_smoke_passed:,}")
+    second_row = st.columns(3, gap="small")
+    second_row[0].metric("等待官方契约或 Adapter", f"{waiting_count:,}")
+    second_row[1].metric("资源阻塞", f"{resource_blocked:,}")
+    second_row[2].metric("运行失败", f"{failed_count:,}")
+    st.caption(
+        f"OphBench Registry 全量登记 {len(readiness)} 个 checkpoint，其中包含8个当前范围排除的 VisionFM；"
+        "结构探测只确认文件容器可读取；完整前向还要求明确 Adapter、预处理和输出契约。"
+        "两者都不会自动授予任务推理或路由资格。"
+    )
+    if summary:
+        batch_completed = int(summary.get("completed_count", 0) or 0)
+        batch_target = int(summary.get("target_count", 0) or 0)
+        status_text = (
+            f"最近批次 {summary.get('job_id', latest_job.get('job_id') if latest_job else '—')}："
+            f"进度 {batch_completed}/{batch_target}，"
+            f"资产探测通过 {summary.get('asset_probe_passed_count', 0)}，"
+            f"完整 runtime smoke {summary.get('runtime_smoke_passed_count', 0)}，"
+            f"失败 {summary.get('failed_count', 0)}，"
+            f"资源阻塞 {summary.get('resource_blocked_count', summary.get('skipped_count', 0))}，"
+            f"超时 {summary.get('timeout_count', 0)}。"
+        )
+        (st.success if not summary.get("failed_count") and not summary.get("timeout_count") else st.warning)(
+            status_text
+        )
+    control_columns = st.columns([1.1, 1.5, 1, 0.8], gap="small")
+    local_checkpoint_ids = readiness.loc[
+        readiness["local_asset_exists"].astype(bool), "checkpoint_id"
+    ].astype(str).tolist()
+    selected_checkpoint = control_columns[1].selectbox(
+        "选中 checkpoint",
+        local_checkpoint_ids,
+        key="asset_smoke_selected_checkpoint",
+    )
+    selected_device = control_columns[2].selectbox(
+        "运行设备",
+        ["auto", "cuda:0", "cpu"],
+        format_func=lambda value: {
+            "auto": "自动选择空闲 GPU",
+            "cuda:0": "GPU 0",
+            "cpu": "CPU",
+        }[value],
+        key="asset_smoke_device",
+    )
+    force = control_columns[3].toggle(
+        "强制重跑", value=False, key="asset_smoke_force"
+    )
+    if control_columns[0].button(
+        "运行全部本机资产",
+        icon=":material/play_arrow:",
+        width="stretch",
+        key="submit_all_asset_smoke",
+    ):
+        try:
+            job_id = submit_asset_smoke_job(
+                selection_mode="all_local",
+                device=selected_device,
+                force=force,
+            )
+        except Exception as exc:
+            st.error(f"Smoke 任务提交失败：{exc}")
+        else:
+            st.session_state["asset_smoke_job_flash"] = f"已提交模型资产 Smoke：{job_id}"
+            st.session_state["pending_engineering_layer"] = "任务运行记录"
+            st.session_state["pending_hub_workspace"] = "任务运行记录"
+            st.rerun()
+    if st.button(
+        "仅运行选中模型",
+        icon=":material/play_arrow:",
+        key="submit_selected_asset_smoke",
+    ):
+        try:
+            job_id = submit_asset_smoke_job(
+                checkpoint_ids=[selected_checkpoint],
+                selection_mode="selected",
+                device=selected_device,
+                force=force,
+            )
+        except Exception as exc:
+            st.error(f"Smoke 任务提交失败：{exc}")
+        else:
+            st.session_state["asset_smoke_job_flash"] = f"已提交模型资产 Smoke：{job_id}"
+            st.session_state["pending_engineering_layer"] = "任务运行记录"
+            st.session_state["pending_hub_workspace"] = "任务运行记录"
+            st.rerun()
+    st.caption(
+        "一次批量提交只生成一条父任务；checkpoint 在父任务内独立运行。"
+        "Smoke 通过不会自动授予任务推理或路由资格。"
+    )
+    with st.expander("查看 checkpoint 运行准备矩阵"):
+        display = readiness[
+            [
+                "model_id",
+                "checkpoint_id",
+                "modalities",
+                "artifact_type",
+                "local_asset_exists",
+                "size_matches_manifest",
+                "registry_sha256_evidence",
+                "adapter_implemented",
+                "preprocessing_status",
+                "expected_output",
+                "probe_profile",
+                "probe_eligible",
+                "runtime_smoke_eligible",
+                "blocked_reason",
+            ]
+        ].copy()
+        display["最近状态"] = display["checkpoint_id"].map(
+            lambda checkpoint_id: ASSET_SMOKE_STATUS_LABELS.get(
+                str((evidence.get(str(checkpoint_id), {}).get("latest") or {}).get("status", "")),
+                "尚未测试",
+            )
+        )
+        display["最近成功证据"] = display["checkpoint_id"].map(
+            lambda checkpoint_id: (
+                (evidence.get(str(checkpoint_id), {}).get("latest_success") or {}).get(
+                    "job_completed_at_utc", "—"
+                )
+            )
+        )
+        display["probe_profile"] = display["probe_profile"].replace(
+            ASSET_PROBE_PROFILE_LABELS
+        )
+        display = display.rename(
+            columns={
+                "model_id": "模型",
+                "checkpoint_id": "Checkpoint",
+                "modalities": "模态",
+                "artifact_type": "资产类型",
+                "local_asset_exists": "本机文件",
+                "size_matches_manifest": "大小一致",
+                "registry_sha256_evidence": "Registry 哈希证据",
+                "adapter_implemented": "Adapter",
+                "preprocessing_status": "预处理核验",
+                "expected_output": "预期输出",
+                "probe_profile": "探测方式",
+                "probe_eligible": "可结构探测",
+                "runtime_smoke_eligible": "可完整前向",
+                "blocked_reason": "尚缺条件",
+            }
+        )
+        st.dataframe(display, hide_index=True, width="stretch")
+        if not results.empty:
+            result_columns = [
+                "checkpoint_id",
+                "probe_profile",
+                "status",
+                "achieved_stage",
+                "runtime_smoke_eligible",
+                "asset_probe_passed",
+                "runtime_smoke_passed",
+            ]
+            result_display = results.reindex(columns=result_columns).copy()
+            result_display["probe_profile"] = result_display["probe_profile"].replace(
+                ASSET_PROBE_PROFILE_LABELS
+            )
+            st.markdown("##### 最近一次运行结果")
+            st.dataframe(result_display, hide_index=True, width="stretch")
 
 
 def _role_text(value: object) -> str:
@@ -987,6 +1245,7 @@ def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> 
     else:
         st.markdown("#### 模型接入 · 资产目录")
         st.caption("显示当前输入模态下可交接的模型资产，并逐项核对来源、Adapter 和任务适配状态。")
+        _render_asset_runtime_readiness()
     task_id = _task_selector(models, "engineering_task")
     recipes = _load_training_recipes()
     catalog = build_unified_model_catalog(models, target_task_id=task_id, recipes=recipes)
@@ -1317,6 +1576,182 @@ def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> 
         _render_training_wizard(row, recipes, target_task_id=task_id)
 
 
+def _render_asset_smoke_job_records() -> None:
+    st.markdown("#### 模型资产 Smoke 任务")
+    flash = st.session_state.pop("asset_smoke_job_flash", None)
+    if flash:
+        st.success(str(flash))
+    try:
+        _ensure_historical_asset_smoke_job()
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        st.warning(f"历史 Smoke 证据暂时无法登记：{exc}")
+    all_jobs = list_asset_smoke_jobs(include_archived=True)
+    if not all_jobs:
+        st.info("尚无模型资产 Smoke 任务。可在“模型资产”页面提交。")
+        return
+    visible_jobs = [job for job in all_jobs if not job.get("archived")]
+    active_jobs = [
+        job for job in visible_jobs if str(job.get("status")) in {"queued", "running"}
+    ]
+    recent_jobs = [job for job in visible_jobs if job not in active_jobs][:10]
+    jobs = active_jobs + recent_jobs
+    if st.button(
+        "刷新 Smoke 状态",
+        icon=":material/refresh:",
+        key="refresh_asset_smoke_jobs",
+    ):
+        st.rerun()
+    st.caption(
+        f"当前展示 {len(jobs)} 个批次；共登记 {len(all_jobs)} 个。"
+        "每个批次仅占一条顶层任务记录。"
+    )
+    for job in jobs:
+        status = str(job.get("status", "unknown"))
+        label = ASSET_SMOKE_STATUS_LABELS.get(status, status)
+        progress = dict(job.get("progress", {}))
+        summary = dict(job.get("summary", {}))
+        counts = dict(progress.get("counts", {}))
+        completed = int(progress.get("completed_count", 0) or 0)
+        total = int(progress.get("total_count", job.get("target_count", 0)) or 0)
+        title = f"{job.get('job_id')} · {completed}/{total} · {label}"
+        with st.expander(title, expanded=status in {"queued", "running"}):
+            metrics = st.columns(6, gap="small")
+            metrics[0].metric("状态", label)
+            metrics[1].metric("进度", f"{completed}/{total}")
+            metrics[2].metric(
+                "完整前向", int(counts.get("runtime_smoke_passed", 0) or 0)
+            )
+            metrics[3].metric(
+                "资源阻塞", int(counts.get("resource_blocked", 0) or 0)
+            )
+            metrics[4].metric(
+                "失败/超时",
+                int(counts.get("failed", 0) or 0)
+                + int(counts.get("timeout", 0) or 0),
+            )
+            metrics[5].metric("设备", job.get("resolved_device", "—"))
+            active_checkpoint = progress.get("active_checkpoint_id")
+            if active_checkpoint:
+                st.info(f"当前运行：{active_checkpoint}")
+            if job.get("parent_job_id"):
+                st.caption(f"来源批次：{job.get('parent_job_id')}")
+            if job.get("source_kind") == "legacy_reference":
+                st.caption("该记录引用既有 CLI Smoke 证据，没有复制权重或大体积产物。")
+                if not job.get("source_available", True):
+                    st.warning("历史证据引用当前不可访问；任务摘要仍保留，但不能展开原始结果。")
+            if job.get("error_message"):
+                st.error(f"{job.get('error_type', '错误')}：{job.get('error_message')}")
+            child_frame = pd.DataFrame(progress.get("children", []))
+            if not child_frame.empty:
+                child_columns = [
+                    "model_id",
+                    "checkpoint_id",
+                    "probe_profile",
+                    "status",
+                    "elapsed_seconds",
+                    "asset_probe_passed",
+                    "runtime_smoke_passed",
+                    "error_detail",
+                ]
+                child_display = child_frame.reindex(columns=child_columns).copy()
+                child_display["probe_profile"] = child_display[
+                    "probe_profile"
+                ].replace(ASSET_PROBE_PROFILE_LABELS)
+                child_display["status"] = child_display["status"].replace(
+                    ASSET_SMOKE_STATUS_LABELS
+                )
+                child_display = child_display.rename(
+                    columns={
+                        "model_id": "模型",
+                        "checkpoint_id": "Checkpoint",
+                        "probe_profile": "运行契约",
+                        "status": "状态",
+                        "elapsed_seconds": "耗时（秒）",
+                        "asset_probe_passed": "资产探测",
+                        "runtime_smoke_passed": "完整前向",
+                        "error_detail": "失败或阻塞摘要",
+                    }
+                )
+                st.dataframe(child_display, hide_index=True, width="stretch")
+            actions = st.columns(5)
+            if status in {"queued", "running"} and actions[0].button(
+                "取消",
+                key=f"cancel_asset_smoke_{job['job_id']}",
+            ):
+                try:
+                    cancel_asset_smoke_job(job["job_dir"])
+                except Exception as exc:
+                    st.error(f"取消失败：{exc}")
+                else:
+                    st.rerun()
+            if status == "cancelled" and actions[1].button(
+                "恢复",
+                key=f"resume_asset_smoke_{job['job_id']}",
+            ):
+                try:
+                    resume_asset_smoke_job(job["job_dir"])
+                except Exception as exc:
+                    st.error(f"恢复失败：{exc}")
+                else:
+                    st.rerun()
+            if actions[2].button(
+                "重跑失败项",
+                key=f"retry_failed_asset_smoke_{job['job_id']}",
+                disabled=not bool(
+                    int(counts.get("failed", 0) or 0)
+                    + int(counts.get("timeout", 0) or 0)
+                ),
+            ):
+                try:
+                    new_job_id = retry_asset_smoke_subset(
+                        job["job_dir"], statuses={"failed", "timeout"}
+                    )
+                except Exception as exc:
+                    st.error(f"重跑失败：{exc}")
+                else:
+                    st.session_state["asset_smoke_job_flash"] = (
+                        f"已从 {job['job_id']} 创建重跑批次：{new_job_id}"
+                    )
+                    st.rerun()
+            if actions[3].button(
+                "重查阻塞项",
+                key=f"retry_blocked_asset_smoke_{job['job_id']}",
+                disabled=not bool(int(counts.get("resource_blocked", 0) or 0)),
+            ):
+                try:
+                    new_job_id = retry_asset_smoke_subset(
+                        job["job_dir"], statuses={"resource_blocked"}
+                    )
+                except Exception as exc:
+                    st.error(f"重查失败：{exc}")
+                else:
+                    st.session_state["asset_smoke_job_flash"] = (
+                        f"已从 {job['job_id']} 创建阻塞项批次：{new_job_id}"
+                    )
+                    st.rerun()
+            if status in {
+                "succeeded",
+                "completed_with_blockers",
+                "failed",
+                "cancelled",
+            } and actions[4].button(
+                "归档",
+                key=f"archive_asset_smoke_{job['job_id']}",
+            ):
+                archive_asset_smoke_job(job["job_dir"], archived=True)
+                st.rerun()
+            log_tail = read_asset_smoke_log_tail(job["job_dir"])
+            if log_tail:
+                with st.expander("批次日志"):
+                    st.code(log_tail, language="text")
+            if summary:
+                st.caption(
+                    "Smoke 结果仅证明模型资产运行契约；"
+                    f"任务推理可用 {summary.get('task_inference_ready_count', 0)}，"
+                    f"可进入路由池 {summary.get('route_eligible_count', 0)}。"
+                )
+
+
 def _render_global_scan_job_records() -> None:
     st.markdown("#### 全局候选扫描任务")
     scan_jobs = list_global_scan_jobs(include_archived=True)
@@ -1374,10 +1809,14 @@ def _render_job_records() -> None:
     st.caption("任务在独立后台进程中运行；本页读取状态、日志和本地运行产物，不依赖外部实验跟踪服务。")
     task_type = st.segmented_control(
         "任务类型筛选",
-        ["全部", "训练适配任务", "全局候选扫描任务"],
+        ["全部", "训练适配任务", "全局候选扫描任务", "模型资产 Smoke 任务"],
         default="全部",
         key="job_record_type_filter",
     )
+    if task_type in {"全部", "模型资产 Smoke 任务"}:
+        _render_asset_smoke_job_records()
+    if task_type == "模型资产 Smoke 任务":
+        return
     if task_type in {"全部", "全局候选扫描任务"}:
         _render_global_scan_job_records()
     if task_type == "全局候选扫描任务":

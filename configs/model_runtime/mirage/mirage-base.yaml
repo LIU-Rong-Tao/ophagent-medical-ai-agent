@@ -1,0 +1,11 @@
+model_id: mirage
+checkpoint_id: mirage-base
+artifact_type: multimodal_full_model
+modalities: [OCT, SLO]
+official_source: {repository: https://github.com/j-morano/MIRAGE, commit_or_tag: 930523b209dad3dd2eadc7296fb7ce3f3eaa9924, paper: https://www.nature.com/articles/s41746-025-01852-3, weight_page: https://huggingface.co/j-morano/MIRAGE-Base}
+model: {constructor: mirage_hf.MIRAGEWrapper, source_file: hf/mirage_hf.py, architecture: paired OCT B-scan and SLO base model, artifact_type: multimodal_full_model}
+checkpoint: {filename: model.safetensors, container: safetensors state dictionary, state_dict_key: root, strict_load: true, key_transform: remove model. wrapper prefix}
+preprocessing: {input_size: [512, 512], resize: paired modality resize, crop: none, normalization: official wrapper, tokenizer: not_applicable, prompt_template: not_applicable}
+forward: {method: MIRAGEWrapper.forward, input_contract: paired B-scan and SLO tensors, output_node: multimodal output dictionary, expected_shape: model-defined, output_semantics: paired retinal representation and task outputs}
+downstream: {official_protocol_status: partially_verified, script: official repository, config: model card and scripts}
+evidence: {verification_status: verified, source_path: hf/mirage_hf.py, source_symbol_or_config_key: MIRAGEWrapper, conflicts: "GitHub CC-BY-4.0 vs Hugging Face CC-BY-NC-ND-4.0", unresolved_items: provider license conflict}

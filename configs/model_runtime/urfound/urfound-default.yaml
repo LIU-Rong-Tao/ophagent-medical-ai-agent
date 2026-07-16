@@ -1,0 +1,11 @@
+model_id: urfound
+checkpoint_id: urfound-default
+artifact_type: vision_language_model
+modalities: [CFP, OCT, text]
+official_source: {repository: https://github.com/yukkai/UrFound, commit_or_tag: 6678be52afdf6c30114fb1d5f733be1282374ada, paper: https://link.springer.com/chapter/10.1007/978-3-031-72390-2_70, weight_page: https://huggingface.co/yyyyk/UrFound}
+model: {constructor: util.model_urfound.urmodel, source_file: util/model_urfound.py, architecture: multimodal masked reconstruction model, artifact_type: vision_language_model}
+checkpoint: {filename: UrFound.pth, container: torch checkpoint, state_dict_key: model, strict_load: true, key_transform: none}
+preprocessing: {input_size: [448, 448], resize: official dataset transform, crop: official dataset transform, normalization: official dataset transform, tokenizer: BERT tokenizer, prompt_template: report text tokens}
+forward: {method: urmodel.forward, input_contract: image + ids + labels + masks + type ids, output_node: image/text losses, reconstruction and mask, expected_shape: "reconstruction=[1,196,3072]", output_semantics: multimodal reconstruction}
+downstream: {official_protocol_status: partially_verified, script: repository training scripts, config: command_line_arguments}
+evidence: {verification_status: verified, source_path: util/model_urfound.py, source_symbol_or_config_key: urmodel, conflicts: timm qk_scale and numpy.float removed in current environment, unresolved_items: direct classification transfer recipe not provided}

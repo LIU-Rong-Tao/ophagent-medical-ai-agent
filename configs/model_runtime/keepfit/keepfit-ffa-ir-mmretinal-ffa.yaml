@@ -1,0 +1,11 @@
+model_id: keepfit
+checkpoint_id: keepfit-ffa-ir-mmretinal-ffa
+artifact_type: vision_language_model
+modalities: [FFA, text]
+official_source: {repository: https://github.com/lxirich/MM-Retinal, commit_or_tag: dbbb1f05b9d27278b01e15e5f837b44b22d32cee, paper: https://link.springer.com/chapter/10.1007/978-3-031-72378-0_67, weight_page: official Google Drive link in OphBench}
+model: {constructor: keepfit.modeling.model.KeepFITModel, source_file: KeepFIT/KeepFIT-CFP/keepfit/modeling/model.py, architecture: ResNet-50 + Bio_ClinicalBERT, artifact_type: vision_language_model}
+checkpoint: {filename: "KeepFIT (FFA-IR+MM).pth", container: torch state dictionary, state_dict_key: root, strict_load: true, key_transform: none}
+preprocessing: {input_size: [512, 512], resize: preserve_aspect_then_pad_canvas, crop: none, normalization: "scale_to_[0,1]", tokenizer: emilyalsentzer/Bio_ClinicalBERT, prompt_template: "A fundus fluorescein angiography image of [CLS]"}
+forward: {method: KeepFITModel.forward, input_contract: FFA image array + category text list, output_node: probabilities and logits, expected_shape: "[1,number_of_prompts]", output_semantics: zero-shot image-text similarities}
+downstream: {official_protocol_status: partially_verified, script: repository task scripts, config: not_provided}
+evidence: {verification_status: verified, source_path: KeepFIT/KeepFIT-CFP/keepfit/modeling/model.py, source_symbol_or_config_key: KeepFITModel, conflicts: none, unresolved_items: FFA-specific prompt wording requires downstream protocol audit}

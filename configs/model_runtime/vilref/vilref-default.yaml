@@ -1,0 +1,11 @@
+model_id: vilref
+checkpoint_id: vilref-default
+artifact_type: vision_language_model
+modalities: [CFP, text]
+official_source: {repository: https://github.com/T6Yang/ViLReF, commit_or_tag: 3a01b908f72abab04661bba80403989f5271b990, paper: https://arxiv.org/abs/2408.10894, weight_page: official Google Drive link in OphBench}
+model: {constructor: ViLReF.clip.utils.load_from_name, source_file: ViLReF/clip/utils.py, architecture: ViT-B/16 + RoBERTa-wwm-ext-base-chinese, artifact_type: vision_language_model}
+checkpoint: {filename: ViLReF.pt, container: torch checkpoint, state_dict_key: state_dict, strict_load: true, key_transform: official loader}
+preprocessing: {input_size: [224, 224], resize: bicubic, crop: none, normalization: CLIP mean/std, tokenizer: ViLReF.clip.utils.tokenize, prompt_template: free text}
+forward: {method: encode_image + encode_text, input_contract: RGB CFP tensor + tokenized text, output_node: image and text embeddings, expected_shape: "image=[1,512]; text=[1,512]", output_semantics: aligned embeddings}
+downstream: {official_protocol_status: partially_verified, script: repository evaluation scripts, config: not_provided}
+evidence: {verification_status: verified, source_path: ViLReF/clip/utils.py, source_symbol_or_config_key: load_from_name, conflicts: FP32 needed for current PyTorch compatibility, unresolved_items: dataset-specific protocol incomplete}

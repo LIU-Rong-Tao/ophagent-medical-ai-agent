@@ -1,0 +1,42 @@
+model_id: deretfound
+checkpoint_id: deretfound-pretraining
+artifact_type: foundation_encoder
+modalities: [CFP]
+official_source:
+  repository: https://github.com/Jonlysun/DERETFound
+  commit_or_tag: 01835850302e9e248bad8aef5c815c29bff4c360
+  paper: https://www.nature.com/articles/s41551-025-01365-0
+  weight_page: https://zenodo.org/records/13340936
+model:
+  constructor: models_mae.mae_vit_large_patch16
+  source_file: models_mae.py
+  architecture: ViT-L/16 MAE
+checkpoint:
+  filename: PreTraining.zip
+  container: PreTraining/checkpoint-best.pth
+  state_dict_key: model
+  strict_load: false
+  key_transform: none
+preprocessing:
+  input_size: [224, 224]
+  resize: direct_resize
+  crop: none
+  normalization: deployed utility.prepare_data behavior
+  tokenizer: not_applicable
+  prompt_template: not_applicable
+forward:
+  method: model(image, mask_ratio=0.75)
+  input_contract: RGB CFP tensor
+  output_node: loss, reconstructed_patches, mask
+  expected_shape: prediction=[1,196,768]; mask=[1,196]
+  output_semantics: masked image reconstruction
+downstream:
+  official_protocol_status: partially_verified
+  script: main_finetune.py
+  config: command_line_arguments
+evidence:
+  verification_status: verified
+  source_path: app.py; models_mae.py
+  source_symbol_or_config_key: run_mae; mae_vit_large_patch16
+  conflicts: utility.prepare_data overwrites mean subtraction before division
+  unresolved_items: official preprocessing behavior should be preserved for reproduction

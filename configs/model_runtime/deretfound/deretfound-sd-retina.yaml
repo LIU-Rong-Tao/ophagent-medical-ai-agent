@@ -1,0 +1,42 @@
+model_id: deretfound
+checkpoint_id: deretfound-sd-retina
+artifact_type: generative_model
+modalities: [CFP, text]
+official_source:
+  repository: https://github.com/Jonlysun/DERETFound
+  commit_or_tag: 01835850302e9e248bad8aef5c815c29bff4c360
+  paper: https://www.nature.com/articles/s41551-025-01365-0
+  weight_page: https://zenodo.org/records/13340936
+model:
+  constructor: diffusers.UNet2DConditionModel.from_pretrained
+  source_file: README_SD.md
+  architecture: Stable Diffusion v1.4 conditional UNet
+checkpoint:
+  filename: sd-retina-model.zip
+  container: sd-retina-model/checkpoint-60000/unet
+  state_dict_key: diffusion_pytorch_model.bin
+  strict_load: handled_by_diffusers
+  key_transform: none
+preprocessing:
+  input_size: [512, 512]
+  resize: pipeline_defined
+  crop: pipeline_defined
+  normalization: latent_space
+  tokenizer: Stable Diffusion v1.4 tokenizer, not bundled
+  prompt_template: disease text prompt
+forward:
+  method: UNet2DConditionModel.forward
+  input_contract: latent [B,4,64,64] + text condition [B,77,768]
+  output_node: sample
+  expected_shape: [1,4,64,64]
+  output_semantics: denoising prediction, not a classification output
+downstream:
+  official_protocol_status: not_provided
+  script: README_SD.md inference snippet
+  config: diffusers==0.21.4
+evidence:
+  verification_status: partially_verified
+  source_path: README_SD.md; embedded unet/config.json
+  source_symbol_or_config_key: UNet2DConditionModel; cross_attention_dim=768
+  conflicts: none
+  unresolved_items: base SD v1.4 VAE, text encoder, and tokenizer are not bundled

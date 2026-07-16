@@ -1,0 +1,11 @@
+model_id: visionunite
+checkpoint_id: visionunite-default
+artifact_type: multimodal_full_model
+modalities: [CFP, text]
+official_source: {repository: https://github.com/HUANGLIZI/VisionUnite, commit_or_tag: 3dab080ef21d946c4dfaab26572de3828c598090, paper: https://ieeexplore.ieee.org/document/11124413, weight_page: official Google Drive link in OphBench}
+model: {constructor: llama.llama_adapter.load, source_file: llama/llama_adapter.py, architecture: EVA02 + CLIP + LLaMA-7B adapter, artifact_type: multimodal_full_model}
+checkpoint: {filename: checkpoint-VisionUniteV1.pth, container: torch training checkpoint, state_dict_key: model, strict_load: false, key_transform: official convert_ckpt.py contract}
+preprocessing: {input_size: [448, 448], resize: bicubic_then_center_crop, crop: center_448, normalization: mean=0.5 std=0.5, tokenizer: external LLaMA tokenizer.model, prompt_template: llama.format_prompt}
+forward: {method: model.generate / model.forward, input_contract: CFP image + dialogue prompt, output_node: generated text and six-sign predictions, expected_shape: model-defined, output_semantics: ophthalmic dialogue and auxiliary sign outputs}
+downstream: {official_protocol_status: partially_verified, script: demo.py; exps/train.sh, config: command_line_arguments}
+evidence: {verification_status: partially_verified, source_path: README.md; llama/llama_adapter.py; demo.py, source_symbol_or_config_key: load; LLaMA_adapter, conflicts: none, unresolved_items: "missing external LLaMA-7B params.json, tokenizer.model, and base shards; resource_blocked"}

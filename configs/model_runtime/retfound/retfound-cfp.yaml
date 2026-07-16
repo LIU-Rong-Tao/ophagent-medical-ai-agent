@@ -1,0 +1,11 @@
+model_id: retfound
+checkpoint_id: retfound-cfp
+artifact_type: foundation_encoder
+modalities: [CFP]
+official_source: {repository: https://github.com/rmaphoh/RETFound, commit_or_tag: ae9a9ecf37857cf47b8aa9f87cd6f710d75db287, paper: https://www.nature.com/articles/s41586-023-06555-x, weight_page: https://huggingface.co/YukunZhou/RETFound_mae_natureCFP}
+model: {constructor: models_vit.vit_large_patch16, source_file: models_vit.py, architecture: ViT-L/16 MAE encoder, artifact_type: foundation_encoder}
+checkpoint: {filename: RETFound_cfp_weights.pth, container: torch checkpoint, state_dict_key: model, strict_load: official adapter validated, key_transform: task head removed for encoder}
+preprocessing: {input_size: [256, 256], resize: bicubic, crop: center_256, normalization: ImageNet mean/std, tokenizer: not_applicable, prompt_template: not_applicable}
+forward: {method: RETFoundCFPAdapter.encode_image, input_contract: RGB CFP tensor, output_node: pooled encoder embedding, expected_shape: "[1,1024]", output_semantics: visual embedding}
+downstream: {official_protocol_status: partially_verified, script: main_finetune.py, config: command_line_arguments}
+evidence: {verification_status: verified, source_path: models_vit.py; OphBench RETFound adapter, source_symbol_or_config_key: vit_large_patch16, conflicts: none, unresolved_items: dataset-specific official recipes require separate extraction}

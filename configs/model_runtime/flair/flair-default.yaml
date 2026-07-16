@@ -1,0 +1,42 @@
+model_id: flair
+checkpoint_id: flair-default
+artifact_type: vision_language_model
+modalities: [CFP, text]
+official_source:
+  repository: https://github.com/jusiro/FLAIR
+  commit_or_tag: d6652d53389ff49e5f73efaccf4246e9de88d1a3
+  paper: https://doi.org/10.1016/j.media.2024.103357
+  weight_page: https://huggingface.co/jusiro2/FLAIR
+model:
+  constructor: flair.FLAIRModel
+  source_file: flair/modeling/model.py
+  architecture: ResNet-50 + Bio_ClinicalBERT
+checkpoint:
+  filename: model.safetensors
+  container: safetensors state dictionary
+  state_dict_key: root
+  strict_load: true
+  key_transform: none
+preprocessing:
+  input_size: [512, 512]
+  resize: preserve_aspect_then_pad_canvas
+  crop: none
+  normalization: scale_to_[0,1]
+  tokenizer: emilyalsentzer/Bio_ClinicalBERT
+  prompt_template: A fundus photograph of [CLS]
+forward:
+  method: FLAIRModel.forward
+  input_contract: RGB array + category text list
+  output_node: probabilities, logits
+  expected_shape: [1,number_of_prompts]
+  output_semantics: zero-shot image-text similarities
+downstream:
+  official_protocol_status: partially_verified
+  script: main_transferability.py
+  config: command_line_arguments
+evidence:
+  verification_status: verified
+  source_path: README.md; flair/modeling/model.py; main_transferability.py
+  source_symbol_or_config_key: FLAIRModel; preprocess_image; preprocess_text
+  conflicts: none
+  unresolved_items: dataset-specific settings live in local_data and require separate audit
