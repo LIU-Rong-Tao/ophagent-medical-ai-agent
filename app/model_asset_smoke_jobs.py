@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -749,6 +750,22 @@ def archive_asset_smoke_job(job_dir: Path | str, *, archived: bool) -> None:
         archived=bool(archived),
         archived_at_utc=_utc_now() if archived else None,
     )
+
+
+def delete_asset_smoke_job(
+    job_dir: Path | str,
+    *,
+    jobs_root: Path | str = ASSET_SMOKE_JOBS_ROOT,
+) -> None:
+    directory = Path(job_dir).resolve()
+    root = Path(jobs_root).resolve()
+    if directory.parent != root:
+        raise ValueError("任务记录不在受控 Smoke 任务目录内，已阻止删除")
+    status = read_asset_smoke_status(directory)
+    if status.get("status") not in PARENT_TERMINAL_STATUSES:
+        raise ValueError("运行中的 Smoke 批次不能删除")
+    if directory.exists():
+        shutil.rmtree(directory)
 
 
 def import_legacy_smoke_run(

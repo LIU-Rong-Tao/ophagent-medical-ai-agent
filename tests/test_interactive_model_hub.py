@@ -35,6 +35,7 @@ from app.model_hub_data import (
     task_metric_profile,
     task_evaluation_summary,
 )
+import app.model_hub_data as model_hub_data_module
 from app.model_hub_scan_jobs import GlobalScanRequest, run_global_scan_request
 import app.model_hub_engineering as engineering_module
 from app.model_hub_engineering import (
@@ -630,6 +631,40 @@ def test_prediction_loader_repairs_duplicate_stem_keys_from_imagefolder_paths(tm
     assert frame["image_key"].tolist() == [
         "anormal_control/103.png",
         "early_glaucoma/103.png",
+    ]
+
+
+def test_prediction_loader_relocates_legacy_project_absolute_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    project_root = tmp_path / "new_server" / "ophagent-medical-ai-agent"
+    relative_path = Path("experiments/demo/outputs/predictions.csv")
+    prediction_path = project_root / relative_path
+    write_csv(
+        prediction_path,
+        prediction_rows("relocated_model", predictions=[0, 1, 2, 0]),
+    )
+    monkeypatch.setattr(model_hub_data_module, "PROJECT_ROOT", project_root)
+
+    frame = _load_model_prediction(
+        pd.Series(
+            {
+                "artifact_id": "relocated_model",
+                "prediction_path": (
+                    "/data/LRT/ophagent-medical-ai-agent/"
+                    + relative_path.as_posix()
+                ),
+                "n_classes": 3,
+            }
+        )
+    )
+
+    assert len(frame) == 4
+    assert frame["image_key"].tolist() == [
+        "case_0",
+        "case_1",
+        "case_2",
+        "case_3",
     ]
 
 

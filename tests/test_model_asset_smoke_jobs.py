@@ -416,6 +416,47 @@ def test_jobs_are_sorted_by_evidence_time_not_legacy_directory_name(
     ]
 
 
+def test_delete_terminal_smoke_job_keeps_external_source(tmp_path: Path) -> None:
+    jobs_root = tmp_path / "jobs"
+    source = tmp_path / "legacy" / "summary.json"
+    source.parent.mkdir(parents=True)
+    source.write_text("external evidence", encoding="utf-8")
+    request = _request("asset-smoke-delete", ["one"])
+    job_dir = _prepare_job(jobs_root, request)
+    payload = asdict(request)
+    payload["source_reference"] = str(source)
+    jobs._write_json_atomic(job_dir / "request.json", payload)
+    jobs.update_asset_smoke_status(job_dir, "completed_with_blockers")
+
+    jobs.delete_asset_smoke_job(job_dir, jobs_root=jobs_root)
+
+    assert not job_dir.exists()
+    assert source.read_text(encoding="utf-8") == "external evidence"
+
+
+def test_delete_running_smoke_job_is_rejected(tmp_path: Path) -> None:
+    request = _request("asset-smoke-running", ["one"])
+    job_dir = _prepare_job(tmp_path, request)
+    jobs.update_asset_smoke_status(job_dir, "running")
+
+    with pytest.raises(ValueError, match="运行中的 Smoke 批次不能删除"):
+        jobs.delete_asset_smoke_job(job_dir, jobs_root=tmp_path)
+
+    assert job_dir.exists()
+
+
+def test_delete_smoke_job_outside_controlled_root_is_rejected(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path / "outside" / "asset-smoke-outside"
+    outside.mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="不在受控 Smoke 任务目录"):
+        jobs.delete_asset_smoke_job(outside, jobs_root=tmp_path / "jobs")
+
+    assert outside.exists()
+
+
 def test_smoke_job_ui_does_not_render_server_paths_or_grant_route_qualification() -> None:
     source = (
         Path(__file__).resolve().parents[1] / "app" / "model_hub_engineering.py"
@@ -430,3 +471,5 @@ def test_smoke_job_ui_does_not_render_server_paths_or_grant_route_qualification(
     assert "输出目录" not in smoke_ui
     assert "task_inference_ready_count" in source
     assert "route_eligible_count" in source
+    assert "我确认永久删除该 Smoke 批次" in smoke_ui
+    assert "模型权重不会被删除" in smoke_ui

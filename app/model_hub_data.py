@@ -31,7 +31,8 @@ OUTPUT_FILES = {
     "manifest": "artifact_manifest.csv",
     "report": "report.html",
 }
-DEFAULT_MODEL_HUB_ROOT = Path(__file__).resolve().parents[1] / "experiments/model_hub"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MODEL_HUB_ROOT = PROJECT_ROOT / "experiments/model_hub"
 
 DR_RISK_EVENTS = {
     "large_undergrading": {"true_min": 4, "pred_max": 2},
@@ -668,6 +669,24 @@ def _load_prediction_file(path_value: str, n_classes: int) -> pd.DataFrame:
     return normalize_prediction_frame(path, num_classes=n_classes).sort_values("image_key").reset_index(drop=True)
 
 
+def _resolve_project_artifact_path(path_value: object) -> Path:
+    path = Path(str(path_value or "").strip())
+    if path.is_file():
+        return path
+    if not path.is_absolute():
+        candidate = PROJECT_ROOT / path
+        if candidate.is_file():
+            return candidate
+    normalized = str(path_value or "").replace("\\", "/")
+    marker = "/ophagent-medical-ai-agent/"
+    if marker in normalized:
+        relative = normalized.split(marker, 1)[1]
+        candidate = PROJECT_ROOT / Path(relative)
+        if candidate.is_file():
+            return candidate
+    return path
+
+
 def _imagefolder_relative_key(path_value: object) -> str:
     text = str(path_value or "").replace("\\", "/").strip()
     parts = [part for part in text.split("/") if part]
@@ -689,7 +708,7 @@ def _repair_duplicate_image_keys(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def _load_model_prediction(row: pd.Series) -> pd.DataFrame:
-    path = Path(str(row.get("prediction_path", "")))
+    path = _resolve_project_artifact_path(row.get("prediction_path", ""))
     if not path.is_file():
         raise ValueError(f"模型 {row.get('artifact_id')} 的 prediction 文件不存在：{path}")
     frame = _load_prediction_file(str(path.resolve()), int(row["n_classes"])).copy()

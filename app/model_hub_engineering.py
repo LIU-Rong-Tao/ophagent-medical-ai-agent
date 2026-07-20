@@ -20,6 +20,7 @@ from app.model_asset_smoke_jobs import (
     archive_asset_smoke_job,
     cancel_asset_smoke_job,
     checkpoint_smoke_evidence,
+    delete_asset_smoke_job,
     import_legacy_smoke_run,
     list_asset_smoke_jobs,
     read_asset_smoke_log_tail,
@@ -126,7 +127,7 @@ ASSET_SMOKE_STATUS_LABELS = {
     "queued": "等待启动",
     "running": "运行中",
     "succeeded": "已完成",
-    "completed_with_blockers": "已完成，有阻塞项",
+    "completed_with_blockers": "已完成，有未通过项",
     "failed": "任务框架失败",
     "cancelled": "已取消",
     "pending": "等待运行",
@@ -136,6 +137,24 @@ ASSET_SMOKE_STATUS_LABELS = {
     "timeout": "运行超时",
     "not_applicable": "不适用",
 }
+
+
+def _asset_smoke_parent_status_label(
+    status: str, counts: dict[str, object]
+) -> str:
+    if status != "completed_with_blockers":
+        return ASSET_SMOKE_STATUS_LABELS.get(status, status)
+    failed_count = int(counts.get("failed", 0) or 0) + int(
+        counts.get("timeout", 0) or 0
+    )
+    blocked_count = int(counts.get("resource_blocked", 0) or 0)
+    if failed_count and blocked_count:
+        return "已完成，有失败和资源阻塞"
+    if failed_count:
+        return "已完成，有失败项"
+    if blocked_count:
+        return "已完成，有资源阻塞"
+    return "已完成，有未通过项"
 
 
 def _ensure_historical_asset_smoke_job() -> str | None:
@@ -1607,10 +1626,10 @@ def _render_asset_smoke_job_records() -> None:
     )
     for job in jobs:
         status = str(job.get("status", "unknown"))
-        label = ASSET_SMOKE_STATUS_LABELS.get(status, status)
         progress = dict(job.get("progress", {}))
         summary = dict(job.get("summary", {}))
         counts = dict(progress.get("counts", {}))
+        label = _asset_smoke_parent_status_label(status, counts)
         completed = int(progress.get("completed_count", 0) or 0)
         total = int(progress.get("total_count", job.get("target_count", 0)) or 0)
         title = f"{job.get('job_id')} · {completed}/{total} · {label}"
@@ -1673,7 +1692,7 @@ def _render_asset_smoke_job_records() -> None:
                     }
                 )
                 st.dataframe(child_display, hide_index=True, width="stretch")
-            actions = st.columns(5)
+            actions = st.columns(6)
             if status in {"queued", "running"} and actions[0].button(
                 "取消",
                 key=f"cancel_asset_smoke_{job['job_id']}",
@@ -1740,6 +1759,35 @@ def _render_asset_smoke_job_records() -> None:
             ):
                 archive_asset_smoke_job(job["job_dir"], archived=True)
                 st.rerun()
+            terminal = status in {
+                "succeeded",
+                "completed_with_blockers",
+                "failed",
+                "cancelled",
+            }
+            with actions[5].popover("删除", disabled=not terminal):
+                st.warning("永久删除该批次的任务记录、日志和结果摘要，无法恢复。模型权重不会被删除。")
+                delete_confirmed = st.checkbox(
+                    "我确认永久删除该 Smoke 批次",
+                    key=f"delete_asset_smoke_confirm_{job['job_id']}",
+                )
+                if st.button(
+                    "确认永久删除",
+                    key=f"delete_asset_smoke_{job['job_id']}",
+                    disabled=not delete_confirmed,
+                    width="stretch",
+                ):
+                    try:
+                        delete_asset_smoke_job(
+                            job["job_dir"], jobs_root=ASSET_SMOKE_JOBS_ROOT
+                        )
+                    except Exception as exc:
+                        st.error(f"删除失败：{exc}")
+                    else:
+                        st.session_state["asset_smoke_job_flash"] = (
+                            "Smoke 批次及其实验记录已永久删除。"
+                        )
+                        st.rerun()
             log_tail = read_asset_smoke_log_tail(job["job_dir"])
             if log_tail:
                 with st.expander("批次日志"):
