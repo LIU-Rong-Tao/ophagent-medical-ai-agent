@@ -563,8 +563,11 @@ def run_training(config_path: Path, *, overrides=None) -> Path:
             "checkpoint_selection": "best validation model",
         },
         "ophagent_declared_due_to_missing_official_downstream_recipe": {
+            "model": config["model"],
             "optimizer": config["optimizer"],
             "scheduler": config["scheduler"],
+            "loss": config["loss"],
+            "augmentation_implementation": config["augmentation"],
             "selection_metric": "quadratic_kappa",
         },
         "test_used_for_selection": False,

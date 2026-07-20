@@ -26,6 +26,7 @@ model:
   num_classes: 5
   pooling: cls_token
   freeze_encoder: false
+  provenance: ophagent_declared_due_to_missing_official_downstream_recipe
 training:
   epochs: 50
   batch_size: 16
@@ -47,6 +48,7 @@ loss:
   name: cross_entropy
   class_weights: null
   label_smoothing: 0.0
+  provenance: ophagent_declared_due_to_missing_official_downstream_recipe
 augmentation:
   random_resized_crop: true
   crop_scale: [0.2, 1.0]
@@ -54,6 +56,7 @@ augmentation:
   horizontal_flip_probability: 0.5
   normalization_mean: [0.485, 0.456, 0.406]
   normalization_std: [0.229, 0.224, 0.225]
+  provenance: ophagent_declared_due_to_missing_official_downstream_recipe
 evaluation:
   selection_split: val
   save_best_by: quadratic_kappa

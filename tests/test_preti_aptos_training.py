@@ -111,5 +111,8 @@ def test_recipe_separates_paper_disclosures_from_project_choices() -> None:
     provenance = "ophagent_declared_due_to_missing_official_downstream_recipe"
     assert recipe["optimizer"]["provenance"] == provenance
     assert recipe["scheduler"]["provenance"] == provenance
+    assert recipe["model"]["provenance"] == provenance
+    assert recipe["loss"]["provenance"] == provenance
+    assert recipe["augmentation"]["provenance"] == provenance
     assert recipe["data"]["root"] is None
     assert recipe["foundation"]["checkpoint_path"] is None
