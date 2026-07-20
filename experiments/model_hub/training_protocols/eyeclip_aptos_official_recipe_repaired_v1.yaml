@@ -1,0 +1,58 @@
+schema_version: 1
+recipe:
+  recipe_id: eyeclip_aptos_official_recipe_repaired_v1
+  display_name: EyeCLIP APTOS 官方仓库 recipe 可执行修复复现
+  recipe_kind: official_repository_recipe_repaired
+  evaluation_role: controlled_task_adaptation
+  trainer_adapter: eyeclip_aptos_official_recipe_repaired_v1
+  supported_model_families: [eyeclip]
+foundation:
+  base_model_provider: ophbench
+  base_model_id: eyeclip
+  base_checkpoint_id: eyeclip-default
+  architecture: EyeCLIP ViT-B/32
+  source_commit: 2fcf6034552e6006c94bd84cbdc6f4a5897b29c0
+  source_root: null
+  checkpoint_path: null
+  checkpoint_sha256: dfb6990aa31d55e6eee23f5b79d4b170d86af9d0f533fedaa805f0cdb5d686d4
+data:
+  root: null
+  expected_manifest_sha256: 4d3332aab0f010ccf1fefa23af51e65fd2764558bc5a6d6c153ba13379949765
+model:
+  image_encoder: ViT-B/32
+  head: linear_512_to_5
+  layer_decay: 0.75
+training:
+  epochs: 50
+  batch_size: 64
+  image_size: 224
+  seeds: [0, 1, 2, 3, 4]
+optimizer:
+  name: adamw
+  learning_rate: 0.0001
+  weight_decay: 0.01
+scheduler:
+  name: cosine
+  warmup_epochs: 5
+  minimum_learning_rate: 0.000001
+loss:
+  name: cross_entropy
+  label_smoothing: 0.1
+augmentation:
+  auto_augment: rand-m9-mstd0.5-inc1
+  random_erase_probability: 0.25
+  interpolation: bicubic
+  normalization: imagenet_default
+evaluation:
+  selection_split: val
+  save_best_by: macro_auc_ovr
+  test_once_after_selection: true
+runtime:
+  device: cuda:2
+  num_workers: 8
+output:
+  run_dir: null
+repairs:
+  readme_entrypoint_typo: true
+  layer_decay_hierarchy_mapping: visual.transformer.resblocks
+  per_epoch_test_evaluation_removed: true
