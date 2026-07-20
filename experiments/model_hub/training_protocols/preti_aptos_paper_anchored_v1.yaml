@@ -1,0 +1,65 @@
+schema_version: 1
+recipe:
+  recipe_id: preti_aptos_paper_anchored_v1
+  display_name: PRETI APTOS 项目下游适配（论文锚定）
+  recipe_kind: official_model_project_downstream_adaptation
+  evaluation_role: project_downstream_adaptation
+  trainer_adapter: preti_aptos_paper_anchored_v1
+  supported_model_families: [preti]
+  description: 保留论文公开的输入、增强、批量和训练轮数；未公开的下游优化细节明确登记为 OphAgent 复现选择
+foundation:
+  base_model_provider: ophbench
+  base_model_id: preti
+  base_checkpoint_id: preti-default
+  architecture: PRETI ViT-B/16
+  source_commit: 2ac2b0f123d69151877ebd44a33edfb026cdac45
+  source_root: null
+  checkpoint_path: null
+  checkpoint_sha256: c6f7ca533c6d609a691a7f0ac3234bee78fe1116da714d9929308eaeaf409395
+  official_downstream_recipe_complete: false
+data:
+  root: null
+  expected_manifest_sha256: 4d3332aab0f010ccf1fefa23af51e65fd2764558bc5a6d6c153ba13379949765
+  required_splits: [train, val, test]
+  label_space: dr_icdr_0_4
+model:
+  num_classes: 5
+  pooling: cls_token
+  freeze_encoder: false
+training:
+  epochs: 50
+  batch_size: 16
+  image_size: 224
+  amp: true
+  seed: 42
+optimizer:
+  name: adamw
+  learning_rate_candidates: [0.00001, 0.00005]
+  weight_decay: 0.05
+  betas: [0.9, 0.95]
+  provenance: ophagent_declared_due_to_missing_official_downstream_recipe
+scheduler:
+  name: cosine
+  warmup_epochs: 3
+  minimum_learning_rate: 0.0000001
+  provenance: ophagent_declared_due_to_missing_official_downstream_recipe
+loss:
+  name: cross_entropy
+  class_weights: null
+  label_smoothing: 0.0
+augmentation:
+  random_resized_crop: true
+  crop_scale: [0.2, 1.0]
+  crop_ratio: [0.75, 1.3333333333]
+  horizontal_flip_probability: 0.5
+  normalization_mean: [0.485, 0.456, 0.406]
+  normalization_std: [0.229, 0.224, 0.225]
+evaluation:
+  selection_split: val
+  save_best_by: quadratic_kappa
+  test_once_after_selection: true
+runtime:
+  device: cuda:2
+  num_workers: 8
+output:
+  run_dir: null
