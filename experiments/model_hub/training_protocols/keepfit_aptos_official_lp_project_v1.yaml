@@ -1,0 +1,48 @@
+schema_version: 1
+recipe:
+  recipe_id: keepfit_aptos_official_lp_project_v1
+  display_name: KeepFIT CFP APTOS 官方线性探针框架项目适配
+  recipe_kind: official_framework_project_downstream_adaptation
+  evaluation_role: controlled_task_adaptation
+  trainer_adapter: keepfit_aptos_official_lp_project_v1
+  supported_model_families: [keepfit]
+foundation:
+  base_model_provider: ophbench
+  base_model_id: keepfit
+  base_checkpoint_id: null
+  architecture: KeepFIT ResNet-50
+  source_commit: dbbb1f05b9d27278b01e15e5f837b44b22d32cee
+  source_root: null
+  checkpoint_path: null
+  checkpoint_sha256: null
+  project_features: false
+data:
+  root: null
+  expected_manifest_sha256: 4d3332aab0f010ccf1fefa23af51e65fd2764558bc5a6d6c153ba13379949765
+preprocessing:
+  input_size: [512, 512]
+  crop_foreground: false
+  preserve_aspect_with_canvas: true
+  scale_to_unit_interval: true
+classifier:
+  type: logistic_regression
+  c: 0.316
+  max_iter: 1000
+  class_weight: balanced
+  random_state: 0
+  provenance: official_keepfit_linear_probe_default
+evaluation:
+  selection_split: none_fixed_official_c
+  test_once_after_fit: true
+  tta: false
+  fta: false
+runtime:
+  device: cuda:2
+  batch_size: 32
+  num_workers: 8
+output:
+  run_dir: null
+claim:
+  status: official_framework_project_downstream_adaptation
+  official_aptos_recipe_available: false
+  ablation_checkpoint_is_separate_candidate: true
