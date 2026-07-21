@@ -1,0 +1,46 @@
+schema_version: 1
+recipe:
+  recipe_id: flair_aptos_official_lp_project_v1
+  display_name: FLAIR APTOS 官方线性探针框架项目适配
+  recipe_kind: official_framework_project_downstream_adaptation
+  evaluation_role: controlled_task_adaptation
+  trainer_adapter: flair_aptos_official_lp_project_v1
+  supported_model_families: [flair]
+foundation:
+  base_model_provider: ophbench
+  base_model_id: flair
+  base_checkpoint_id: flair-default
+  architecture: FLAIR ResNet-50
+  source_commit: d6652d53389ff49e5f73efaccf4246e9de88d1a3
+  source_root: null
+  checkpoint_path: null
+  checkpoint_sha256: 050334cd934fa3126435c202c41f493ca222fc3fe3ea9c50cf21f67c792a1440
+data:
+  root: null
+  expected_manifest_sha256: 4d3332aab0f010ccf1fefa23af51e65fd2764558bc5a6d6c153ba13379949765
+preprocessing:
+  input_size: [512, 512]
+  crop_foreground: true
+  preserve_aspect_with_canvas: true
+  scale_to_unit_interval: true
+classifier:
+  type: logistic_regression
+  c: 0.316
+  max_iter: 1000
+  class_weight: balanced
+  random_state: 0
+  provenance: official_flair_linear_probe_default
+evaluation:
+  selection_split: none_fixed_official_c
+  test_once_after_fit: true
+  tta: false
+  fta: false
+runtime:
+  device: cuda:2
+  batch_size: 32
+  num_workers: 8
+output:
+  run_dir: null
+claim:
+  status: official_framework_project_downstream_adaptation
+  official_aptos_recipe_available: false
