@@ -1,0 +1,173 @@
+{
+  "contract_id": "ophagent_model_hub_minimal_capabilities_v1",
+  "status": "definition_only",
+  "controller": "human",
+  "llm_system_control_enabled": false,
+  "qwen_control_enabled": false,
+  "execution_boundary": {
+    "reuse_existing_registry": true,
+    "reuse_existing_task_contracts": true,
+    "reuse_existing_evaluator": true,
+    "reuse_existing_result_packages": true,
+    "second_platform_prohibited": true,
+    "raw_private_data_in_git_prohibited": true
+  },
+  "capabilities": [
+    {
+      "capability_id": "model_registry.inspect",
+      "version": "1.0",
+      "effect": "read_only",
+      "executor": "app.model_providers.catalog",
+      "required_permission": "model_registry:read",
+      "approval": "none",
+      "input": [
+        "provider_id",
+        "model_id",
+        "checkpoint_id",
+        "task_id"
+      ],
+      "output": [
+        "registered_asset_records",
+        "runtime_readiness",
+        "task_readiness",
+        "qualification_status"
+      ]
+    },
+    {
+      "capability_id": "prediction_asset.validate",
+      "version": "1.0",
+      "effect": "artifact_validation",
+      "executor": "scripts.routing.run_interactive_model_hub",
+      "required_permission": "prediction_asset:read",
+      "approval": "none",
+      "input": [
+        "task_contract",
+        "prediction_asset",
+        "artifact_sha256"
+      ],
+      "output": [
+        "schema_validation",
+        "case_alignment_validation",
+        "probability_validation",
+        "artifact_manifest"
+      ]
+    },
+    {
+      "capability_id": "result_risk_audit.run",
+      "version": "1.0",
+      "effect": "writes_audit_result_package",
+      "executor": "app.generic_result_audit",
+      "required_permission": "private_result_audit:execute",
+      "approval": "human_required_for_private_data",
+      "input": [
+        "deidentified_result_table",
+        "field_mapping",
+        "task_contract",
+        "output_location"
+      ],
+      "output": [
+        "validation",
+        "model_error_risk_audit",
+        "case_risk_scores",
+        "leakage_checks",
+        "artifact_manifest"
+      ]
+    },
+    {
+      "capability_id": "routing_protocol.evaluate",
+      "version": "1.0",
+      "effect": "writes_offline_evaluation_package",
+      "executor": "scripts.routing.run_interactive_model_hub",
+      "required_permission": "routing_evaluation:execute",
+      "approval": "human_required_for_locked_test_or_private_data",
+      "input": [
+        "frozen_protocol",
+        "prediction_asset_registry",
+        "selection_split",
+        "output_location"
+      ],
+      "output": [
+        "model_baselines",
+        "pairing_results",
+        "case_routing_trace",
+        "artifact_manifest"
+      ]
+    }
+  ],
+  "future_tool_candidate_gate": {
+    "registration_status": "not_registered",
+    "required_evidence": [
+      "independent_reproduction_passed",
+      "action_eligibility_passed",
+      "event_capacity_gate_passed",
+      "source_overlap_audited",
+      "input_output_contract_frozen",
+      "failure_boundary_documented",
+      "permission_review_passed"
+    ],
+    "multimodal_projects_remain_independent": true,
+    "passing_a_smoke_test_is_not_sufficient": true
+  },
+  "run_trace_schema": {
+    "schema_id": "ophagent_model_hub_run_trace_v1",
+    "required": [
+      "run_id",
+      "capability_id",
+      "contract_version",
+      "initiator_type",
+      "status",
+      "started_at_utc",
+      "protocol_id",
+      "code_commit_sha",
+      "parameters_fingerprint",
+      "input_artifacts",
+      "permissions",
+      "approvals",
+      "task_id",
+      "dataset_id",
+      "output_artifacts"
+    ],
+    "status_values": [
+      "queued",
+      "running",
+      "succeeded",
+      "completed_with_blockers",
+      "failed",
+      "cancelled"
+    ],
+    "initiator_type_values": [
+      "human",
+      "scheduled_system"
+    ],
+    "input_artifact_fields": [
+      "artifact_id",
+      "path_or_opaque_reference",
+      "sha256",
+      "contains_private_data"
+    ],
+    "output_artifact_fields": [
+      "artifact_id",
+      "path_or_opaque_reference",
+      "sha256",
+      "qualification_effect"
+    ],
+    "optional": [
+      "parent_run_id",
+      "finished_at_utc",
+      "model_ids",
+      "selection_split",
+      "test_access_state",
+      "device",
+      "error_code",
+      "error_detail",
+      "route_eligible_before",
+      "route_eligible_after"
+    ],
+    "privacy": {
+      "raw_patient_identifier_prohibited": true,
+      "raw_image_path_prohibited": true,
+      "server_absolute_path_in_ui_prohibited": true,
+      "private_trace_storage_outside_git_required": true
+    }
+  }
+}

@@ -42,6 +42,16 @@ APTOS 十模型已统一为 H100、FP32、forward-only 口径，排除图像读�
 
 正式准入前必须同时确认：CFP 模态与冻结类别顺序一致；具有稳定 `case_id`、`patient_id` 和患者级去重；与当前 train/validation/test 无图像或患者重叠；文件清单与 SHA256 固定；许可、数据使用和伦理边界明确；标签来源与独立性可追溯；候选模型不存在未披露的数据污染；样本量满足预先设定的配对终点；在协议锁定前不读取结果。准入后也不得重新训练、校准、调阈值、改预算或替换候选。
 
+## 覆盖缺口与下一批任务
+
+统一覆盖矩阵见 `model_hub_coverage_matrix.csv`。OphBench 27 个 checkpoint 中，H100 当前有 17 个完成 runtime Smoke；其余主要是 VisionFM、VisionUnite 和不适用于分类路由的 DERETFound SD-Retina。APTOS 已有 10 个、青光眼已有 5 个标准离线任务资产，均完成任务评测和回顾性路由验证，但尚未通过独立确认性门禁。
+
+下一批优先级固定为：第一，核验并接入 DeepDRiD 作为 DR 第二数据集；MESSIDOR-2 作为标签来源核清后的备选，OIA-DDR 先做预训练污染核查。第二，优先核验 GAMMA 作为青光眼正常/早期/进展期三分类第二数据集；G1020、REFUGE、RIM-ONE 和 AIROGS 只用于二分类迁移或稳健性分析，不与当前三分类结果直接合并。第三，使用 PALM 建立病理性近视二分类任务；该数据包含 1,200 张 CFP、患者级隔离的官方 train/validation/test，可最大程度复用当前分类、风险审计和路由流程。RFMiD 2.0 的多标签任务排在其后，因为当前 evaluator 还没有冻结的多标签路由契约。
+
+私有数据只通过“脱敏 manifest → 标准 prediction asset → 结果表校验 → 模型输出错误风险审计 → validation 路由筛选 → 锁定评测”的既有 Model Hub 流程接入。原始图像、患者标识和绝对路径不进入 Git；缺少 `patient_id`、患者级去重、标签来源、数据使用许可或独立 split 时，只能完成数据审计，不授予任务或路由资格。
+
+最小 capability/tool contract 与统一 run trace 定义在 `configs/protocols/model_hub_minimal_capability_contract.json`。系统控制者固定为人工，Qwen 不参与控制。现有多模态项目保持独立；只有完成独立复现、动作资格、事件容量、来源重叠和权限门禁后，才可登记为未来工具候选。
+
 ## 结论、限制与决策门
 
 当前已形成“资产登记与任务准入 → 离线单模型评测 → 模型输出错误审计 → validation 路由筛选 → locked Test → 稳健性与成本审计”的开题实验闭环。APTOS 支持存在预算约束下的模型互补性，但性能方案伴随代理错误引入；青光眼未显示稳定优于 Scout-only。所有方案继续保持 `route_eligible=false`。
