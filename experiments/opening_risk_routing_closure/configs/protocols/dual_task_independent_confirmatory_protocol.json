@@ -1,0 +1,336 @@
+{
+  "protocol_id": "ophagent_dual_task_independent_confirmatory_v1",
+  "created_at_utc": "2026-07-23T15:51:58.679869+00:00",
+  "status": "frozen_before_independent_data_access",
+  "source_commit": "cd3096c73121b9166bc138953244a40515df06ca",
+  "evaluation_design": "independent_unexposed_external_confirmation",
+  "data_access_state": "not_accessed",
+  "tasks": {
+    "aptos_dr_5class": {
+      "primary_candidate": {
+        "pairing_id": "aptos_locked_performance_primary",
+        "scouts": [
+          "flair",
+          "ret_clip"
+        ],
+        "expert": "retfound_cfp",
+        "policy": "disagreement_then_uncertainty",
+        "budget": 0.2
+      },
+      "proxy_guardrail_candidate": {
+        "pairing_id": "aptos_locked_zero_introduced",
+        "scouts": [
+          "retfound_cfp",
+          "retizero"
+        ],
+        "expert": "flair",
+        "policy": "disagreement_then_uncertainty",
+        "budget": 0.2
+      },
+      "primary_endpoint": "paired QWK difference versus primary Scout",
+      "secondary_endpoints": [
+        "paired Macro-F1 difference",
+        "paired Accuracy difference",
+        "label-order proxy corrected/introduced/net rates"
+      ],
+      "class_order": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "glaucoma_3class": {
+      "primary_candidate": {
+        "pairing_id": "glaucoma_locked_multi",
+        "scouts": [
+          "glaucoma_retfound_dinov2",
+          "glaucoma_vit_b"
+        ],
+        "expert": "glaucoma_swin_tiny",
+        "policy": "disagreement_then_uncertainty",
+        "budget": 0.1
+      },
+      "single_scout_reference": {
+        "pairing_id": "glaucoma_locked_single",
+        "scouts": [
+          "glaucoma_retfound_dinov2"
+        ],
+        "expert": "glaucoma_swin_tiny",
+        "policy": "high_entropy",
+        "budget": 0.05
+      },
+      "primary_endpoint": "paired Macro-F1 difference versus primary Scout",
+      "secondary_endpoints": [
+        "paired Accuracy difference",
+        "label-order proxy corrected/introduced/net rates"
+      ],
+      "class_order": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "analysis": {
+    "unit": "patient",
+    "confidence_interval": "patient-clustered paired bootstrap, 5000 resamples, two-sided percentile 95% CI",
+    "random_seed": 20260723,
+    "primary_success_gate": "lower 95% CI of the task primary paired endpoint is > 0",
+    "accuracy_guardrail": "lower 95% CI of paired Accuracy difference is > -0.01",
+    "proxy_guardrail": "upper 95% CI of introduced label-order proxy-event rate is <= 0.01",
+    "multiplicity": "hierarchical task-specific gates; secondary endpoints are descriptive unless the primary gate passes"
+  },
+  "data_requirements": {
+    "independent_from_current_train_validation_test": true,
+    "stable_case_id": true,
+    "patient_id_required": true,
+    "patient_overlap_prohibited": true,
+    "labels_frozen_before_inference": true,
+    "minimum_sample_size": "determined prospectively from the primary paired endpoint; not from confirmatory outcomes"
+  },
+  "execution_locks": {
+    "no_model_training": true,
+    "no_recalibration": true,
+    "no_threshold_or_budget_selection": true,
+    "no_candidate_promotion": true,
+    "no_test_driven_preprocessing_change": true,
+    "route_eligible_before_gate_completion": false
+  },
+  "cost_protocol": {
+    "hardware": "NVIDIA H100 80GB HBM3",
+    "batch_sizes": [
+      1,
+      16
+    ],
+    "scope": "forward-only, excluding image I/O and preprocessing",
+    "warmup_runs": 10,
+    "measured_runs": 30,
+    "same_host_required": true,
+    "glaucoma_cost_measurement_required_before_cost_claim": true
+  },
+  "frozen_source_protocols": [
+    {
+      "path": "experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_ten_model_locked_test.yaml",
+      "sha256": "06383bac431c223247436a4a5b0560ea5c9d3d9f7088679f9d4b78ecd3606fa1"
+    },
+    {
+      "path": "experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_locked_test.yaml",
+      "sha256": "8e146791f6b83fa58053aca6db17f5139f1d36be0d8db97e1b6c50feeb8bfebf"
+    }
+  ],
+  "prediction_assets": [
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "preti",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/validation_predictions.csv",
+      "sha256": "8bf3b2c6efdd732526161f9a11c8f119d9a720a268b4be41bec79306a5c41234"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "preti",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/test_predictions.csv",
+      "sha256": "0d2b0ab0a89980bd756ee66f131482f8b5922c65e5f8f4bdf9d56df2a3aa50e5"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retfound_cfp",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/validation_predictions.csv",
+      "sha256": "9b882479d12c66f22dc587149d76b10f533f625a798038fbff012a23d8b5670f"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retfound_cfp",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/test_predictions.csv",
+      "sha256": "b987d6abbf8fa27bb5122f892caedd2abd1689aef8de6b42a466032a2b4ad3c9"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "convnext_tiny",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "66a087605618390018abcba9c07b4e28c396c075a254424e0f13bd88669fee62"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "convnext_tiny",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "a8e920bf418b81f320e26b18447ff5622a840a1d4fa57a9c274de1f0dc6e2245"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "swin_tiny",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "eb67213b0b82f6eb2cdf92fbebe109f6ac6cdb603d60fcb92810ef5629e82878"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "swin_tiny",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "abdf511a2f5e2d220768ad6ed53d210204600642c5347ebe2529d20df07760fa"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "flair",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "3efec0a8c1c15b689688cc6f4c16d2d6f898bb1a348be5d8c01967a5e8ad7f8a"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "flair",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "f82c05283f4eb340699bfba5d0f0bf32b53a83984682e7bb5bdeec8477a11e61"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retfound_green",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "6a5e8110a3eb8a9862da0aa09e3442b4340956b5db6a31643d99b424a2d3dcee"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retfound_green",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "97775982710ca70abbe0aee4bb5133d835a4fb3bc98a58313baba61a053c332a"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "eyeclip_cfp",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/eyeclip_cfp/20260723T082659Z/predictions/validation_predictions.csv",
+      "sha256": "c5f770478020f6e32cd5c6850a26c3cf424683ee6b982fd391fe4a61516feda9"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "eyeclip_cfp",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/eyeclip_cfp/20260723T082659Z/predictions/test_predictions.csv",
+      "sha256": "07dc0ebf880edc263262f72c187926143910ab3d3571ab0c692ced5d369912e9"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "keepfit_cfp",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/keepfit_cfp/20260723T082655Z/predictions/validation_predictions.csv",
+      "sha256": "d7a4471f5c8b87f73b39a52a9b595c251054a75aa58df53ef39f0aee7296846f"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "keepfit_cfp",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/keepfit_cfp/20260723T082655Z/predictions/test_predictions.csv",
+      "sha256": "3ff60c995a6e0582b655a1cd9c9cef8e1c65248bdf009a9fa80951447b2b48da"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "ret_clip",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/ret_clip/20260723T082658Z/predictions/validation_predictions.csv",
+      "sha256": "a9fab4dcf4b0721bc445036065f32f1c07313447a77ad686b4cf3c719ca6655b"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "ret_clip",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/ret_clip/20260723T082658Z/predictions/test_predictions.csv",
+      "sha256": "fdf1112b455a4b3af590973683cd1e48d2ff8f697ca3f066dfe4666945f7df85"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retizero",
+      "split": "validation",
+      "path": "experiments/opening_risk_routing_closure/replays/retizero/20260723T082829Z/predictions/validation_predictions.csv",
+      "sha256": "a1e84b35349fa64d0524596428b2b132668cbe0e86103f4f05ae1ba87a380e40"
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "model_id": "retizero",
+      "split": "test",
+      "path": "experiments/opening_risk_routing_closure/replays/retizero/20260723T082829Z/predictions/test_predictions.csv",
+      "sha256": "70ca9481c231d30dd847b6955f1bfc0d7c929893508d0ad4c81ae5644d3c33a5"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_convnext_tiny",
+      "split": "validation",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/validation_predictions.csv",
+      "sha256": "01432aa0e006cb876fc0f904e5e7beecb92129e71b15749b8812db15cb9691f6"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_convnext_tiny",
+      "split": "test",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/test_predictions.csv",
+      "sha256": "603c31d8c378774247a9473f6cd5c868448b483219e18b9b43b969964cdbed11"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_swin_tiny",
+      "split": "validation",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/validation_predictions.csv",
+      "sha256": "3d25eb3b3c49471b088db0443479504b63df4ae0af9ef22fa9344cadf893977a"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_swin_tiny",
+      "split": "test",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/test_predictions.csv",
+      "sha256": "4b21a8ae1b5c8f305c6fdbb3de90528cdae6e816ee39c8382cbf87853937d4d2"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_vit_b",
+      "split": "validation",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/validation_predictions.csv",
+      "sha256": "7184c3d41d49775f3557a3a4a6ff4d0c20c975cf6be8dfcb15b0866094f478a6"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_vit_b",
+      "split": "test",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/test_predictions.csv",
+      "sha256": "f9e58b53784815eb1f5b3dd233093dd7e2b64e9c2a2e62bbb40c428e8b67005c"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_vit_l",
+      "split": "validation",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/validation_predictions.csv",
+      "sha256": "88569f202a00de74d82155c750e3b32eea6a100b8df35dd23cf93d6b88b345ea"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_vit_l",
+      "split": "test",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/test_predictions.csv",
+      "sha256": "538209317cec21c37e7ec032098e068494d74f767d9c8610117afe9e4352c73e"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_retfound_dinov2",
+      "split": "validation",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/validation_predictions.csv",
+      "sha256": "7cdf6e3453ef0bf2723b7f944c65f3e955a8f07e315621fb70bccf54edf6bc1e"
+    },
+    {
+      "task_id": "glaucoma_3class",
+      "model_id": "glaucoma_retfound_dinov2",
+      "split": "test",
+      "path": "experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/test_predictions.csv",
+      "sha256": "d6095a40f82d78f1c30eb6080564fae0c64b44604e25a9693ce2d8a8827cd89f"
+    }
+  ],
+  "interpretation_boundary": "Label-order proxy events are model-output audit proxies, not clinical outcomes or treatment recommendations."
+}

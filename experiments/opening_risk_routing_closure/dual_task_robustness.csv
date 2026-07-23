@@ -1,0 +1,421 @@
+analysis_section,task_id,split,candidate_id,estimate,metric,class_id,point,ci_lower,ci_upper,n,bootstrap_repeats,notes
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,accuracy,,0.8404669260700389,0.8073929961089494,0.8715953307392996,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,accuracy,,0.8618677042801557,0.830739299610895,0.8910505836575876,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route_minus_scout,accuracy,,0.021400778210116767,0.009727626459143934,0.03696498054474706,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,macro_f1,,0.735666236876959,0.6817769502887507,0.7829897523353914,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,macro_f1,,0.7733020892031801,0.7188426016312893,0.8187261019411823,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route_minus_scout,macro_f1,,0.03763585232622113,0.01675100652811272,0.06390771744722226,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,qwk,,0.9165748060783532,0.8918827929542881,0.937821393887467,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,qwk,,0.9236274776494362,0.9004405730453418,0.9443652029395747,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_low_budget,route_minus_scout,qwk,,0.0070526715710830246,0.0026240755502922376,0.013201492373777912,514,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_low_budget,rate,scout_proxy_event,,0.0311284046692607,0.017509727626459144,0.04474708171206226,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_low_budget,rate,final_proxy_event,,0.027237354085603113,0.013618677042801557,0.04085603112840467,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_low_budget,rate,corrected,,0.0038910505836575876,0.0,0.009727626459143969,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_low_budget,rate,introduced,,0.0,0.0,0.0,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_low_budget,rate,net_reduction,,0.0038910505836575876,0.0,0.009727626459143969,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,recall,0,0.9802371541501976,0.9603139485882849,0.995968146780671,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,recall,1,0.7692307692307693,0.6457891949152543,0.8775510204081632,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,recall,2,0.7,0.625,0.7750249999999999,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,recall,3,0.7037037037037037,0.5263157894736842,0.88,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,recall,4,0.6428571428571429,0.4883720930232558,0.783797032326444,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,f1,0,0.9841269841269841,0.972,0.9940834214901012,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,f1,1,0.6896551724137931,0.5833131067961166,0.7777777777777778,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,f1,2,0.7452471482889734,0.6798342667907885,0.8015564202334631,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,f1,3,0.5757575757575758,0.42105263157894735,0.7058823529411765,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,scout,f1,4,0.6835443037974683,0.557366673583731,0.7948717948717948,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,recall,0,0.9841897233201581,0.9672712369597616,0.9962406015037594,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,recall,1,0.75,0.6290041260315079,0.8572055137844607,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,recall,2,0.7571428571428571,0.6865671641791045,0.8260945048309178,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,recall,3,0.8148148148148148,0.6551392572944297,0.9523809523809523,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,recall,4,0.6428571428571429,0.4883720930232558,0.783797032326444,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,f1,0,0.9861386138613861,0.9742548668385725,0.9957810339325605,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,f1,1,0.6842105263157895,0.577766323024055,0.7710882746672967,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,f1,2,0.7851851851851852,0.7272727272727273,0.8359407018442623,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,f1,3,0.7096774193548387,0.5660377358490566,0.8312229437229435,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_low_budget,route,f1,4,0.7012987012987013,0.5753424657534246,0.8089887640449438,42,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,val,aptos_locked_low_budget,rate,both_correct,,0.7723735408560312,,,397,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_low_budget,rate,scout_wrong_expert_right,,0.08171206225680934,,,42,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_low_budget,rate,scout_right_expert_wrong,,0.06809338521400778,,,35,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_low_budget,rate,both_wrong,,0.07782101167315175,,,40,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,accuracy,,0.811284046692607,0.7782101167315175,0.844406614785992,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,accuracy,,0.8813229571984436,0.8540856031128404,0.9085603112840467,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route_minus_scout,accuracy,,0.07003891050583655,0.03891050583657585,0.10311284046692604,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,macro_f1,,0.7147483589854622,0.662976334741346,0.760829113706553,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,macro_f1,,0.7940150437079249,0.7428550382075346,0.8384619387533088,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route_minus_scout,macro_f1,,0.07926668472246268,0.03177669305036249,0.12649861855247668,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,qwk,,0.913756294858803,0.8895053353459502,0.9355798133813986,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,qwk,,0.9395613389927812,0.919416131500989,0.95725730592294,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route_minus_scout,qwk,,0.025805044133978106,0.0013193251914325524,0.05202483779142392,514,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_performance_primary,rate,scout_proxy_event,,0.017509727626459144,0.007782101167315175,0.029182879377431907,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_performance_primary,rate,final_proxy_event,,0.02529182879377432,0.011673151750972763,0.04085603112840467,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_performance_primary,rate,corrected,,0.0019455252918287938,0.0,0.005836575875486381,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_performance_primary,rate,introduced,,0.009727626459143969,0.0019455252918287938,0.019455252918287938,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_performance_primary,rate,net_reduction,,-0.007782101167315175,-0.017509727626459144,0.0,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,recall,0,0.9565217391304348,0.9288537549407114,0.98,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,recall,1,0.8653846153846154,0.7692307692307693,0.9534883720930233,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,recall,2,0.5642857142857143,0.48201438848920863,0.65,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,recall,3,0.8148148148148148,0.6666666666666666,0.9583333333333334,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,recall,4,0.6904761904761905,0.5454051383399209,0.8205357142857141,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,f1,0,0.9738430583501007,0.958331043956044,0.9875,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,f1,1,0.6666666666666666,0.5714285714285714,0.7555643044619422,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,f1,2,0.6781115879828327,0.6019395001797914,0.7468072401567455,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,f1,3,0.5301204819277109,0.3998684210526316,0.6585365853658537,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,scout,f1,4,0.725,0.6027314738405677,0.8256980454726764,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,recall,0,0.9841897233201581,0.9669413891589693,0.9962271217581796,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,recall,1,0.75,0.6345833333333333,0.8620689655172413,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,recall,2,0.8285714285714286,0.7618956043956043,0.891724048889654,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,recall,3,0.7777777777777778,0.6,0.9259259259259259,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,recall,4,0.6666666666666666,0.5128048780487805,0.8055555555555556,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,f1,0,0.9861386138613861,0.9753060912151821,0.9960159362549801,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,f1,1,0.7289719626168224,0.631578947368421,0.819672131147541,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,f1,2,0.8315412186379928,0.7812442974452555,0.8782287822878229,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,f1,3,0.6666666666666666,0.5172135706340378,0.7887323943661971,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_performance_primary,route,f1,4,0.7567567567567568,0.6268656716417911,0.8571428571428571,42,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,val,aptos_locked_performance_primary,rate,both_correct,,0.7237354085603113,,,372,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_performance_primary,rate,scout_wrong_expert_right,,0.1303501945525292,,,67,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_performance_primary,rate,scout_right_expert_wrong,,0.08754863813229571,,,45,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_performance_primary,rate,both_wrong,,0.058365758754863814,,,30,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,accuracy,,0.811284046692607,0.7762645914396887,0.8443579766536965,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,accuracy,,0.8735408560311284,0.8443579766536965,0.9027237354085603,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route_minus_scout,accuracy,,0.0622568093385214,0.0311284046692607,0.09343385214007756,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,macro_f1,,0.7147483589854622,0.6640223414177954,0.7624527729598618,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,macro_f1,,0.7817129320866608,0.7271641851028307,0.8297261985038675,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route_minus_scout,macro_f1,,0.06696457310119863,0.017963430429809465,0.11284380373602293,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,qwk,,0.913756294858803,0.8896535260698206,0.9341438678718519,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,qwk,,0.9233799312182354,0.895472700577753,0.9469739219672485,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_single_reference,route_minus_scout,qwk,,0.009623636359432308,-0.01845892487224072,0.03649091597524737,514,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_single_reference,rate,scout_proxy_event,,0.017509727626459144,0.007782101167315175,0.029182879377431907,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_single_reference,rate,final_proxy_event,,0.033073929961089495,0.017509727626459144,0.048638132295719845,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_single_reference,rate,corrected,,0.0019455252918287938,0.0,0.005836575875486381,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_single_reference,rate,introduced,,0.017509727626459144,0.007782101167315175,0.029182879377431907,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_single_reference,rate,net_reduction,,-0.01556420233463035,-0.027237354085603113,-0.0038910505836575876,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,recall,0,0.9565217391304348,0.9310309784132323,0.9800816574969962,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,recall,1,0.8653846153846154,0.7599814814814815,0.9555555555555556,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,recall,2,0.5642857142857143,0.48148148148148145,0.647887323943662,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,recall,3,0.8148148148148148,0.6538461538461539,0.9565217391304348,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,recall,4,0.6904761904761905,0.5454051383399209,0.8292812662169173,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,f1,0,0.9738430583501007,0.9595108419016594,0.9873962765022327,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,f1,1,0.6666666666666666,0.5645161290322581,0.7468354430379747,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,f1,2,0.6781115879828327,0.6040786017377249,0.7470089051859611,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,f1,3,0.5301204819277109,0.3939393939393939,0.6486486486486487,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,scout,f1,4,0.725,0.6110772357723577,0.8315074906367039,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,recall,0,0.9802371541501976,0.9621212121212122,0.9960321381517033,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,recall,1,0.7115384615384616,0.5892857142857143,0.8297872340425532,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,recall,2,0.8357142857142857,0.7709850731754753,0.8943103744417725,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,recall,3,0.7777777777777778,0.6190476190476191,0.9231481481481478,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,recall,4,0.6190476190476191,0.47823616600790514,0.7692307692307693,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,f1,0,0.9821782178217822,0.9698189134808853,0.9923954372623575,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,f1,1,0.6727272727272727,0.5660377358490566,0.7647058823529411,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,f1,2,0.8327402135231317,0.7820056195852955,0.8787905001572821,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,f1,3,0.6885245901639344,0.5454545454545454,0.8077702702702698,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_single_reference,route,f1,4,0.7323943661971831,0.6046292233435717,0.8387295898048586,42,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,val,aptos_locked_single_reference,rate,both_correct,,0.7373540856031129,,,379,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_single_reference,rate,scout_wrong_expert_right,,0.1245136186770428,,,64,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_single_reference,rate,scout_right_expert_wrong,,0.07392996108949416,,,38,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_single_reference,rate,both_wrong,,0.06420233463035019,,,33,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,accuracy,,0.8540856031128404,0.8229571984435797,0.8832684824902723,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,accuracy,,0.8618677042801557,0.830739299610895,0.8910505836575876,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route_minus_scout,accuracy,,0.0077821011673152585,-0.02144941634241248,0.03696498054474717,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,macro_f1,,0.7138290711279961,0.6469758776585508,0.7646898931228364,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,macro_f1,,0.7737722072100339,0.7224383236037185,0.8190585576667941,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route_minus_scout,macro_f1,,0.05994313608203783,0.007442141232191064,0.11719467179635751,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,qwk,,0.9177884355293581,0.8928236009657237,0.9401203054031524,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,qwk,,0.932365226427699,0.9086575694938293,0.9518080338548087,514,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route_minus_scout,qwk,,0.014576790898340963,-0.006225460681840175,0.03783836767463727,514,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,scout_proxy_event,,0.048638132295719845,0.0311284046692607,0.06809338521400778,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,final_proxy_event,,0.017509727626459144,0.007782101167315175,0.029182879377431907,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,corrected,,0.0311284046692607,0.017509727626459144,0.04669260700389105,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,introduced,,0.0,0.0,0.0,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,net_reduction,,0.0311284046692607,0.017509727626459144,0.04669260700389105,514,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,recall,0,0.9920948616600791,0.9799196787148594,1.0,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,recall,1,0.4230769230769231,0.29411764705882354,0.5625,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,recall,2,0.9142857142857143,0.8671861341783217,0.958347602739726,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,recall,3,0.48148148148148145,0.2940563725490196,0.68,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,recall,4,0.5952380952380952,0.4463789682539683,0.7435897435897436,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,f1,0,0.9785575048732943,0.9645654907698124,0.9902152641878669,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,f1,1,0.5365853658536586,0.4,0.6590971528471528,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,f1,2,0.8178913738019169,0.770754275870555,0.8604022420046159,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,f1,3,0.5416666666666666,0.35,0.6969873150105708,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,scout,f1,4,0.6944444444444444,0.561392811296534,0.8108108108108109,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,recall,0,0.9802371541501976,0.9607778637770898,0.9959839357429718,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,recall,1,0.75,0.625,0.8636363636363636,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,recall,2,0.7428571428571429,0.6692293233082707,0.8175194811599921,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,recall,3,0.8148148148148148,0.6551724137931034,0.9523809523809523,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,recall,4,0.7142857142857143,0.5757575757575758,0.8409389952153109,42,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,f1,0,0.9802371541501976,0.9666650294695481,0.9916001111188277,253,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,f1,1,0.6724137931034483,0.5714285714285714,0.7647186700767262,52,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,f1,2,0.8,0.7443937759196197,0.8525927298557707,140,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,f1,3,0.6567164179104478,0.5161290322580645,0.7761194029850746,27,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,val,aptos_locked_zero_introduced,route,f1,4,0.759493670886076,0.6388586956521739,0.8571428571428571,42,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,both_correct,,0.7237354085603113,,,372,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,scout_wrong_expert_right,,0.08754863813229571,,,45,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,scout_right_expert_wrong,,0.1303501945525292,,,67,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,val,aptos_locked_zero_introduced,rate,both_wrong,,0.058365758754863814,,,30,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,accuracy,,0.8090909090909091,0.7854545454545454,0.8309090909090909,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,accuracy,,0.8190909090909091,0.7954318181818182,0.84,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route_minus_scout,accuracy,,0.010000000000000009,0.0027272727272726893,0.018181818181818188,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,macro_f1,,0.6756798558641108,0.6393201411928684,0.7091818168963495,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,macro_f1,,0.6853786601006523,0.6493411972487722,0.7190600727994886,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route_minus_scout,macro_f1,,0.009698804236541458,-0.002969036470153899,0.02135661551773199,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,qwk,,0.8924301728040046,0.871213676102281,0.912009413702699,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,qwk,,0.8992799971414278,0.8790540456278098,0.9171197074113837,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_low_budget,route_minus_scout,qwk,,0.006849824337423205,-0.001321914562881038,0.015418287955617706,1100,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_low_budget,rate,scout_proxy_event,,0.031818181818181815,0.02181818181818182,0.042727272727272725,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_low_budget,rate,final_proxy_event,,0.038181818181818185,0.028181818181818183,0.05,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_low_budget,rate,corrected,,0.0009090909090909091,0.0,0.0027272727272727275,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_low_budget,rate,introduced,,0.007272727272727273,0.0027272727272727275,0.012727272727272728,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_low_budget,rate,net_reduction,,-0.006363636363636364,-0.011818181818181818,-0.0018181818181818182,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,recall,0,0.9723247232472325,0.9574861367837338,0.9850187265917603,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,recall,1,0.7027027027027027,0.6181569602272727,0.7830188679245284,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,recall,2,0.66,0.6059488729570448,0.7122851858079704,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,recall,3,0.5689655172413793,0.44606557377049183,0.6956521739130435,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,recall,4,0.6067415730337079,0.5,0.7111217948717948,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,f1,0,0.9822926374650512,0.973811833171678,0.9896751833852327,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,f1,1,0.6265060240963856,0.5522937238493724,0.6940431212140136,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,f1,2,0.7213114754098361,0.6784908424908425,0.7616225,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,f1,3,0.42038216560509556,0.31931555230787967,0.5189960836422127,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,scout,f1,4,0.627906976744186,0.5405239595423644,0.7106644853525779,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,recall,0,0.9723247232472325,0.9574861367837338,0.9850187265917603,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,recall,1,0.7117117117117117,0.6260851891127608,0.7931105728127672,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,recall,2,0.7066666666666667,0.6555155699177438,0.7585090702947845,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,recall,3,0.5172413793103449,0.38596491228070173,0.6481725146198829,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,recall,4,0.5955056179775281,0.48999489795918366,0.7023809523809523,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,f1,0,0.9822926374650512,0.973811833171678,0.9896751833852327,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,f1,1,0.6396761133603239,0.5665236051502146,0.7063055365686943,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,f1,2,0.7399650959860384,0.6979232292322923,0.777027027027027,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,f1,3,0.4225352112676056,0.3157894736842105,0.5235809602860425,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_low_budget,route,f1,4,0.6424242424242425,0.5548387096774193,0.7261921388667198,89,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,test,aptos_locked_low_budget,rate,both_correct,,0.7609090909090909,,,837,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_low_budget,rate,scout_wrong_expert_right,,0.08818181818181818,,,97,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_low_budget,rate,scout_right_expert_wrong,,0.04818181818181818,,,53,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_low_budget,rate,both_wrong,,0.10272727272727272,,,113,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,accuracy,,0.8154545454545454,0.7918181818181819,0.8390909090909091,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,accuracy,,0.8545454545454545,0.8345227272727274,0.8754545454545455,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route_minus_scout,accuracy,,0.039090909090909065,0.019090909090909155,0.05909090909090908,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,macro_f1,,0.7078814466855292,0.6745444907255769,0.7398526424186364,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,macro_f1,,0.7354828389061907,0.6994961419017308,0.7697945303137005,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route_minus_scout,macro_f1,,0.02760139222066149,-0.0021181777992959642,0.05684145816420131,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,qwk,,0.9040031131032173,0.8836217571895587,0.9230428267089773,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,qwk,,0.9211419241268465,0.9028523404428723,0.9375169646545646,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route_minus_scout,qwk,,0.01713881102362913,0.0013891958328389631,0.034670653433465,1100,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_performance_primary,rate,scout_proxy_event,,0.019090909090909092,0.011818181818181818,0.02727272727272727,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_performance_primary,rate,final_proxy_event,,0.035454545454545454,0.024545454545454544,0.046363636363636364,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_performance_primary,rate,corrected,,0.0,0.0,0.0,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_performance_primary,rate,introduced,,0.016363636363636365,0.00909090909090909,0.024545454545454544,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_performance_primary,rate,net_reduction,,-0.016363636363636365,-0.024545454545454544,-0.00909090909090909,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,recall,0,0.9630996309963099,0.947266987743509,0.9784324277656268,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,recall,1,0.8198198198198198,0.7456100478468899,0.8899105504587156,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,recall,2,0.5966666666666667,0.5396717048594182,0.6537337809636149,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,recall,3,0.6896551724137931,0.5624725877192982,0.8070175438596491,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,recall,4,0.7303370786516854,0.6363636363636364,0.8227881065400844,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,f1,0,0.9793621013133208,0.9705333252729575,0.9878168772679491,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,f1,1,0.6570397111913358,0.5910524393213735,0.7171052631578947,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,f1,2,0.7061143984220908,0.6593365436062065,0.75,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,f1,3,0.4624277456647399,0.36257309941520466,0.5542357913328707,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,scout,f1,4,0.7344632768361582,0.6567107212031446,0.8022045855379188,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,recall,0,0.977859778597786,0.9648115448161917,0.9889913297711462,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,recall,1,0.7477477477477478,0.6666666666666666,0.8241032901833871,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,recall,2,0.8,0.753984349678196,0.8442906574394463,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,recall,3,0.5344827586206896,0.40383771929824563,0.6666666666666666,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,recall,4,0.6292134831460674,0.5333333333333333,0.7282608695652174,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,f1,0,0.9823911028730306,0.9738798399795432,0.989729703624227,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,f1,1,0.6887966804979253,0.613937984496124,0.7509881422924901,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,f1,2,0.8067226890756303,0.7717966736171541,0.8402005031735693,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,f1,3,0.47692307692307695,0.36493032514930324,0.581081081081081,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_performance_primary,route,f1,4,0.7225806451612903,0.640609375,0.7948717948717948,89,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,test,aptos_locked_performance_primary,rate,both_correct,,0.7390909090909091,,,813,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_performance_primary,rate,scout_wrong_expert_right,,0.11,,,121,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_performance_primary,rate,scout_right_expert_wrong,,0.07636363636363637,,,84,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_performance_primary,rate,both_wrong,,0.07454545454545454,,,82,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,accuracy,,0.8154545454545454,0.7936363636363636,0.8390909090909091,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,accuracy,,0.8527272727272728,0.8318181818181818,0.8736363636363637,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route_minus_scout,accuracy,,0.037272727272727346,0.017272727272727217,0.05638636363636354,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,macro_f1,,0.7078814466855292,0.6739165323341944,0.7409933599980965,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,macro_f1,,0.7375455537600079,0.699967447890624,0.7729802881352578,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route_minus_scout,macro_f1,,0.02966410707447864,-0.0004912741874268792,0.057930564794845804,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,qwk,,0.9040031131032173,0.8846511853135748,0.9238690910542915,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,qwk,,0.9159872776341116,0.8975563542189512,0.9332162259503026,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_single_reference,route_minus_scout,qwk,,0.011984164530894237,-0.006555708927396911,0.030458381581478775,1100,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_single_reference,rate,scout_proxy_event,,0.019090909090909092,0.01090909090909091,0.028181818181818183,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_single_reference,rate,final_proxy_event,,0.04090909090909091,0.03,0.05272727272727273,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_single_reference,rate,corrected,,0.0,0.0,0.0,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_single_reference,rate,introduced,,0.02181818181818182,0.013636363636363636,0.03090909090909091,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_single_reference,rate,net_reduction,,-0.02181818181818182,-0.03090909090909091,-0.013636363636363636,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,recall,0,0.9630996309963099,0.9475587703435805,0.9782224019569162,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,recall,1,0.8198198198198198,0.7452830188679245,0.8907601222307105,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,recall,2,0.5966666666666667,0.5415245159812121,0.6506889946598561,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,recall,3,0.6896551724137931,0.5636363636363636,0.8103692257644761,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,recall,4,0.7303370786516854,0.6337910798122066,0.8214285714285714,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,f1,0,0.9793621013133208,0.9707363914512959,0.9875,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,f1,1,0.6570397111913358,0.586755875516529,0.7188764783951704,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,f1,2,0.7061143984220908,0.6611209103840683,0.7490043746582298,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,f1,3,0.4624277456647399,0.36809815950920244,0.5490246875952454,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,scout,f1,4,0.7344632768361582,0.655367231638418,0.804472484428177,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,recall,0,0.974169741697417,0.9603024574669187,0.9869646182495344,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,recall,1,0.6936936936936937,0.6068262411347517,0.777804487179487,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,recall,2,0.8166666666666667,0.7734595469255664,0.8608506374598348,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,recall,3,0.5172413793103449,0.3817965367965368,0.6440845227475467,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,recall,4,0.651685393258427,0.549969512195122,0.7500618811881185,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,f1,0,0.9832402234636871,0.975469375357347,0.9907322975135003,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,f1,1,0.6497890295358649,0.5753394350830403,0.7205947308251922,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,f1,2,0.7941653160453809,0.7595785887903062,0.829034299714169,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,f1,3,0.5309734513274337,0.40775800071916574,0.6349354695149086,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_single_reference,route,f1,4,0.7295597484276729,0.6455696202531646,0.8054212347325854,89,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,test,aptos_locked_single_reference,rate,both_correct,,0.7372727272727273,,,811,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_single_reference,rate,scout_wrong_expert_right,,0.11181818181818182,,,123,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_single_reference,rate,scout_right_expert_wrong,,0.07818181818181819,,,86,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_single_reference,rate,both_wrong,,0.07272727272727272,,,80,0,primary Scout versus registered Expert
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,accuracy,,0.8490909090909091,0.8281818181818181,0.87,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,accuracy,,0.8454545454545455,0.8236363636363636,0.8681818181818182,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route_minus_scout,accuracy,,-0.0036363636363636598,-0.022727272727272707,0.015454545454545388,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,macro_f1,,0.7059867771592995,0.6674889636485347,0.7432172403166573,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,macro_f1,,0.7322473143060425,0.696335407617,0.7659389699669384,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route_minus_scout,macro_f1,,0.026260537146743035,-0.0066891368682137995,0.0575084632165282,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,qwk,,0.9131468299638731,0.8946951312448701,0.9295278252856408,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,qwk,,0.9195606829332841,0.9011843290923336,0.9369650062473289,1100,2000,case-level paired bootstrap
+route_metric_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route_minus_scout,qwk,,0.006413852969410994,-0.006149368597802884,0.01804343569232889,1100,2000,case-level paired bootstrap
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,scout_proxy_event,,0.04454545454545455,0.03272727272727273,0.057272727272727274,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,final_proxy_event,,0.028181818181818183,0.019090909090909092,0.038181818181818185,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,corrected,,0.016363636363636365,0.00909090909090909,0.024545454545454544,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,introduced,,0.0,0.0,0.0,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+proxy_error_variation,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,net_reduction,,0.016363636363636365,0.00909090909090909,0.024545454545454544,1100,2000,label-order proxy threshold=3; not a clinical-outcome event
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,recall,0,0.9760147601476015,0.9628235481436869,0.9883957021947428,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,recall,1,0.6036036036036037,0.5137379440131734,0.6944562146892654,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,recall,2,0.8866666666666667,0.8476165146909828,0.9207920792079208,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,recall,3,0.46551724137931033,0.32876223091976514,0.5957549099836333,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,recall,4,0.5056179775280899,0.40422356303588436,0.6067415730337079,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,f1,0,0.9796296296296296,0.9709086641058472,0.9874405641544165,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,f1,1,0.6442307692307693,0.5666509433962263,0.7169858967028777,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,f1,2,0.8159509202453987,0.7844944993733464,0.8469888074339813,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,f1,3,0.47368421052631576,0.35415865384615386,0.5821004202289523,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,scout,f1,4,0.6164383561643836,0.5179730341600846,0.7013257575757574,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,recall,0,0.9797047970479705,0.9667882236552306,0.9908763278954437,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,recall,1,0.7297297297297297,0.6454396771452847,0.8119791666666666,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,recall,2,0.74,0.6888888888888889,0.7889981979030144,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,recall,3,0.6206896551724138,0.5,0.7446912807676261,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,recall,4,0.6741573033707865,0.573170731707317,0.7685363247863246,89,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,f1,0,0.9851576994434137,0.9776462494209968,0.9918552036199095,542,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,f1,1,0.6639344262295082,0.5909042961258152,0.729424645770717,111,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,f1,2,0.7803163444639719,0.7397706881724799,0.8169517114730409,300,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,f1,3,0.4864864864864865,0.3856868131868132,0.5798907882241214,58,2000,case-level bootstrap; class support shown in n
+class_level_ci,aptos_dr_5class,test,aptos_locked_zero_introduced,route,f1,4,0.7453416149068323,0.6666666666666666,0.8148148148148148,89,2000,case-level bootstrap; class support shown in n
+error_complementarity,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,both_correct,,0.7390909090909091,,,813,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,scout_wrong_expert_right,,0.07636363636363637,,,84,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,scout_right_expert_wrong,,0.11,,,121,0,primary Scout versus registered Expert
+error_complementarity,aptos_dr_5class,test,aptos_locked_zero_introduced,rate,both_wrong,,0.07454545454545454,,,82,0,primary Scout versus registered Expert
+validation_selection_stability,aptos_dr_5class,val,aptos_locked_low_budget,bootstrap_selection_frequency,qwk,,0.003,2.0,5.0,514,2000,median_rank=3.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,aptos_dr_5class,val,aptos_locked_performance_primary,bootstrap_selection_frequency,qwk,,0.721,1.0,3.0,514,2000,median_rank=1.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,aptos_dr_5class,val,aptos_locked_single_reference,bootstrap_selection_frequency,qwk,,0.059,1.0,4.0,514,2000,median_rank=3.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,aptos_dr_5class,val,aptos_locked_zero_introduced,bootstrap_selection_frequency,qwk,,0.217,1.0,5.0,514,2000,median_rank=2.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,aptos_dr_5class,val,baseline::swin_tiny,bootstrap_selection_frequency,qwk,,0.0,3.0,5.0,514,2000,median_rank=5.0; comparison limited to frozen candidates plus strong baseline
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,accuracy,,0.9069767441860465,0.8697674418604651,0.9441860465116279,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,route,accuracy,,0.9255813953488372,0.8883720930232558,0.958139534883721,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,route_minus_scout,accuracy,,0.018604651162790753,-0.009302325581395321,0.051162790697674376,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,macro_f1,,0.8819278444515636,0.8291500255473263,0.9277498881098464,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,route,macro_f1,,0.9055852190863632,0.8581328386399724,0.9455578817550581,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_multi,route_minus_scout,macro_f1,,0.023657374634799666,-0.011494245780562979,0.06220938716819047,215,2000,case-level paired bootstrap
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_multi,rate,scout_proxy_event,,0.013953488372093023,0.0,0.03255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_multi,rate,final_proxy_event,,0.0,0.0,0.0,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_multi,rate,corrected,,0.013953488372093023,0.0,0.03255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_multi,rate,introduced,,0.0,0.0,0.0,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_multi,rate,net_reduction,,0.013953488372093023,0.0,0.03255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,recall,0,0.9357798165137615,0.8842034774436089,0.9782667134174848,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,recall,1,0.75,0.6060606060606061,0.8750762195121947,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,recall,2,0.9545454545454546,0.9014084507042254,1.0,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,f1,0,0.9400921658986175,0.9047569650266746,0.9700053191489361,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,f1,1,0.7792207792207793,0.6666666666666666,0.8732394366197183,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,scout,f1,2,0.9264705882352942,0.8739495798319328,0.9655289702087732,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,recall,0,0.9357798165137615,0.8857142857142857,0.9787344858156027,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,recall,1,0.775,0.6362708719851577,0.8974358974358975,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,recall,2,1.0,1.0,1.0,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,f1,0,0.9444444444444444,0.9120836417468542,0.9736842105263158,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,f1,1,0.8157894736842105,0.7058823529411765,0.9014342150463757,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_multi,route,f1,2,0.9565217391304348,0.9154929577464789,0.9868421052631579,66,2000,case-level bootstrap; class support shown in n
+error_complementarity,glaucoma_3class,val,glaucoma_locked_multi,rate,both_correct,,0.8372093023255814,,,180,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_multi,rate,scout_wrong_expert_right,,0.05581395348837209,,,12,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_multi,rate,scout_right_expert_wrong,,0.06976744186046512,,,15,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_multi,rate,both_wrong,,0.037209302325581395,,,8,0,primary Scout versus registered Expert
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,scout,accuracy,,0.9069767441860465,0.8651162790697674,0.9441860465116279,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,route,accuracy,,0.9209302325581395,0.8837209302325582,0.9534883720930233,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,route_minus_scout,accuracy,,0.013953488372093092,-0.013953488372092981,0.041860465116279055,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,scout,macro_f1,,0.8819278444515636,0.830552773740329,0.9300633293691228,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,route,macro_f1,,0.899959493849229,0.8516509435177881,0.9423085913463106,215,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,val,glaucoma_locked_single,route_minus_scout,macro_f1,,0.01803164939766544,-0.015275309238747325,0.053422393551213754,215,2000,case-level paired bootstrap
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_single,rate,scout_proxy_event,,0.013953488372093023,0.0,0.03255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_single,rate,final_proxy_event,,0.004651162790697674,0.0,0.013953488372093023,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_single,rate,corrected,,0.009302325581395349,0.0,0.023255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_single,rate,introduced,,0.0,0.0,0.0,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,val,glaucoma_locked_single,rate,net_reduction,,0.009302325581395349,0.0,0.023255813953488372,215,2000,label-order proxy threshold=2; not a clinical-outcome event
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,recall,0,0.9357798165137615,0.8907563025210085,0.9757195121951213,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,recall,1,0.75,0.6136180351906159,0.8823529411764706,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,recall,2,0.9545454545454546,0.8947368421052632,1.0,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,f1,0,0.9400921658986175,0.9074869472997226,0.9702127659574468,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,f1,1,0.7792207792207793,0.6666666666666666,0.87641219024165,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,scout,f1,2,0.9264705882352942,0.8761865407319953,0.9673308032890575,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,recall,0,0.9357798165137615,0.88990631317058,0.9747899159663865,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,recall,1,0.775,0.6363082039911309,0.8979591836734694,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,recall,2,0.9848484848484849,0.9464165057915057,1.0,66,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,f1,0,0.9488372093023256,0.9186529635777756,0.9756156474608224,109,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,f1,1,0.8157894736842105,0.7096774193548387,0.9024390243902439,40,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,val,glaucoma_locked_single,route,f1,2,0.935251798561151,0.8888497652582159,0.9743589743589743,66,2000,case-level bootstrap; class support shown in n
+error_complementarity,glaucoma_3class,val,glaucoma_locked_single,rate,both_correct,,0.8372093023255814,,,180,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_single,rate,scout_wrong_expert_right,,0.05581395348837209,,,12,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_single,rate,scout_right_expert_wrong,,0.06976744186046512,,,15,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,val,glaucoma_locked_single,rate,both_wrong,,0.037209302325581395,,,8,0,primary Scout versus registered Expert
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,accuracy,,0.8620689655172413,0.8297413793103449,0.8922413793103449,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,route,accuracy,,0.8577586206896551,0.8254310344827587,0.8879310344827587,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,route_minus_scout,accuracy,,-0.004310344827586188,-0.0237068965517242,0.01724137931034475,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,macro_f1,,0.8345843444889667,0.7972604978391975,0.8694296831400841,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,route,macro_f1,,0.8254073703660358,0.7860093121531686,0.8622086893133084,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_multi,route_minus_scout,macro_f1,,-0.009176974122930837,-0.035383196934820706,0.016769437928090634,464,2000,case-level paired bootstrap
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_multi,rate,scout_proxy_event,,0.02586206896551724,0.01293103448275862,0.040948275862068964,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_multi,rate,final_proxy_event,,0.021551724137931036,0.008620689655172414,0.036637931034482756,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_multi,rate,corrected,,0.008620689655172414,0.0021551724137931034,0.017241379310344827,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_multi,rate,introduced,,0.004310344827586207,0.0,0.010775862068965518,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_multi,rate,net_reduction,,0.004310344827586207,-0.00646551724137931,0.015086206896551725,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,recall,0,0.8813559322033898,0.8396530289330922,0.9215686274509803,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,recall,1,0.7241379310344828,0.6282051282051282,0.8111458333333331,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,recall,2,0.9148936170212766,0.8680522798742139,0.960532765737874,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,f1,0,0.896551724137931,0.8662028447742733,0.9240780911062907,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,f1,1,0.6923076923076923,0.6107687222956685,0.7647774244833064,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,scout,f1,2,0.9148936170212766,0.88,0.9480968858131488,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,recall,0,0.8813559322033898,0.839995670995671,0.9214876033057852,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,recall,1,0.6781609195402298,0.5774611587048062,0.7741935483870968,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,recall,2,0.9290780141843972,0.884608843537415,0.9708029197080292,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,f1,0,0.8984881209503239,0.8681818181818182,0.927536231884058,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,f1,1,0.6742857142857143,0.5890209508460919,0.7511748540020611,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_multi,route,f1,2,0.903448275862069,0.8661971830985915,0.9377339901477832,141,2000,case-level bootstrap; class support shown in n
+error_complementarity,glaucoma_3class,test,glaucoma_locked_multi,rate,both_correct,,0.7974137931034483,,,370,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_multi,rate,scout_wrong_expert_right,,0.04741379310344827,,,22,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_multi,rate,scout_right_expert_wrong,,0.06465517241379311,,,30,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_multi,rate,both_wrong,,0.09051724137931035,,,42,0,primary Scout versus registered Expert
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,scout,accuracy,,0.8620689655172413,0.8297413793103449,0.8922413793103449,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,route,accuracy,,0.8663793103448276,0.834051724137931,0.896551724137931,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,route_minus_scout,accuracy,,0.004310344827586299,-0.010775862068965525,0.021551724137930942,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,scout,macro_f1,,0.8345843444889667,0.7951261735547175,0.8701011311868181,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,route,macro_f1,,0.8381063422598825,0.8004427807363909,0.873977833097664,464,2000,case-level paired bootstrap
+route_metric_ci,glaucoma_3class,test,glaucoma_locked_single,route_minus_scout,macro_f1,,0.0035219977709157746,-0.015093810964811206,0.023554534093147856,464,2000,case-level paired bootstrap
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_single,rate,scout_proxy_event,,0.02586206896551724,0.01293103448275862,0.040948275862068964,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_single,rate,final_proxy_event,,0.021551724137931036,0.008620689655172414,0.034482758620689655,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_single,rate,corrected,,0.008620689655172414,0.0021551724137931034,0.017241379310344827,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_single,rate,introduced,,0.004310344827586207,0.0,0.010775862068965518,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+proxy_error_variation,glaucoma_3class,test,glaucoma_locked_single,rate,net_reduction,,0.004310344827586207,-0.00646551724137931,0.015086206896551725,464,2000,label-order proxy threshold=2; not a clinical-outcome event
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,recall,0,0.8813559322033898,0.8391232482932088,0.921489628909415,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,recall,1,0.7241379310344828,0.6262310606060606,0.8125146028037382,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,recall,2,0.9148936170212766,0.8648648648648649,0.9574468085106383,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,f1,0,0.896551724137931,0.8666630196936543,0.9240506329113924,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,f1,1,0.6923076923076923,0.6091829085457272,0.7654391534391534,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,scout,f1,2,0.9148936170212766,0.8794312443083037,0.9466677115987461,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,recall,0,0.885593220338983,0.8432096995041077,0.9246885066834525,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,recall,1,0.7126436781609196,0.6190476190476191,0.8052353896103894,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,recall,2,0.9290780141843972,0.8823529411764706,0.9680038216560509,141,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,f1,0,0.9008620689655172,0.8710324711673243,0.926829268292683,236,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,f1,1,0.7005649717514124,0.6206896551724138,0.7745664739884393,87,2000,case-level bootstrap; class support shown in n
+class_level_ci,glaucoma_3class,test,glaucoma_locked_single,route,f1,2,0.9128919860627178,0.8763250883392226,0.9456869009584664,141,2000,case-level bootstrap; class support shown in n
+error_complementarity,glaucoma_3class,test,glaucoma_locked_single,rate,both_correct,,0.7974137931034483,,,370,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_single,rate,scout_wrong_expert_right,,0.04741379310344827,,,22,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_single,rate,scout_right_expert_wrong,,0.06465517241379311,,,30,0,primary Scout versus registered Expert
+error_complementarity,glaucoma_3class,test,glaucoma_locked_single,rate,both_wrong,,0.09051724137931035,,,42,0,primary Scout versus registered Expert
+validation_selection_stability,glaucoma_3class,val,baseline::glaucoma_retfound_dinov2,bootstrap_selection_frequency,macro_f1,,0.051,1.0,3.0,215,2000,median_rank=3.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,glaucoma_3class,val,glaucoma_locked_multi,bootstrap_selection_frequency,macro_f1,,0.6085,1.0,3.0,215,2000,median_rank=1.0; comparison limited to frozen candidates plus strong baseline
+validation_selection_stability,glaucoma_3class,val,glaucoma_locked_single,bootstrap_selection_frequency,macro_f1,,0.3405,1.0,3.0,215,2000,median_rank=2.0; comparison limited to frozen candidates plus strong baseline
