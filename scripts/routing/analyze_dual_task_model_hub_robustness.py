@@ -720,34 +720,71 @@ def collect_cost_evidence(
                 "notes": str(hub_row.get("cpu_postprocess_status", "")),
             }
         )
+    glaucoma_cost_path = REPO_ROOT / (
+        "experiments/model_hub/tasks/glaucoma_3class/outputs/h100_cost/"
+        "glaucoma_h100_forward_cost_summary.csv"
+    )
+    glaucoma_costs = (
+        pd.read_csv(glaucoma_cost_path)
+        if glaucoma_cost_path.exists()
+        else pd.DataFrame()
+    )
     for _, model in glaucoma_hub.iterrows():
+        artifact_id = str(model["artifact_id"])
+        measured = glaucoma_costs.loc[
+            glaucoma_costs["artifact_id"].eq(artifact_id)
+        ]
+        if measured.empty:
+            rows.append(
+                {
+                    "task_id": "glaucoma_3class",
+                    "model_id": artifact_id,
+                    "hardware": "historical RTX4090 (registry declaration)",
+                    "dtype": "",
+                    "batch1_ms_per_image": np.nan,
+                    "batch16_ms_per_image": np.nan,
+                    "batch16_images_per_second": np.nan,
+                    "peak_memory_mb": np.nan,
+                    "warmup_runs": np.nan,
+                    "measured_runs": np.nan,
+                    "scope": model["cost_scope"],
+                    "comparability": "historical_hardware_not_comparable",
+                    "evidence_path": (
+                        "experiments/model_hub/tasks/glaucoma_3class/configs/"
+                        "glaucoma_h100_prediction_assets.csv"
+                    ),
+                    "evidence_sha256": sha256_file(
+                        REPO_ROOT
+                        / "experiments/model_hub/tasks/glaucoma_3class/configs/"
+                        "glaucoma_h100_prediction_assets.csv"
+                    ),
+                    "notes": "No formal H100 cost evidence",
+                }
+            )
+            continue
+        batch_1 = measured.loc[measured["batch_size"].eq(1)].iloc[0]
+        batch_16 = measured.loc[measured["batch_size"].eq(16)].iloc[0]
         rows.append(
             {
                 "task_id": "glaucoma_3class",
-                "model_id": model["artifact_id"],
-                "hardware": "historical RTX4090 (registry declaration)",
-                "dtype": "",
-                "batch1_ms_per_image": np.nan,
-                "batch16_ms_per_image": np.nan,
-                "batch16_images_per_second": np.nan,
-                "peak_memory_mb": np.nan,
-                "warmup_runs": np.nan,
-                "measured_runs": np.nan,
-                "scope": model["cost_scope"],
-                "comparability": "historical_hardware_not_comparable",
-                "evidence_path": (
-                    "experiments/model_hub/tasks/glaucoma_3class/configs/"
-                    "glaucoma_h100_prediction_assets.csv"
+                "model_id": artifact_id,
+                "hardware": batch_16["device"],
+                "dtype": batch_16["precision"],
+                "batch1_ms_per_image": batch_1["median_ms_per_image"],
+                "batch16_ms_per_image": batch_16["median_ms_per_image"],
+                "batch16_images_per_second": batch_16["images_per_second"],
+                "peak_memory_mb": measured[
+                    "peak_allocated_memory_mb"
+                ].max(),
+                "warmup_runs": batch_16["warmup_runs"],
+                "measured_runs": batch_16["timed_runs"],
+                "scope": "H100 GPU forward-only batch1/batch16",
+                "comparability": "comparable_h100_forward_only",
+                "evidence_path": str(
+                    glaucoma_cost_path.relative_to(REPO_ROOT)
                 ),
-                "evidence_sha256": sha256_file(
-                    REPO_ROOT
-                    / "experiments/model_hub/tasks/glaucoma_3class/configs/"
-                    "glaucoma_h100_prediction_assets.csv"
-                ),
-                "notes": (
-                    "No formal H100 cost evidence; excluded from cross-task "
-                    "cost ranking"
-                ),
+                "evidence_sha256": sha256_file(glaucoma_cost_path),
+                "notes": "fixed-batch FP32; image I/O and preprocessing excluded",
             }
         )
     return pd.DataFrame(rows)

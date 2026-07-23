@@ -23,6 +23,7 @@ import pandas as pd  # noqa: E402
 
 SUPPORTED_ADAPTERS = {
     "glaucoma_convnext_tiny",
+    "glaucoma_timm_classifier",
     "glaucoma_retfound_dinov2",
 }
 CONFIG_FIELDS = {
@@ -124,6 +125,7 @@ def load_benchmark_config(path: Path) -> dict[str, Any]:
             raise BenchmarkError(f"不支持的 adapter：{artifact['adapter']}")
         adapter_fields = {
             "glaucoma_convnext_tiny": {"model_config", "class_to_idx_path"},
+            "glaucoma_timm_classifier": {"model_config", "class_to_idx_path"},
             "glaucoma_retfound_dinov2": {"retfound_root"},
         }[artifact["adapter"]]
         adapter_missing = sorted(adapter_fields - set(artifact))
@@ -227,24 +229,31 @@ def _load_json_mapping(path: Path) -> dict[str, int]:
     return {str(key): int(value) for key, value in data.items()}
 
 
-def _prepare_convnext(spec: dict[str, Any], device: Any) -> PreparedArtifact:
+def _prepare_timm_classifier(
+    spec: dict[str, Any], device: Any
+) -> PreparedArtifact:
     import yaml
 
-    from models.classifiers.builder import build_model
     from models.datasets.aptos_dataset import build_aptos_dataloader
+    from scripts.v083_glaucoma.export_glaucoma_scout_predictions import (
+        build_inference_model,
+        structured_config_value,
+    )
 
     config_path = Path(spec["model_config"])
     checkpoint_path = Path(spec["checkpoint_path"])
     class_mapping_path = Path(spec["class_to_idx_path"])
     for path in (config_path, checkpoint_path, class_mapping_path):
         if not path.exists():
-            raise BenchmarkError(f"ConvNeXt 运行文件不存在：{path}")
+            raise BenchmarkError(f"timm classifier 运行文件不存在：{path}")
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    config["data_root"] = str(spec["data_root"])
+    image_size = int(
+        structured_config_value(config, "training", "image_size", "image_size")
+    )
     dataset, loader = build_aptos_dataloader(
-        data_root=config["data_root"],
+        data_root=str(spec["data_root"]),
         split=str(spec["split"]),
-        image_size=int(config["image_size"]),
+        image_size=image_size,
         batch_size=int(spec["batch_size"]),
         num_workers=int(spec.get("num_workers", 4)),
         shuffle=False,
@@ -253,21 +262,16 @@ def _prepare_convnext(spec: dict[str, Any], device: Any) -> PreparedArtifact:
     observed_mapping = {str(key): int(value) for key, value in dataset.class_to_idx.items()}
     if observed_mapping != expected_mapping:
         raise BenchmarkError(
-            "ConvNeXt class_to_idx 不一致，停止成本测量："
+            "timm classifier class_to_idx 不一致，停止成本测量："
             f"dataset={observed_mapping}, checkpoint={expected_mapping}"
         )
-    model = build_model(
-        config=config,
-        checkpoint_path=str(checkpoint_path),
-        device=device,
-        training=False,
-    )
+    model = build_inference_model(config, checkpoint_path, device)
     return PreparedArtifact(
         model=model,
         loader=loader,
         n_images=len(dataset),
         checkpoint_path=checkpoint_path,
-        adapter_note="复用 v0.8.3 ConvNeXt 青光眼分类器 loader",
+        adapter_note="复用 v0.8.3 通用 timm 青光眼分类器 loader",
     )
 
 
@@ -322,8 +326,11 @@ def _prepare_retfound(spec: dict[str, Any], device: Any) -> PreparedArtifact:
 
 
 def prepare_artifact(spec: dict[str, Any], device: Any) -> PreparedArtifact:
-    if spec["adapter"] == "glaucoma_convnext_tiny":
-        return _prepare_convnext(spec, device)
+    if spec["adapter"] in {
+        "glaucoma_convnext_tiny",
+        "glaucoma_timm_classifier",
+    }:
+        return _prepare_timm_classifier(spec, device)
     if spec["adapter"] == "glaucoma_retfound_dinov2":
         return _prepare_retfound(spec, device)
     raise BenchmarkError(f"不支持的 adapter：{spec['adapter']}")
@@ -351,29 +358,47 @@ def benchmark_prepared_artifact(
             model(images)
     if device.type == "cuda":
         torch.cuda.synchronize(device)
-    del images, first_batch
+    measurement_mode = str(config.get("measurement_mode", "full_split"))
+    if measurement_mode not in {"full_split", "fixed_batch"}:
+        raise BenchmarkError(
+            f"不支持的 measurement_mode：{measurement_mode}"
+        )
+    if measurement_mode == "full_split":
+        del images, first_batch
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
 
     rows: list[dict[str, Any]] = []
     for repeat_index in range(1, int(config["timed_runs"]) + 1):
-        total_forward_ms = 0.0
-        seen = 0
-        for batch in prepared.loader:
-            batch_images = batch[0].to(device, non_blocking=True)
+        if measurement_mode == "fixed_batch":
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             started = time.perf_counter()
             with torch.inference_mode():
-                model(batch_images)
+                model(images)
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
-            total_forward_ms += (time.perf_counter() - started) * 1000.0
-            seen += int(batch_images.shape[0])
-        if seen != prepared.n_images:
-            raise BenchmarkError(
-                f"{spec['artifact_id']} 本轮计时图像数异常：{seen} != {prepared.n_images}"
-            )
+            total_forward_ms = (time.perf_counter() - started) * 1000.0
+            seen = int(images.shape[0])
+        else:
+            total_forward_ms = 0.0
+            seen = 0
+            for batch in prepared.loader:
+                batch_images = batch[0].to(device, non_blocking=True)
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                started = time.perf_counter()
+                with torch.inference_mode():
+                    model(batch_images)
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                total_forward_ms += (time.perf_counter() - started) * 1000.0
+                seen += int(batch_images.shape[0])
+            if seen != prepared.n_images:
+                raise BenchmarkError(
+                    f"{spec['artifact_id']} 本轮计时图像数异常："
+                    f"{seen} != {prepared.n_images}"
+                )
         peak_memory = (
             torch.cuda.max_memory_allocated(device) / 1024 / 1024
             if device.type == "cuda"
@@ -400,10 +425,13 @@ def benchmark_prepared_artifact(
                 "timing_scope": config["timing_scope"],
                 "timing_source": (
                     f"{config['benchmark_id']} | {prepared.adapter_note} | "
+                    f"measurement_mode={measurement_mode} | "
                     "不含解码、预处理、I/O、CPU-GPU 传输和服务开销"
                 ),
             }
         )
+    if measurement_mode == "fixed_batch":
+        del images, first_batch
     return rows
 
 

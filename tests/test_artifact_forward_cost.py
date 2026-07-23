@@ -65,6 +65,21 @@ def valid_config() -> dict:
     }
 
 
+def test_generic_timm_adapter_and_fixed_batch_mode_are_accepted(
+    tmp_path: Path,
+):
+    payload = valid_config()
+    payload["measurement_mode"] = "fixed_batch"
+    payload["artifacts"][0]["adapter"] = "glaucoma_timm_classifier"
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_benchmark_config(path)
+
+    assert loaded["measurement_mode"] == "fixed_batch"
+    assert loaded["artifacts"][0]["adapter"] == "glaucoma_timm_classifier"
+
+
 def test_aggregate_cost_runs_reports_robust_multi_run_statistics():
     runs = pd.DataFrame(
         [

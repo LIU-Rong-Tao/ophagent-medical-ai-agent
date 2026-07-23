@@ -1,0 +1,150 @@
+benchmark_id: glaucoma_h100_fp32_forward_only_v1
+timing_scope: forward_only
+measurement_mode: fixed_batch
+device: cuda:4
+expected_device_name_contains: H100
+precision: fp32
+warmup_runs: 10
+timed_runs: 30
+
+artifacts:
+  - artifact_id: glaucoma_convnext_tiny
+    cost_profile_id: h100_fp32_bs1_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: convnext
+    batch_size: 1
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+  - artifact_id: glaucoma_convnext_tiny
+    cost_profile_id: h100_fp32_bs16_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: convnext
+    batch_size: 16
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+
+  - artifact_id: glaucoma_swin_tiny
+    cost_profile_id: h100_fp32_bs1_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: swin
+    batch_size: 1
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+  - artifact_id: glaucoma_swin_tiny
+    cost_profile_id: h100_fp32_bs16_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: swin
+    batch_size: 16
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+
+  - artifact_id: glaucoma_vit_b
+    cost_profile_id: h100_fp32_bs1_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: vit_b
+    batch_size: 1
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+  - artifact_id: glaucoma_vit_b
+    cost_profile_id: h100_fp32_bs16_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: vit_b
+    batch_size: 16
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+
+  - artifact_id: glaucoma_vit_l
+    cost_profile_id: h100_fp32_bs1_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: vit_l
+    batch_size: 1
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+  - artifact_id: glaucoma_vit_l
+    cost_profile_id: h100_fp32_bs16_forward_only_v1
+    adapter: glaucoma_timm_classifie
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: vit_l
+    batch_size: 16
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+    class_to_idx_path: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/class_to_idx.json
+    model_config: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/effective_config.yaml
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+
+  - artifact_id: glaucoma_retfound_dinov2
+    cost_profile_id: h100_fp32_bs1_forward_only_v1
+    adapter: glaucoma_retfound_dinov2
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: retfound_dinov2
+    batch_size: 1
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+    retfound_root: /training_data/lizekun/ophagent_assets/RETFound/runtime_source
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+    expected_class_to_idx:
+      anormal_control: 0
+      bearly_glaucoma: 1
+      cadvanced_glaucoma: 2
+  - artifact_id: glaucoma_retfound_dinov2
+    cost_profile_id: h100_fp32_bs16_forward_only_v1
+    adapter: glaucoma_retfound_dinov2
+    task_id: glaucoma_3class
+    dataset_id: glaucoma_fundus
+    model_family: retfound_dinov2
+    batch_size: 16
+    num_workers: 2
+    checkpoint_path: /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+    retfound_root: /training_data/lizekun/ophagent_assets/RETFound/runtime_source
+    data_root: /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+    split: test
+    expected_class_to_idx:
+      anormal_control: 0
+      bearly_glaucoma: 1
+      cadvanced_glaucoma: 2

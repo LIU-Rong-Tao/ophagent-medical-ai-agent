@@ -34,13 +34,19 @@ Validation bootstrap 在“冻结四方案 + Swin-Tiny”范围内，性能主�
 
 APTOS 十模型已统一为 H100、FP32、forward-only 口径，排除图像读取和预处理。Batch=16 单图中位成本从 EyeCLIP CFP 的 0.397 ms 到 RetiZero 的 5.199 ms；ConvNeXt-Tiny 0.423 ms、Swin-Tiny 0.498 ms、FLAIR 0.872 ms、RET-CLIP 1.221 ms、RETFound CFP 3.421 ms。该表只支持同 H100 协议下的相对比较，不等同于端到端部署延迟。
 
-青光眼当前仅有历史 RTX 4090 成本声明，没有统一 H100 成本证据，已从跨任务成本排名中排除。完整证据见 `h100_cost_evidence.csv`。
+青光眼五模型已补齐同一 H100、FP32、forward-only 口径。Batch=16 单图中位成本为：ConvNeXt-Tiny 0.444 ms、Swin-Tiny 0.498 ms、ViT-B 1.021 ms、ViT-L 3.413 ms、RETFound-DINOv2 3.630 ms；对应 batch=1 为 3.568、3.907、3.376、7.676、9.239 ms。该证据仅用于同硬件相对成本比较，不包含图像读取、预处理、数据传输和服务开销。完整证据见 `h100_cost_evidence.csv`。
+
+## 确认性数据准备
+
+当前 H100 可访问范围内没有满足准入条件的独立确认性队列，因此状态保持 `candidate_identified_not_admitted`，冻结协议未执行、未修改。DR 候选数据包括 [DeepDRiD](https://doi.org/10.5281/zenodo.6452623) 和 [IDRiD](https://idrid.grand-challenge.org/Data/)；青光眼三分类语义最接近 [GAMMA](https://gamma.grand-challenge.org/)。PAPILA 的可疑类、REFUGE/AIROGS 的二分类标签与当前正常/早期/进展期定义不直接一致，只能作为后续迁移或敏感性分析候选。
+
+正式准入前必须同时确认：CFP 模态与冻结类别顺序一致；具有稳定 `case_id`、`patient_id` 和患者级去重；与当前 train/validation/test 无图像或患者重叠；文件清单与 SHA256 固定；许可、数据使用和伦理边界明确；标签来源与独立性可追溯；候选模型不存在未披露的数据污染；样本量满足预先设定的配对终点；在协议锁定前不读取结果。准入后也不得重新训练、校准、调阈值、改预算或替换候选。
 
 ## 结论、限制与决策门
 
 当前已形成“资产登记与任务准入 → 离线单模型评测 → 模型输出错误审计 → validation 路由筛选 → locked Test → 稳健性与成本审计”的开题实验闭环。APTOS 支持存在预算约束下的模型互补性，但性能方案伴随代理错误引入；青光眼未显示稳定优于 Scout-only。所有方案继续保持 `route_eligible=false`。
 
-主要限制包括：回顾性数据；Test 并非全新确认性留出；缺少统一 patient_id；青光眼样本较小且划分完整性受限；青光眼缺少同 H100 成本；RETFound CFP 为 metric replay 而非历史 exact replay；代理事件不是临床后果。
+主要限制包括：回顾性数据；Test 并非全新确认性留出；缺少统一 patient_id；青光眼样本较小且划分完整性受限；RETFound CFP 为 metric replay 而非历史 exact replay；代理事件不是临床后果。H100 成本已经统一，但仍不是端到端部署延迟。
 
 下一决策门是执行 `configs/protocols/dual_task_independent_confirmatory_protocol.json`：在未暴露、患者级独立数据上，锁定现有模型、预处理、候选、策略和预算，不再训练、校准或调阈值；使用患者聚类配对 bootstrap，并同时通过主指标、Accuracy 和代理错误 guardrail。确认性门禁通过前不授予路由资格，也不建议继续增加 APTOS 模型。
 
