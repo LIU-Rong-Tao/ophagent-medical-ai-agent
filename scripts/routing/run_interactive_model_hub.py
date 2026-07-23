@@ -121,6 +121,8 @@ HUB_COLUMNS = [
     "offline_evaluation_eligible",
     "cpu_postprocess_ms_per_image",
     "cpu_postprocess_status",
+    "excluded_case_count",
+    "excluded_image_keys",
     "notes",
 ]
 
@@ -370,8 +372,18 @@ def task_metadata(tasks: pd.DataFrame, task_id: str) -> dict[str, Any]:
     }
 
 
-def prediction_metrics(path: Path, *, n_classes: int, qwk_enabled: bool) -> dict[str, Any]:
-    frame = normalize_and_validate_prediction(path, n_classes=n_classes)
+def prediction_metrics(
+    path: Path,
+    *,
+    n_classes: int,
+    qwk_enabled: bool,
+    excluded_image_keys: set[str] | None = None,
+) -> dict[str, Any]:
+    frame = normalize_and_validate_prediction(
+        path,
+        n_classes=n_classes,
+        excluded_image_keys=excluded_image_keys,
+    )
     truth = frame["true_label"].astype(int)
     prediction = frame["pred_label"].astype(int)
     return {
@@ -402,6 +414,34 @@ def merge_roles(*values: Any) -> str:
     return "|".join(roles)
 
 
+def load_case_exclusions(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+) -> dict[tuple[str, str], set[str]]:
+    registry_value = clean_text(config.get("case_exclusion_registry"))
+    if not registry_value:
+        return {}
+    exclusions = read_csv(registry_value, config_dir=config_path.parent)
+    required = {"task_id", "split", "image_key"}
+    missing = required - set(exclusions.columns)
+    if missing:
+        raise ModelHubError(
+            "case exclusion registry missing columns: " + ", ".join(sorted(missing))
+        )
+    grouped: dict[tuple[str, str], set[str]] = {}
+    for _, row in exclusions.iterrows():
+        if "enabled" in exclusions.columns and not truthy(row.get("enabled")):
+            continue
+        task_id = clean_text(row["task_id"])
+        split = clean_text(row["split"])
+        image_key = clean_text(row["image_key"])
+        if not task_id or not split or not image_key:
+            raise ModelHubError("case exclusion registry contains an empty key")
+        grouped.setdefault((task_id, split), set()).add(image_key)
+    return grouped
+
+
 def build_prediction_asset_hub(config: dict[str, Any], *, config_path: Path) -> pd.DataFrame:
     """Register frozen probability packages as first-class Model Hub assets."""
     tasks = read_csv(config["task_registry"], config_dir=config_path.parent)
@@ -417,6 +457,7 @@ def build_prediction_asset_hub(config: dict[str, Any], *, config_path: Path) -> 
         raise ModelHubError("prediction asset registry missing columns: " + ", ".join(sorted(missing)))
     selection_split = clean_text(config.get("selection_split", "val")) or "val"
     qwk_tasks = set(config.get("qwk_enabled_tasks", []))
+    exclusions = load_case_exclusions(config, config_path=config_path)
     rows: list[dict[str, Any]] = []
     for _, asset in assets.iterrows():
         task_id = clean_text(asset["task_id"])
@@ -425,10 +466,14 @@ def build_prediction_asset_hub(config: dict[str, Any], *, config_path: Path) -> 
         validation_path = resolve_path(asset["validation_prediction_path"], config_dir=config_path.parent)
         test_path = resolve_path(asset["test_prediction_path"], config_dir=config_path.parent)
         prediction_path = validation_path if selection_split == "val" else test_path
+        excluded_image_keys = exclusions.get((task_id, selection_split), set())
         if not prediction_path.exists():
             raise ModelHubError(f"prediction asset missing: {prediction_path}")
         metrics = prediction_metrics(
-            prediction_path, n_classes=meta["n_classes"], qwk_enabled=task_id in qwk_tasks
+            prediction_path,
+            n_classes=meta["n_classes"],
+            qwk_enabled=task_id in qwk_tasks,
+            excluded_image_keys=excluded_image_keys,
         )
         route_eligible = truthy(asset["route_eligible"])
         validation_eligible = truthy(asset["validation_selection_eligible"])
@@ -471,6 +516,8 @@ def build_prediction_asset_hub(config: dict[str, Any], *, config_path: Path) -> 
                 "offline_evaluation_eligible": validation_eligible,
                 "cpu_postprocess_ms_per_image": metric_value(asset, "cpu_postprocess_ms_per_image"),
                 "cpu_postprocess_status": clean_text(asset.get("cpu_postprocess_status", "not_applicable")),
+                "excluded_case_count": len(excluded_image_keys),
+                "excluded_image_keys": "|".join(sorted(excluded_image_keys)),
                 "notes": clean_text(asset.get("notes", "")),
             }
         )
@@ -703,7 +750,12 @@ def build_model_hub(config: dict[str, Any], *, config_path: Path) -> pd.DataFram
     return hub.sort_values(["task_id", "artifact_id"]).reset_index(drop=True)
 
 
-def normalize_and_validate_prediction(path: Path, *, n_classes: int) -> pd.DataFrame:
+def normalize_and_validate_prediction(
+    path: Path,
+    *,
+    n_classes: int,
+    excluded_image_keys: set[str] | None = None,
+) -> pd.DataFrame:
     try:
         frame = normalize_prediction_frame(path, num_classes=n_classes)
     except Exception as exc:
@@ -725,6 +777,20 @@ def normalize_and_validate_prediction(path: Path, *, n_classes: int) -> pd.DataF
         ).sum(axis=1) / np.log(n_classes)
     if frame["image_key"].duplicated().any():
         raise PairingSkip("skipped_incompatible_image_keys", f"prediction image_key 重复：{path}")
+    excluded_image_keys = excluded_image_keys or set()
+    if excluded_image_keys:
+        observed = set(frame["image_key"].astype(str))
+        missing_exclusions = excluded_image_keys - observed
+        if missing_exclusions:
+            raise PairingSkip(
+                "skipped_incompatible_image_keys",
+                f"prediction 缺少待排除病例：{sorted(missing_exclusions)[:5]}",
+            )
+        frame = frame.loc[
+            ~frame["image_key"].astype(str).isin(excluded_image_keys)
+        ].copy()
+        if frame.empty:
+            raise PairingSkip("skipped_incompatible_image_keys", "排除后 prediction 为空")
     prob_cols = [f"prob_{index}" for index in range(n_classes)]
     probabilities = frame[prob_cols].astype(float).to_numpy()
     if not np.isfinite(probabilities).all() or not np.allclose(probabilities.sum(axis=1), 1.0, atol=1e-5):
@@ -765,10 +831,16 @@ def prepare_pairing(pairing: pd.Series, hub: pd.DataFrame) -> PairingContext:
     n_classes_set = {int(row["n_classes"]) for row in model_rows}
     datasets = {clean_text(row["dataset_id"]) for row in model_rows}
     splits = {clean_text(row["split"]) for row in model_rows}
+    exclusion_sets = {
+        tuple(sorted(parse_list(row.get("excluded_image_keys", ""))))
+        for row in model_rows
+    }
     if len(label_spaces) != 1 or len(n_classes_set) != 1:
         raise PairingSkip("skipped_incompatible_label_space", "模型标签空间或类别数不一致")
     if len(datasets) != 1 or len(splits) != 1:
         raise PairingSkip("skipped_incompatible_dataset_split", "模型数据集或 split 不一致")
+    if len(exclusion_sets) != 1:
+        raise PairingSkip("skipped_incompatible_image_keys", "模型病例排除规则不一致")
     missing = [row["artifact_id"] for row in model_rows if not clean_text(row["prediction_path"])]
     if missing:
         raise PairingSkip(
@@ -776,9 +848,12 @@ def prepare_pairing(pairing: pd.Series, hub: pd.DataFrame) -> PairingContext:
             "缺少 prediction：" + "|".join(map(str, missing)),
         )
     n_classes = next(iter(n_classes_set))
+    excluded_image_keys = set(next(iter(exclusion_sets)))
     frames = {
         clean_text(row["artifact_id"]): normalize_and_validate_prediction(
-            resolve_path(row["prediction_path"]), n_classes=n_classes
+            resolve_path(row["prediction_path"]),
+            n_classes=n_classes,
+            excluded_image_keys=excluded_image_keys,
         )
         for row in model_rows
     }
@@ -867,11 +942,20 @@ def selected_n_for_budget(n_cases: int, budget: float) -> int:
 
 
 def risk_proxy_summary(
-    truth: np.ndarray, scout: np.ndarray, final: np.ndarray, selected: np.ndarray
+    truth: np.ndarray,
+    scout: np.ndarray,
+    final: np.ndarray,
+    selected: np.ndarray,
+    *,
+    undergrading_threshold: int = 3,
 ) -> dict[str, int | float]:
-    """Label-defined DR grading proxy; never a clinical-outcome inference."""
-    dangerous_scout = (truth >= 3) & (scout < 3)
-    dangerous_final = (truth >= 3) & (final < 3)
+    """Label-defined ordered-class proxy; never a clinical-outcome inference."""
+    dangerous_scout = (truth >= undergrading_threshold) & (
+        scout < undergrading_threshold
+    )
+    dangerous_final = (truth >= undergrading_threshold) & (
+        final < undergrading_threshold
+    )
     corrected = dangerous_scout & ~dangerous_final
     introduced = ~dangerous_scout & dangerous_final
     selected_dangerous = dangerous_scout & selected
@@ -986,6 +1070,7 @@ def evaluate_pairing(
     *,
     qwk_enabled: bool,
     trace_budgets: set[float],
+    proxy_undergrading_threshold: int = 3,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     pairing = context.pairing
     primary = context.scouts[context.primary_scout_id]
@@ -1005,7 +1090,13 @@ def evaluate_pairing(
         selected_n = int(selected_mask.sum())
         final_prediction = np.where(selected_mask, expert_prediction, primary_prediction)
         final_metrics = classification_summary(truth, final_prediction, qwk_enabled=qwk_enabled)
-        risk_metrics = risk_proxy_summary(truth, primary_prediction, final_prediction, selected_mask)
+        risk_metrics = risk_proxy_summary(
+            truth,
+            primary_prediction,
+            final_prediction,
+            selected_mask,
+            undergrading_threshold=proxy_undergrading_threshold,
+        )
         call_rate = selected_n / len(primary) if len(primary) else 0.0
         result_rows.append(
             {
@@ -1056,7 +1147,11 @@ def evaluate_pairing(
             final_prediction = np.where(selected_mask, expert_prediction, primary_prediction)
             final_metrics = classification_summary(truth, final_prediction, qwk_enabled=qwk_enabled)
             risk_metrics = risk_proxy_summary(
-                truth, primary_prediction, final_prediction, selected_mask
+                truth,
+                primary_prediction,
+                final_prediction,
+                selected_mask,
+                undergrading_threshold=proxy_undergrading_threshold,
             )
             call_rate = selected_n / len(primary) if len(primary) else 0.0
             result_rows.append(
@@ -1268,6 +1363,9 @@ def evaluate_pairings(
     trace_frames: list[pd.DataFrame] = []
     skipped_rows: list[dict[str, Any]] = []
     qwk_tasks = set(config.get("qwk_enabled_tasks", []))
+    proxy_undergrading_threshold = int(
+        config.get("label_proxy_undergrading_threshold", 3)
+    )
     trace_budgets = set(float(value) for value in config.get("case_trace_budgets", [0.2, 0.3, 0.5]))
     for _, pairing in pairings.iterrows():
         if not truthy(pairing["enabled"]):
@@ -1279,6 +1377,7 @@ def evaluate_pairings(
                 hub,
                 qwk_enabled=clean_text(pairing["task_id"]) in qwk_tasks,
                 trace_budgets=trace_budgets,
+                proxy_undergrading_threshold=proxy_undergrading_threshold,
             )
             result_frames.append(results)
             trace_frames.append(traces)

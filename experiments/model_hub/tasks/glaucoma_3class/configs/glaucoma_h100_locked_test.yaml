@@ -1,0 +1,49 @@
+protocol_id: glaucoma_h100_locked_retrospective_test_v1
+mode: locked_retrospective_test
+selection_split: test
+evaluation_split: test
+evaluation_design: locked_retrospective_test
+result_semantics: frozen_prediction_asset_replay
+confirmatory_test: false
+test_result_based_selection: false
+offline_routing_evaluation_complete: true
+route_eligible: false
+split_integrity_limited: true
+output_dir: experiments/model_hub/tasks/glaucoma_3class/outputs/test_locked
+model_hub_output_dir: experiments/model_hub/tasks/glaucoma_3class/outputs/test_locked
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+prediction_asset_registry: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_prediction_assets.csv
+pairing_protocols: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_locked_test_pairings.csv
+case_exclusion_registry: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_case_exclusions.csv
+qwk_enabled_tasks: []
+label_proxy_undergrading_threshold: 2
+case_trace_budgets: [0.05, 0.10]
+pairing_expansion:
+  enabled: false
+validation_frozen_candidates:
+  primary:
+    scout_artifact_ids: [glaucoma_retfound_dinov2, glaucoma_vit_b]
+    primary_scout_artifact_id: glaucoma_retfound_dinov2
+    expert_artifact_id: glaucoma_swin_tiny
+    routing_policy: disagreement_then_uncertainty
+    expert_budget: 0.10
+  single_scout_reference:
+    scout_artifact_ids: [glaucoma_retfound_dinov2]
+    primary_scout_artifact_id: glaucoma_retfound_dinov2
+    expert_artifact_id: glaucoma_swin_tiny
+    routing_policy: high_entropy
+    expert_budget: 0.05
+  strong_single_model_baseline: glaucoma_retfound_dinov2
+controls: [scout_only, random_same_budget, full_expert, oracle_exact_k]
+class_order:
+  anormal_control: 0
+  bearly_glaucoma: 1
+  cadvanced_glaucoma: 2
+validation_result_manifest_sha256: cea7d86940dcfe3e2c6977e92795afb6138b68f30a9b8d06682a0cfa7e1076fb
+validation_candidate_selection_sha256: 90eb7192e9c79ed3b7fbed8ff307ae9034efc0ab346272e2cff17f9ac5378857
+implementation_base_commit: bd3d3bc
+notes:
+  - 候选、策略和预算仅根据清理后的 215 例 validation 冻结。
+  - Test 主口径排除 1 个跨 split 同图异标病例，保留 464 例。
+  - 原始 465 例只用于敏感性对照，不参与候选或参数选择。
+  - 标签等级低估仅为研究代理事件，不代表临床后果。

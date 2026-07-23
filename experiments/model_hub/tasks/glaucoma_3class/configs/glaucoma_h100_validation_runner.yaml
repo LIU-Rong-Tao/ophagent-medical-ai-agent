@@ -1,0 +1,295 @@
+protocol_id: glaucoma_h100_five_model_validation_replay_v1
+mode: exploratory
+selection_split: val
+evaluation_split: test
+risk_metric_profile: generic_multiclass
+output_dir: experiments/model_hub/tasks/glaucoma_3class/outputs
+stages:
+  - id: convnext-validation
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/validation_predictions.csv
+      - --split
+      - val
+      - --device
+      - cuda:0
+      - --model-name
+      - glaucoma_convnext_tiny
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/val
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/validation_predictions.csv
+  - id: convnext-test
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/test_predictions.csv
+      - --split
+      - test
+      - --device
+      - cuda:0
+      - --model-name
+      - glaucoma_convnext_tiny
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/test
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/convnext_tiny_glaucoma_scout__glaucoma_3class__adapter/20260706-101622/checkpoints/convnext_tiny_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_convnext_tiny/test_predictions.csv
+  - id: swin-validation
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/validation_predictions.csv
+      - --split
+      - val
+      - --device
+      - cuda:1
+      - --model-name
+      - glaucoma_swin_tiny
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/val
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/validation_predictions.csv
+  - id: swin-test
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/test_predictions.csv
+      - --split
+      - test
+      - --device
+      - cuda:1
+      - --model-name
+      - glaucoma_swin_tiny
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/test
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_swin_tiny/test_predictions.csv
+  - id: vit-b-validation
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/validation_predictions.csv
+      - --split
+      - val
+      - --device
+      - cuda:2
+      - --model-name
+      - glaucoma_vit_b
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/val
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/validation_predictions.csv
+  - id: vit-b-test
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/test_predictions.csv
+      - --split
+      - test
+      - --device
+      - cuda:2
+      - --model-name
+      - glaucoma_vit_b
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/test
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_b__glaucoma_3class__adapter/20260706-213930/checkpoints/vit_base_patch16_224_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_b/test_predictions.csv
+  - id: vit-l-validation
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/validation_predictions.csv
+      - --split
+      - val
+      - --device
+      - cuda:3
+      - --model-name
+      - glaucoma_vit_l
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/val
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/validation_predictions.csv
+  - id: vit-l-test
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - --config
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/effective_config.yaml
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+      - --class-to-idx
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/configs/class_to_idx.json
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/test_predictions.csv
+      - --split
+      - test
+      - --device
+      - cuda:3
+      - --model-name
+      - glaucoma_vit_l
+    inputs:
+      - scripts/v083_glaucoma/export_glaucoma_scout_predictions.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/test
+      - /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/vit_l_imagenet_glaucoma_3class_adapter/20260706-232007/checkpoints/vit_large_patch16_224.augreg_in21k_ft_in1k_best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_vit_l/test_predictions.csv
+  - id: retfound-dinov2-validation
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_retfound_dinov2_glaucoma_expert_predictions.py
+      - --retfound-root
+      - /training_data/lizekun/ophagent_assets/RETFound/runtime_source
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/validation_predictions.csv
+      - --split
+      - val
+      - --device
+      - cuda:0
+      - --model-name
+      - glaucoma_retfound_dinov2
+    inputs:
+      - scripts/v083_glaucoma/export_retfound_dinov2_glaucoma_expert_predictions.py
+      - /training_data/lizekun/ophagent_assets/RETFound/runtime_source/models_vit.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/val
+      - /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/validation_predictions.csv
+  - id: retfound-dinov2-test
+    kind: prediction_export
+    command:
+      - "{python}"
+      - scripts/v083_glaucoma/export_retfound_dinov2_glaucoma_expert_predictions.py
+      - --retfound-root
+      - /training_data/lizekun/ophagent_assets/RETFound/runtime_source
+      - --checkpoint
+      - /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+      - --data-root
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus
+      - --out-csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/test_predictions.csv
+      - --split
+      - test
+      - --device
+      - cuda:0
+      - --model-name
+      - glaucoma_retfound_dinov2
+    inputs:
+      - scripts/v083_glaucoma/export_retfound_dinov2_glaucoma_expert_predictions.py
+      - /training_data/lizekun/ophagent_assets/RETFound/runtime_source/models_vit.py
+      - /training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus/test
+      - /training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/glaucoma_retfound_dinov2/test_predictions.csv
+  - id: validation-model-hub-scan
+    kind: routing
+    command:
+      - "{python}"
+      - scripts/routing/run_interactive_model_hub.py
+      - --config
+      - experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_validation_pool.yaml
+      - --stage
+      - all
+    inputs:
+      - scripts/routing/run_interactive_model_hub.py
+      - experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_validation_pool.yaml
+      - experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_prediction_assets.csv
+      - experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_case_exclusions.csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/prediction_assets/*/validation_predictions.csv
+    outputs:
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool/model_hub_snapshot.csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool/pairing_results.csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool/candidate_ranking.csv
+      - experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool/candidate_selection.csv

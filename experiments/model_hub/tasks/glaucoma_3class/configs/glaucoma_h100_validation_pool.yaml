@@ -1,0 +1,33 @@
+protocol_id: glaucoma_h100_five_model_validation_pool_v1
+mode: exploratory
+selection_split: val
+evaluation_split: test
+evaluation_design: retrospective_validation_selection_split_integrity_limited
+result_semantics: validation_cached_probability_replay
+confirmatory_test: false
+test_result_based_selection: false
+route_eligible: false
+output_dir: experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool
+model_hub_output_dir: experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+prediction_asset_registry: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_prediction_assets.csv
+pairing_protocols: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_h100_pairings.csv
+case_exclusion_registry: experiments/model_hub/tasks/glaucoma_3class/configs/glaucoma_case_exclusions.csv
+qwk_enabled_tasks: []
+label_proxy_undergrading_threshold: 2
+case_trace_budgets: [0.20]
+pairing_expansion:
+  enabled: true
+  task_id: glaucoma_3class
+  budgets: [0.05, 0.10, 0.20, 0.30]
+  single_scout_policies: [low_confidence, low_margin, high_entropy]
+  multi_scout_policies: [mean_uncertainty, disagreement_then_uncertainty]
+source_versions:
+  - historical_4090_checkpoints
+  - h100_probability_replay
+  - glaucoma_split_sha256_audit
+notes:
+  - Scout、Expert、策略与预算只根据 validation 结果初筛。
+  - Test 概率仅作为冻结资产生成，不参与本轮候选选择。
+  - 进展级低估仅为标签等级代理，不代表临床后果。
+  - 原始 split 保持不变；validation 路由排除 SHA256 冲突病例。

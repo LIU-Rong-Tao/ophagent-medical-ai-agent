@@ -18,7 +18,10 @@ if str(ROOT) not in sys.path:
 from scripts.routing.run_interactive_model_hub import (
     HUB_COLUMNS,
     PairingContext,
+    PairingSkip,
     cost_summary,
+    normalize_and_validate_prediction,
+    risk_proxy_summary,
     run_protocol,
 )
 from scripts.routing.run_controlled_protocol import load_config
@@ -387,6 +390,47 @@ def test_dry_run_validates_without_writing(tmp_path: Path) -> None:
 
     assert result.files == []
     assert not output_dir.exists()
+
+
+def test_prediction_case_exclusions_are_explicit_and_complete(tmp_path: Path) -> None:
+    prediction_path = tmp_path / "predictions.csv"
+    write_csv(
+        prediction_path,
+        prediction_rows("scout_a", predictions=[0, 1, 2, 0]),
+    )
+
+    filtered = normalize_and_validate_prediction(
+        prediction_path,
+        n_classes=3,
+        excluded_image_keys={"case_1"},
+    )
+
+    assert filtered["image_key"].tolist() == ["case_0", "case_2", "case_3"]
+    try:
+        normalize_and_validate_prediction(
+            prediction_path,
+            n_classes=3,
+            excluded_image_keys={"missing_case"},
+        )
+    except PairingSkip as exc:
+        assert exc.status == "skipped_incompatible_image_keys"
+    else:
+        raise AssertionError("missing exclusion key must stop evaluation")
+
+
+def test_label_proxy_threshold_supports_glaucoma_advanced_undergrading() -> None:
+    summary = risk_proxy_summary(
+        np.array([2, 2, 1, 0]),
+        np.array([1, 2, 1, 0]),
+        np.array([2, 1, 1, 0]),
+        np.array([True, True, False, False]),
+        undergrading_threshold=2,
+    )
+
+    assert summary["dangerous_total"] == 1
+    assert summary["dangerous_corrected"] == 1
+    assert summary["dangerous_introduced"] == 1
+    assert summary["net_dangerous_reduction"] == 0
 
 
 def test_partial_cpu_probe_cost_is_not_presented_as_complete_total() -> None:
