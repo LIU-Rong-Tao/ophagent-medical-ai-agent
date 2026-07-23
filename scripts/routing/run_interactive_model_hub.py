@@ -1198,6 +1198,9 @@ def expanded_pool_pairings(config: dict[str, Any], hub: pd.DataFrame) -> pd.Data
     budgets = "|".join(str(value) for value in expansion["budgets"])
     single_policies = "|".join(expansion["single_scout_policies"])
     multi_policies = "|".join(expansion["multi_scout_policies"])
+    result_semantics = clean_text(
+        config.get("result_semantics", "validation_cached_probability_replay")
+    ) or "validation_cached_probability_replay"
     for scout in available:
         for expert in available:
             if scout == expert:
@@ -1212,7 +1215,7 @@ def expanded_pool_pairings(config: dict[str, Any], hub: pd.DataFrame) -> pd.Data
                 "prediction_source_mode": "prediction_asset",
                 "routing_policies": single_policies,
                 "budget_grid": budgets,
-                "result_semantics": "validation_cached_probability_replay",
+                "result_semantics": result_semantics,
                 "notes": "expanded from registered probability assets",
             })
     for left_index, left in enumerate(available):
@@ -1230,7 +1233,7 @@ def expanded_pool_pairings(config: dict[str, Any], hub: pd.DataFrame) -> pd.Data
                     "prediction_source_mode": "prediction_asset",
                     "routing_policies": multi_policies,
                     "budget_grid": budgets,
-                    "result_semantics": "validation_cached_probability_replay",
+                    "result_semantics": result_semantics,
                     "notes": "expanded two-scout probability disagreement replay",
                 })
     return pd.DataFrame(rows)
@@ -1305,13 +1308,22 @@ def write_run_config(
         "allowed_policies": sorted(pairings.loc[pairings["status"] == "completed", "routing_policy"].dropna().unique().tolist()),
         "cost_modes": sorted(pairings.loc[pairings["status"] == "completed", "cost_mode"].dropna().unique().tolist()),
         "result_semantics": config.get("result_semantics", "interactive_replay"),
+        "selection_split": config.get("selection_split", "val"),
+        "evaluation_design": config.get("evaluation_design", ""),
+        "confirmatory_test": config.get("confirmatory_test", None),
+        "test_result_based_selection": config.get("test_result_based_selection", ""),
+        "route_eligible": config.get("route_eligible", None),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "notes": "100% 为 Expert prediction replacement；在线成本仍包含 Scout。并行情景未实测。",
     }
     path.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
 
-def rank_validation_candidates(pairings: pd.DataFrame) -> pd.DataFrame:
+def rank_validation_candidates(
+    pairings: pd.DataFrame,
+    *,
+    selection_status: str = "validation_candidate_not_test_evaluated",
+) -> pd.DataFrame:
     candidates = pairings.loc[
         (pairings["status"] == "completed")
         & (pairings["evaluation_kind"] == "routed")
@@ -1332,13 +1344,18 @@ def rank_validation_candidates(pairings: pd.DataFrame) -> pd.DataFrame:
         kind="mergesort",
     ).reset_index(drop=True)
     candidates.insert(0, "validation_rank", np.arange(1, len(candidates) + 1))
-    candidates["selection_status"] = "validation_candidate_not_test_evaluated"
+    candidates["selection_status"] = selection_status
     return candidates
 
 
-def select_validation_candidates(pairings: pd.DataFrame, hub: pd.DataFrame) -> pd.DataFrame:
-    """Publish a compact, validation-only shortlist without using Oracle as evidence."""
-    ranked = rank_validation_candidates(pairings)
+def select_validation_candidates(
+    pairings: pd.DataFrame,
+    hub: pd.DataFrame,
+    *,
+    selection_status: str = "validation_candidate_not_test_evaluated",
+) -> pd.DataFrame:
+    """Publish a compact shortlist without using Oracle as evidence."""
+    ranked = rank_validation_candidates(pairings, selection_status=selection_status)
     selections: list[pd.DataFrame] = []
     complete_cost = ranked.loc[
         ranked["cost_mode"].eq("estimated_from_measured_forward_only")
@@ -1377,7 +1394,7 @@ def select_validation_candidates(pairings: pd.DataFrame, hub: pd.DataFrame) -> p
             ["macro_f1", "qwk", "accuracy"], ascending=False, kind="mergesort"
         ).head(1)
         baselines.insert(0, "selection_role", "strong_single_model_baseline")
-        baselines["selection_status"] = "validation_candidate_not_test_evaluated"
+        baselines["selection_status"] = selection_status
         selections.append(baselines)
     if not selections:
         return pd.DataFrame()
@@ -1550,6 +1567,11 @@ def run_protocol(
     pairing_path = output_path / "pairing_results.csv"
     trace_path = output_path / "case_routing_trace.csv"
     ranking_path = output_path / "candidate_ranking.csv"
+    selection_status = (
+        "exploratory_test_result_not_for_selection"
+        if clean_text(config.get("test_result_based_selection")) == "exploratory_only"
+        else "validation_candidate_not_test_evaluated"
+    )
     if stage in {"model_hub", "all"}:
         write_csv(hub_path, build_model_hub(config, config_path=config_path), HUB_COLUMNS)
     if stage in {"pairing", "all"}:
@@ -1559,8 +1581,8 @@ def run_protocol(
         pairings, traces = evaluate_pairings(config, config_path=config_path, hub=hub)
         write_csv(pairing_path, pairings, PAIRING_COLUMNS)
         write_csv(trace_path, traces, TRACE_COLUMNS)
-        rank_validation_candidates(pairings).to_csv(ranking_path, index=False)
-        select_validation_candidates(pairings, hub).to_csv(
+        rank_validation_candidates(pairings, selection_status=selection_status).to_csv(ranking_path, index=False)
+        select_validation_candidates(pairings, hub, selection_status=selection_status).to_csv(
             output_path / "candidate_selection.csv", index=False
         )
     if stage in {"report", "all"}:
@@ -1570,8 +1592,10 @@ def run_protocol(
             pairings, traces = evaluate_pairings(config, config_path=config_path, hub=hub)
             write_csv(pairing_path, pairings, PAIRING_COLUMNS)
             write_csv(trace_path, traces, TRACE_COLUMNS)
-            rank_validation_candidates(pairings).to_csv(ranking_path, index=False)
-            select_validation_candidates(pairings, hub).to_csv(
+            rank_validation_candidates(pairings, selection_status=selection_status).to_csv(
+                ranking_path, index=False
+            )
+            select_validation_candidates(pairings, hub, selection_status=selection_status).to_csv(
                 output_path / "candidate_selection.csv", index=False
             )
         hub = pd.read_csv(hub_path)

@@ -155,6 +155,10 @@ def run_training(config_path: Path, overrides=None):
         "classifier_iterations": [int(value) for value in probe.n_iter_],
     }
     (output / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    validation_prediction_path = output / "validation_predictions.csv"
+    prediction_frame(datasets["val"], val_probabilities, config["data"]["root"]).to_csv(
+        validation_prediction_path, index=False
+    )
     prediction_path = output / "test_predictions.csv"
     prediction_frame(datasets["test"], test_probabilities, config["data"]["root"]).to_csv(
         prediction_path, index=False
