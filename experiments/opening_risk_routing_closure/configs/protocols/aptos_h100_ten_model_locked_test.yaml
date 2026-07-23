@@ -1,0 +1,17 @@
+protocol_id: aptos_h100_ten_model_locked_retrospective_test_v1
+mode: locked_retrospective_test
+evaluation_design: locked_retrospective_test
+offline_routing_evaluation_complete: true
+pristine_confirmatory_test: false
+route_eligible: false
+selection_split: test
+evaluation_split: test
+model_hub_output_dir: experiments/opening_risk_routing_closure/outputs/model_hub_test_locked_ten_model
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+prediction_asset_registry: experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_prediction_assets.csv
+pairing_protocols: experiments/opening_risk_routing_closure/configs/protocols/aptos_ten_model_locked_test_pairings.csv
+qwk_enabled_tasks: [aptos_dr_5class]
+case_trace_budgets: [0.05, 0.20, 0.30]
+result_semantics: locked_retrospective_test
+publish:
+  generate_runner_report: false

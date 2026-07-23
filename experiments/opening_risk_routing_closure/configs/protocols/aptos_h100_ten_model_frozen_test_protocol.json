@@ -1,0 +1,25 @@
+{
+  "protocol_id": "aptos_h100_ten_model_locked_retrospective_test_v1",
+  "implementation_commit_sha": "789f34aab6db8ddf1ed962019a6e2f84d74c9d56",
+  "selection_split": "validation",
+  "evaluation_split": "test",
+  "evaluation_design": "locked_retrospective_test",
+  "pristine_confirmatory_test": false,
+  "test_used_for_selection": false,
+  "test_metrics_computed_before_freeze": true,
+  "class_order": ["anodr", "bmilddr", "cmoderatedr", "dseveredr", "eproliferativedr"],
+  "route_eligible": false,
+  "probability_assets": {
+    "flair": {"validation_sha256": "3efec0a8c1c15b689688cc6f4c16d2d6f898bb1a348be5d8c01967a5e8ad7f8a", "test_sha256": "f82c05283f4eb340699bfba5d0f0bf32b53a83984682e7bb5bdeec8477a11e61"},
+    "retfound_cfp": {"validation_sha256": "9b882479d12c66f22dc587149d76b10f533f625a798038fbff012a23d8b5670f", "test_sha256": "b987d6abbf8fa27bb5122f892caedd2abd1689aef8de6b42a466032a2b4ad3c9"},
+    "ret_clip": {"validation_sha256": "a9fab4dcf4b0721bc445036065f32f1c07313447a77ad686b4cf3c719ca6655b", "test_sha256": "fdf1112b455a4b3af590973683cd1e48d2ff8f697ca3f066dfe4666945f7df85"},
+    "retizero": {"validation_sha256": "a1e84b35349fa64d0524596428b2b132668cbe0e86103f4f05ae1ba87a380e40", "test_sha256": "70ca9481c231d30dd847b6955f1bfc0d7c929893508d0ad4c81ae5644d3c33a5"},
+    "swin_tiny": {"validation_sha256": "eb67213b0b82f6eb2cdf92fbebe109f6ac6cdb603d60fcb92810ef5629e82878", "test_sha256": "abdf511a2f5e2d220768ad6ed53d210204600642c5347ebe2529d20df07760fa"}
+  },
+  "predeclared_candidates": {
+    "performance_primary": {"scouts": ["flair", "ret_clip"], "expert": "retfound_cfp", "policy": "disagreement_then_uncertainty", "budget": 0.20},
+    "single_scout_reference": {"scouts": ["flair"], "expert": "swin_tiny", "policy": "high_entropy", "budget": 0.30},
+    "zero_introduced_proxy": {"scouts": ["retfound_cfp", "retizero"], "expert": "flair", "policy": "disagreement_then_uncertainty", "budget": 0.20},
+    "low_budget_ablation": {"scouts": ["ret_clip"], "expert": "retfound_cfp", "policy": "low_confidence", "budget": 0.05}
+  }
+}
