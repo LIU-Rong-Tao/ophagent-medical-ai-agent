@@ -1,0 +1,23 @@
+{
+  "scope": "APTOS six-model validation routing freeze review",
+  "capability_matrix": [
+    {"capability": "prediction asset registry", "existing_entry": "run_interactive_model_hub.build_prediction_asset_hub", "status": "complete", "evidence": "six registered frozen validation packages", "gap": "none", "recommended_action": "reuse"},
+    {"capability": "single and multi scout expansion", "existing_entry": "run_interactive_model_hub.expanded_pool_pairings", "status": "complete", "evidence": "90 pairings and 1,860 validation rows", "gap": "none", "recommended_action": "reuse"},
+    {"capability": "label-defined proxy metrics", "existing_entry": "run_interactive_model_hub.risk_proxy_summary", "status": "complete", "evidence": "corrected, introduced, residual and net fields", "gap": "not clinical outcome metrics", "recommended_action": "reuse"},
+    {"capability": "cost schema", "existing_entry": "run_interactive_model_hub.cost_summary", "status": "partially_complete", "evidence": "Green CPU probe makes total unavailable", "gap": "CPU probe latency not measured", "recommended_action": "fix_in_place"},
+    {"capability": "result resume", "existing_entry": "run_interactive_model_hub.verify_resume_artifacts", "status": "complete", "evidence": "protocol SHA plus per-artifact SHA verification", "gap": "none", "recommended_action": "reuse"},
+    {"capability": "controlled artifact reuse", "existing_entry": "run_controlled_protocol.py and verify_aptos_replay_pool.py", "status": "complete", "evidence": "six replay verifications skip unchanged fingerprints", "gap": "none", "recommended_action": "reuse"},
+    {"capability": "Demo integration", "existing_entry": "app/model_hub_demo.py", "status": "complete", "evidence": "same model_hub_validation package loads in smoke test", "gap": "none", "recommended_action": "reuse"},
+    {"capability": "test freeze gate", "existing_entry": "aptos_frozen_test_protocol.json", "status": "broken", "evidence": "prior replay summaries already contain test metrics", "gap": "strict no-prior-test-metrics condition is false", "recommended_action": "fix_in_place"}
+  ],
+  "code_review": [
+    {"finding": "parallel runner", "status": "resolved", "evidence": "run_aptos_h100_pool.py and model-specific replay scripts removed; formal runner is run_interactive_model_hub.py"},
+    {"finding": "parallel evaluator", "status": "resolved", "evidence": "one-off APTOS analysis/audit scripts removed; routing metrics reside in the Model Hub runner and task-agnostic evaluator"},
+    {"finding": "checkpoint loading during cached replay", "status": "resolved", "evidence": "prediction_asset mode reads CSV packages only and marks task_inference_ready=false"},
+    {"finding": "Green cost overstatement", "status": "resolved", "evidence": "partial CPU probe cost produces no complete total and is excluded from cost-complete shortlist"},
+    {"finding": "Oracle in shortlist", "status": "resolved", "evidence": "candidate ranking filters evaluation_kind=routed"},
+    {"finding": "case trace bloat", "status": "resolved", "evidence": "protocol records case_trace_budgets=[0.20]; current manifest references only the 61 MB 20% trace, not the former 244 MB trace"},
+    {"finding": "RETFound CFP replay provenance", "status": "limited", "evidence": "H100 replay asset is metric_replay, with historical exact reproduction=false and no validation-history mixing"},
+    {"finding": "frozen-test validity", "status": "blocked", "evidence": "six historical H100 replay summaries already include test metrics; no evidence those metrics selected the validation shortlist"}
+  ]
+}

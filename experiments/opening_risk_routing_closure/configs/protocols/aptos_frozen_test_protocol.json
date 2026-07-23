@@ -1,0 +1,168 @@
+{
+  "protocol_id": "aptos_frozen_test_protocol_v1",
+  "created_at_utc": "2026-07-23T00:00:00Z",
+  "freeze_status": "blocked_by_preexisting_test_metrics",
+  "implementation_commit_sha": "6739c902fa69c2be83b783c5ad678c24d078bfb1",
+  "protocol_commit_sha": null,
+  "protocol_commit_sha_note": "The Git commit containing this protocol is recorded in the release report to avoid a self-referential SHA cycle.",
+  "selection_split": "validation",
+  "test_split": "test",
+  "task_id": "aptos_dr_5class",
+  "class_order": ["anodr", "bmilddr", "cmoderatedr", "dseveredr", "eproliferativedr"],
+  "budget_definition": "round(n_validation_cases * requested_budget), with a maximum of n_validation_cases",
+  "tie_breaking_rule": "routing_score descending, then stable case_id ascending",
+  "metric_definitions": {
+    "primary": ["Accuracy", "Macro-F1", "Weighted-F1", "QWK"],
+    "selection_rule": "validation only; zero introduced proxy events first, then Macro-F1, Accuracy, net proxy-event reduction, QWK, and lower budget",
+    "oracle": "upper bound only; excluded from shortlist and model selection"
+  },
+  "proxy_risk_definition": {
+    "name": "label_defined_dangerous_undergrading_proxy",
+    "definition": "true_grade >= 3 and predicted_grade < 3",
+    "boundary": "This is a label-defined model-error proxy, not a clinical outcome or treatment recommendation."
+  },
+  "cost_definition": {
+    "device": "H100",
+    "scope": "forward-only; excludes image I/O, preprocessing, queueing, loading, and service overhead",
+    "batches": [1, 16],
+    "green_rule": "RETFound-Green GPU encoder cost is retained, but combinations involving it have no complete total cost until CPU StandardScaler and LogisticRegression probe costs are measured."
+  },
+  "routing_policy_parameters": {
+    "low_confidence": "1 - top1_probability",
+    "low_margin": "1 - (top1_probability - top2_probability)",
+    "high_entropy": "normalized prediction entropy",
+    "severe_probability_mass": "sum(prob_3, prob_4)",
+    "disagreement_then_uncertainty": "2 * scout_prediction_disagreement + mean(1 - scout_confidence)"
+  },
+  "random_seeds": {
+    "random_routing": "int(sha256(pairing_id + ':' + budget)[:8], 16)",
+    "training": "not used by this frozen probability replay"
+  },
+  "bootstrap_protocol": "not run before freeze; any confidence intervals must be predefined before a future test evaluation",
+  "primary_candidate": {
+    "routing_type": "multi_scout",
+    "scouts": ["convnext_tiny", "preti"],
+    "expert": "flair",
+    "policy": "disagreement_then_uncertainty",
+    "expert_budget": 0.1
+  },
+  "single_scout_reference": {
+    "scout": "retfound_cfp",
+    "expert": "flair",
+    "policy": "low_confidence",
+    "expert_budget": 0.1,
+    "historical_exact_reproduction": false,
+    "current_run_reproducible": true,
+    "replay_status": "metric_replay",
+    "provenance_limited": false,
+    "note": "The registered asset is the H100 replay package, not a historical validation package. It is metric_replay rather than exact_replay."
+  },
+  "low_budget_ablation": {
+    "scout": "convnext_tiny",
+    "expert": "flair",
+    "policy": "low_margin",
+    "expert_budget": 0.05
+  },
+  "strong_baseline": {"model": "swin_tiny", "mode": "single_model"},
+  "controls": ["scout_only", "random_routing", "full_expert", "oracle_upper_bound"],
+  "protocol_source_validation_result": {
+    "output_dir": "experiments/opening_risk_routing_closure/outputs/model_hub_validation",
+    "artifact_manifest_sha256": "ffb7381421e210485d45e5546e6bd8d78ca31a4a9ee031f6bff4c6eb462462af",
+    "candidate_selection_artifact": "candidate_selection.csv",
+    "selection_used_test_content": false
+  },
+  "test_asset_integrity_checked_only": true,
+  "test_metrics_computed_before_freeze": true,
+  "test_metrics_preexisting_reason": "All six H100 replay run summaries already contain test replay metrics from the prior replay phase. They were not read by the validation shortlist or this freeze process.",
+  "test_content_used_for_selection": false,
+  "ready_for_frozen_test": false,
+  "gate_blocker": "The requested strict condition test_metrics_computed_before_freeze=false cannot be truthfully met without rewriting history.",
+  "model_pool": [
+    {
+      "model_id": "preti",
+      "generation_run_id": "seed42_20260722",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/validation_predictions.csv",
+      "validation_prediction_sha256": "8bf3b2c6efdd732526161f9a11c8f119d9a720a268b4be41bec79306a5c41234",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/test_predictions.csv",
+      "test_prediction_sha256": "0d2b0ab0a89980bd756ee66f131482f8b5922c65e5f8f4bdf9d56df2a3aa50e5",
+      "checkpoint_sha256": "1baea5a2cf13624be3cfebc4c15f02edbf59e61f4753f9503e2d18360c9db82b",
+      "preprocessing_id": "preti_rgb224_imagenet_fp32",
+      "replay_status": "metric_replay",
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay"
+    },
+    {
+      "model_id": "retfound_cfp",
+      "generation_run_id": "h100_retfound_cfp_replay_v1",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/validation_predictions.csv",
+      "validation_prediction_sha256": "9b882479d12c66f22dc587149d76b10f533f625a798038fbff012a23d8b5670f",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/test_predictions.csv",
+      "test_prediction_sha256": "b987d6abbf8fa27bb5122f892caedd2abd1689aef8de6b42a466032a2b4ad3c9",
+      "checkpoint_sha256": "c70d94c81fd7eb94e141c3f82a6a73923d77a64ccc8d8d9e346863f9a36525f7",
+      "preprocessing_id": "imagenet_bicubic_resize256_centercrop224_v1",
+      "replay_status": "metric_replay",
+      "historical_exact_reproduction": false,
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay"
+    },
+    {
+      "model_id": "convnext_tiny",
+      "generation_run_id": "full_replay_20260722",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "validation_prediction_sha256": "66a087605618390018abcba9c07b4e28c396c075a254424e0f13bd88669fee62",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "test_prediction_sha256": "a8e920bf418b81f320e26b18447ff5622a840a1d4fa57a9c274de1f0dc6e2245",
+      "checkpoint_sha256": "78e5655f7eace5260e4247c0b68c16ae0581ab83794bb6ccc8c6257c38b22882",
+      "preprocessing_id": "timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32",
+      "replay_status": "metric_replay",
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay"
+    },
+    {
+      "model_id": "swin_tiny",
+      "generation_run_id": "full_replay_20260722",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "validation_prediction_sha256": "eb67213b0b82f6eb2cdf92fbebe109f6ac6cdb603d60fcb92810ef5629e82878",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "test_prediction_sha256": "abdf511a2f5e2d220768ad6ed53d210204600642c5347ebe2529d20df07760fa",
+      "checkpoint_sha256": "48e336a24b6427ba9f60c0198110837c4ecc0c3d6d90a1add52bcfe256d6a963",
+      "preprocessing_id": "timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32",
+      "replay_status": "metric_replay",
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay"
+    },
+    {
+      "model_id": "flair",
+      "generation_run_id": "full_replay_20260722",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/validation_predictions.csv",
+      "validation_prediction_sha256": "3efec0a8c1c15b689688cc6f4c16d2d6f898bb1a348be5d8c01967a5e8ad7f8a",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/test_predictions.csv",
+      "test_prediction_sha256": "f82c05283f4eb340699bfba5d0f0bf32b53a83984682e7bb5bdeec8477a11e61",
+      "checkpoint_sha256": "e14f6e3081c05d76cd4729969b40fb8d2733a5f0aceba83d8c5bdfb396a5148c",
+      "preprocessing_id": "flair_foreground_crop_aspect_canvas512_rgb_fp32",
+      "replay_status": "metric_replay",
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay"
+    },
+    {
+      "model_id": "retfound_green",
+      "generation_run_id": "full_replay_20260722",
+      "validation_prediction_path": "experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/validation_predictions.csv",
+      "validation_prediction_sha256": "6a5e8110a3eb8a9862da0aa09e3442b4340956b5db6a31643d99b424a2d3dcee",
+      "test_prediction_path": "experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/test_predictions.csv",
+      "test_prediction_sha256": "97775982710ca70abbe0aee4bb5133d835a4fb3bc98a58313baba61a053c332a",
+      "checkpoint_sha256": "431de5dbc1bebbb32f60e2c0bcf8daa4f8bcbf06f7cb1e1dc97ec589713942e1",
+      "preprocessing_id": "retfound_green_v0_1_resize392_bilinear_rgb_halfnorm_fp32",
+      "replay_status": "metric_replay",
+      "current_run_reproducible": true,
+      "validation_selection_eligible": true,
+      "qualification_status": "metric_replay",
+      "cost_qualification": "partial_cpu_probe_unmeasured"
+    }
+  ]
+}
