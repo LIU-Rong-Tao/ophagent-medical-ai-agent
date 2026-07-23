@@ -1,0 +1,11 @@
+model_id,validation_accuracy,validation_macro_f1,validation_qwk,test_accuracy,test_macro_f1,test_qwk,h100_batch16_ms_per_image,task_role,task_inference_ready,route_eligible,notes
+preti,0.838521,0.678704,0.896952,0.813636,0.608245,0.860384,1.029562,routing_shortlist,false,false,Existing H100 replay candidate
+retfound_cfp,0.854086,0.713829,0.917788,0.849091,0.705987,0.913147,3.421439,qualification_limited,false,false,Historical replay is metric_replay rather than exact_replay
+convnext_tiny,0.842412,0.716210,0.888795,0.839091,0.696954,0.898762,0.423347,routing_shortlist,false,false,Cost reference and validation candidate
+swin_tiny,0.861868,0.734268,0.907995,0.849091,0.703963,0.904505,0.497991,routing_shortlist,false,false,Strong single-model baseline
+flair,0.811284,0.714748,0.913756,0.815455,0.707881,0.904003,0.871570,routing_shortlist,false,false,Core scout/expert candidate
+retfound_green,0.803502,0.681023,0.879372,0.779091,0.639431,0.865338,1.397037,cost_incomplete,false,false,Cost evidence incomplete for ranking
+eyeclip_cfp,0.583658,0.419791,0.557377,0.568182,0.405161,0.544726,0.397066,task_ready_reference,false,false,Offline prediction asset only; not shortlisted
+keepfit_cfp,0.840467,0.721307,0.884013,0.820909,0.688185,0.890388,0.867346,task_ready_reference,false,false,Offline prediction asset only
+ret_clip,0.840467,0.735666,0.916575,0.809091,0.675680,0.892430,1.221319,routing_shortlist,false,false,Core routing candidate
+retizero,0.821012,0.707052,0.907029,0.788182,0.648295,0.882584,5.198930,task_ready_reference,false,false,Conditional proxy-risk candidate; high cost
