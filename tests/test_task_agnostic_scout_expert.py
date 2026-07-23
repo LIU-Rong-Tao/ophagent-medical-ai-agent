@@ -23,6 +23,7 @@ from scripts.routing.evaluate_task_agnostic_scout_expert import (  # noqa: E402
     oracle_exact_k_curve,
     oracle_up_to_k_curve,
     random_same_budget,
+    risk_event_rows,
     recompute_probability_signals,
     run_evaluation,
     select_for_expert,
@@ -224,6 +225,41 @@ def test_oracle_up_to_k_is_monotonic_and_does_not_force_harmful_calls():
     assert up_to.iloc[-1]["accuracy"] == pytest.approx(1.0)
 
 
+def test_label_defined_risk_event_tracks_capture_and_residual_errors():
+    protocol = {
+        "protocol_id": "fixture",
+        "task_id": "fixture_2class",
+        "risk_events": [
+            {
+                "event_id": "undergrading",
+                "event_name": "标签定义的低估分级",
+                "true_label_gte": 1,
+                "pred_label_lt": 1,
+            }
+        ],
+    }
+
+    rows = risk_event_rows(
+        routing_frame(),
+        protocol,
+        "fixture_scout",
+        "fixture_expert",
+        method_kind="uncertainty",
+        budget=0.5,
+        policy="low_confidence",
+        selected_keys={"a", "b"},
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["event_total"] == 1
+    assert row["selected_event_n"] == 1
+    assert row["corrected_event_n"] == 1
+    assert row["introduced_event_n"] == 0
+    assert row["residual_event_n"] == 0
+    assert row["event_recall"] == pytest.approx(1.0)
+    assert row["event_precision"] == pytest.approx(0.5)
+    assert row["event_lift_vs_budget"] == pytest.approx(2.0)
 def write_prediction(path: Path, frame: pd.DataFrame) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(path, index=False)

@@ -1,0 +1,27 @@
+# H100-local replay evidence and generated result packages are not source assets.
+# Commit only reusable protocol configuration below configs/protocols/.
+/outputs/
+/replays/
+/screening/
+/selection/
+/migration/
+/registry/
+/artifact_index.csv
+/README.md
+/configs/screening/
+
+# Large or case-level generated artifacts
+replays/**/checkpoints/
+replays/**/*.pth
+replays/**/predictions/*.csv
+replays/**/logs/
+replays/**/dataset_manifest.json
+replays/**/run_manifest.json
+replays/**/registration_record.csv
+replays/**/environment_pip_freeze.txt
+screening/historical_test/predictions/
+screening/historical_test/model_error_audits/**/case_risk_scores.csv
+screening/historical_test/model_error_audits/**/normalized_predictions.csv
+screening/historical_test/controlled_protocol/.controlled_runner_state.json
+screening/historical_test/controlled_protocol/*.log
+**/__pycache__/

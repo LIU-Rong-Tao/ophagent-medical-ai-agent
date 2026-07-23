@@ -31,16 +31,22 @@ REGISTRY_COLUMNS = {
 RISK_COLUMNS = [
     "protocol_id",
     "task_id",
+    "method_kind",
+    "scout_artifact",
+    "expert_artifact",
     "event_id",
     "event_name",
     "budget",
     "policy",
     "event_total",
     "selected_event_n",
+    "corrected_event_n",
+    "introduced_event_n",
     "residual_event_n",
     "event_recall",
     "event_precision",
     "event_lift_vs_budget",
+    "event_scope",
 ]
 
 
@@ -114,10 +120,46 @@ def load_protocol(path: Path) -> dict[str, Any]:
         raise EvaluationError("当前确定性评测器仅接受一个 Scout 和一个 Expert")
     if payload["mode"] == "final" and payload["selection_split"] == payload["evaluation_split"]:
         raise EvaluationError("final 模式下 selection_split 与 evaluation_split 必须分离")
-    if payload["risk_events"]:
-        raise EvaluationError("v0.8.4 核心评测暂不启用专病风险事件")
+    validate_risk_events(payload["risk_events"])
     return payload
 
+
+def validate_risk_events(events: object) -> None:
+    if not isinstance(events, list):
+        raise EvaluationError("risk_events 必须是列表")
+    supported = {
+        "true_label_eq",
+        "true_label_gte",
+        "true_label_lte",
+        "pred_label_eq",
+        "pred_label_gte",
+        "pred_label_lte",
+        "pred_label_lt",
+        "pred_label_gt",
+    }
+    for event in events:
+        if not isinstance(event, dict):
+            raise EvaluationError("risk_events 的每项必须是对象")
+        missing = {"event_id", "event_name"} - set(event)
+        if missing:
+            raise EvaluationError(f"风险事件缺少字段：{sorted(missing)}")
+        configured = set(event) & supported
+        if not configured:
+            raise EvaluationError(
+                f"风险事件 {event['event_id']} 未声明标签条件"
+            )
+        invalid = set(event) - (supported | {"event_id", "event_name", "scope"})
+        if invalid:
+            raise EvaluationError(
+                f"风险事件 {event['event_id']} 包含不支持字段：{sorted(invalid)}"
+            )
+        for field in configured:
+            try:
+                int(event[field])
+            except (TypeError, ValueError) as exc:
+                raise EvaluationError(
+                    f"风险事件 {event['event_id']} 的 {field} 必须是整数"
+                ) from exc
 
 def probability_columns_from_frame(frame: pd.DataFrame) -> list[str]:
     indexed: list[tuple[int, str]] = []
@@ -404,6 +446,86 @@ def routing_metrics(frame: pd.DataFrame, selected_keys: set[str]) -> dict[str, f
         }
     return compute_metrics(frame["true_label"], prediction, probabilities)
 
+def event_mask(
+    true_labels: np.ndarray, predictions: np.ndarray, event: dict[str, Any]
+) -> np.ndarray:
+    mask = np.ones(len(true_labels), dtype=bool)
+    comparisons = {
+        "true_label_eq": (true_labels, np.equal),
+        "true_label_gte": (true_labels, np.greater_equal),
+        "true_label_lte": (true_labels, np.less_equal),
+        "pred_label_eq": (predictions, np.equal),
+        "pred_label_gte": (predictions, np.greater_equal),
+        "pred_label_lte": (predictions, np.less_equal),
+        "pred_label_lt": (predictions, np.less),
+        "pred_label_gt": (predictions, np.greater),
+    }
+    for field, (values, operator) in comparisons.items():
+        if field in event:
+            mask &= operator(values, int(event[field]))
+    return mask
+
+
+def risk_event_rows(
+    frame: pd.DataFrame,
+    protocol: dict[str, Any],
+    scout_id: str,
+    expert_id: str,
+    *,
+    method_kind: str,
+    budget: float,
+    policy: str,
+    selected_keys: set[str],
+) -> list[dict[str, Any]]:
+    if not protocol["risk_events"]:
+        return []
+    truth = frame["true_label"].astype(int).to_numpy()
+    scout_prediction = frame["scout_pred_label"].astype(int).to_numpy()
+    routed_prediction = route_predictions(frame, selected_keys)
+    selected = frame["image_key"].astype(str).isin(selected_keys).to_numpy()
+    selected_n = int(selected.sum())
+    rows: list[dict[str, Any]] = []
+    for event in protocol["risk_events"]:
+        base_event = event_mask(truth, scout_prediction, event)
+        routed_event = event_mask(truth, routed_prediction, event)
+        event_total = int(base_event.sum())
+        selected_event_n = int((base_event & selected).sum())
+        residual_event_n = int(routed_event.sum())
+        corrected_event_n = int((base_event & ~routed_event).sum())
+        introduced_event_n = int((~base_event & routed_event).sum())
+        rows.append(
+            {
+                "protocol_id": protocol["protocol_id"],
+                "task_id": protocol["task_id"],
+                "method_kind": method_kind,
+                "scout_artifact": scout_id,
+                "expert_artifact": expert_id,
+                "event_id": event["event_id"],
+                "event_name": event["event_name"],
+                "budget": float(budget),
+                "policy": policy,
+                "event_total": event_total,
+                "selected_event_n": selected_event_n,
+                "corrected_event_n": corrected_event_n,
+                "introduced_event_n": introduced_event_n,
+                "residual_event_n": residual_event_n,
+                "event_recall": (
+                    selected_event_n / event_total if event_total else float("nan")
+                ),
+                "event_precision": (
+                    selected_event_n / selected_n if selected_n else float("nan")
+                ),
+                "event_lift_vs_budget": (
+                    (selected_event_n / event_total) / budget
+                    if event_total and budget > 0
+                    else float("nan")
+                ),
+                "event_scope": event.get(
+                    "scope", "label_defined_error_event_not_clinical_outcome"
+                ),
+            }
+        )
+    return rows
 
 def random_same_budget(
     frame: pd.DataFrame,
@@ -754,6 +876,16 @@ def run_evaluation(registry_path: Path, protocol_path: Path, work_dir: Path) -> 
     ]
 
     routing_rows: list[dict[str, Any]] = []
+    risk_rows = risk_event_rows(
+        merged,
+        protocol,
+        scout_id,
+        expert_id,
+        method_kind="baseline",
+        budget=0.0,
+        policy="scout_only",
+        selected_keys=set(),
+    )
     for policy in protocol["policies"]:
         for budget in protocol["budgets"]:
             selected_n = selected_n_for_budget(len(merged), float(budget))
@@ -814,9 +946,25 @@ def run_evaluation(registry_path: Path, protocol_path: Path, work_dir: Path) -> 
                 )
             )
 
+    for policy in protocol["policies"]:
+        for budget in protocol["budgets"]:
+            selected_n = selected_n_for_budget(len(merged), float(budget))
+            selected = set(select_for_expert(merged, str(policy), selected_n))
+            risk_rows.extend(
+                risk_event_rows(
+                    merged,
+                    protocol,
+                    scout_id,
+                    expert_id,
+                    method_kind="uncertainty",
+                    budget=float(budget),
+                    policy=str(policy),
+                    selected_keys=selected,
+                )
+            )
     write_csv(pd.DataFrame(baseline_rows), work_dir / "model_baselines.csv")
     write_csv(pd.DataFrame(routing_rows), work_dir / "routing_results.csv")
-    write_csv(pd.DataFrame(columns=RISK_COLUMNS), work_dir / "risk_results.csv")
+    write_csv(pd.DataFrame(risk_rows, columns=RISK_COLUMNS), work_dir / "risk_results.csv")
     write_csv(
         pd.DataFrame(case_audit_rows(merged, protocol, scout_id, expert_id)),
         work_dir / "case_audit.csv",

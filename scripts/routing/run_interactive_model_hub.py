@@ -35,6 +35,8 @@ OUTPUT_NAMES = (
     "case_routing_trace.csv",
     "run_config.yaml",
     "artifact_manifest.csv",
+    "candidate_ranking.csv",
+    "candidate_selection.csv",
     "report.html",
 )
 
@@ -107,11 +109,24 @@ HUB_COLUMNS = [
     "adapter_status",
     "onboarding_status",
     "compatibility_status",
+    "adapter_type",
+    "validation_prediction_path",
+    "test_prediction_path",
+    "checkpoint_sha256",
+    "current_run_reproducible",
+    "validation_selection_eligible",
+    "qualification_status",
+    "route_eligible",
+    "task_inference_ready",
+    "offline_evaluation_eligible",
+    "cpu_postprocess_ms_per_image",
+    "cpu_postprocess_status",
     "notes",
 ]
 
 
 PAIRING_COLUMNS = [
+    "evaluation_kind",
     "pairing_id",
     "task_id",
     "scout_artifact_ids",
@@ -132,6 +147,7 @@ PAIRING_COLUMNS = [
     "expert_call_rate",
     "accuracy",
     "macro_f1",
+    "weighted_f1",
     "qwk",
     "qwk_status",
     "scout_only_accuracy",
@@ -139,6 +155,16 @@ PAIRING_COLUMNS = [
     "scout_only_macro_f1",
     "expert_only_macro_f1",
     "expert_only_qwk",
+    "dangerous_total",
+    "dangerous_selected",
+    "dangerous_corrected",
+    "dangerous_introduced",
+    "net_dangerous_reduction",
+    "residual_dangerous_count",
+    "dangerous_recall_at_k",
+    "dangerous_precision_at_k",
+    "vtdr_miss_count",
+    "severe_grade_error_count",
     "replay_mode",
     "cost_mode",
     "scout_cost_sum_ms_per_image",
@@ -351,6 +377,7 @@ def prediction_metrics(path: Path, *, n_classes: int, qwk_enabled: bool) -> dict
     return {
         "accuracy": float(accuracy_score(truth, prediction)),
         "macro_f1": float(f1_score(truth, prediction, average="macro", zero_division=0)),
+        "weighted_f1": float(f1_score(truth, prediction, average="weighted", zero_division=0)),
         "qwk": (
             float(cohen_kappa_score(truth, prediction, weights="quadratic"))
             if qwk_enabled
@@ -375,7 +402,84 @@ def merge_roles(*values: Any) -> str:
     return "|".join(roles)
 
 
+def build_prediction_asset_hub(config: dict[str, Any], *, config_path: Path) -> pd.DataFrame:
+    """Register frozen probability packages as first-class Model Hub assets."""
+    tasks = read_csv(config["task_registry"], config_dir=config_path.parent)
+    assets = read_csv(config["prediction_asset_registry"], config_dir=config_path.parent)
+    required = {
+        "task_id", "artifact_id", "model_family", "architecture", "adapter_type",
+        "validation_prediction_path", "test_prediction_path", "checkpoint_sha256",
+        "preprocessing_id", "forward_cost_ms_per_image", "cost_scope",
+        "current_run_reproducible", "validation_selection_eligible", "route_eligible",
+    }
+    missing = required - set(assets.columns)
+    if missing:
+        raise ModelHubError("prediction asset registry missing columns: " + ", ".join(sorted(missing)))
+    selection_split = clean_text(config.get("selection_split", "val")) or "val"
+    qwk_tasks = set(config.get("qwk_enabled_tasks", []))
+    rows: list[dict[str, Any]] = []
+    for _, asset in assets.iterrows():
+        task_id = clean_text(asset["task_id"])
+        artifact_id = clean_text(asset["artifact_id"])
+        meta = task_metadata(tasks, task_id)
+        validation_path = resolve_path(asset["validation_prediction_path"], config_dir=config_path.parent)
+        test_path = resolve_path(asset["test_prediction_path"], config_dir=config_path.parent)
+        prediction_path = validation_path if selection_split == "val" else test_path
+        if not prediction_path.exists():
+            raise ModelHubError(f"prediction asset missing: {prediction_path}")
+        metrics = prediction_metrics(
+            prediction_path, n_classes=meta["n_classes"], qwk_enabled=task_id in qwk_tasks
+        )
+        route_eligible = truthy(asset["route_eligible"])
+        validation_eligible = truthy(asset["validation_selection_eligible"])
+        rows.append(
+            {
+                "model_id": f"{task_id}::{artifact_id}",
+                "task_id": task_id,
+                **meta,
+                "split": selection_split,
+                "artifact_id": artifact_id,
+                "model_family": clean_text(asset["model_family"]),
+                "architecture": clean_text(asset["architecture"]),
+                "pretraining_source": clean_text(asset.get("pretraining_source", "frozen replay asset")),
+                "checkpoint_path": clean_text(asset.get("checkpoint_path", "")),
+                "checkpoint_status": "verified_historical_replay",
+                "checkpoint_mb": np.nan,
+                "parameter_count": np.nan,
+                "trainable_parameter_count": np.nan,
+                "role_candidates": clean_text(asset.get("role_candidates", "scout|expert")),
+                "source_version": clean_text(asset.get("source_version", "h100_replay")),
+                "prediction_source": "prediction_asset",
+                "prediction_path": str(prediction_path),
+                "baseline_source": str(prediction_path),
+                **metrics,
+                "forward_cost_ms_per_image": metric_value(asset, "forward_cost_ms_per_image"),
+                "cost_scope": clean_text(asset["cost_scope"]),
+                "cost_status": clean_text(asset.get("cost_status", "measured")),
+                "adapter_status": "prediction_asset",
+                "onboarding_status": "registered_frozen_probability_asset",
+                "compatibility_status": "ready_for_pairing" if validation_eligible else "not_selection_eligible",
+                "adapter_type": clean_text(asset["adapter_type"]),
+                "validation_prediction_path": str(validation_path),
+                "test_prediction_path": str(test_path),
+                "checkpoint_sha256": clean_text(asset["checkpoint_sha256"]),
+                "current_run_reproducible": truthy(asset["current_run_reproducible"]),
+                "validation_selection_eligible": validation_eligible,
+                "qualification_status": clean_text(asset.get("qualification_status", "replay_candidate")),
+                "route_eligible": route_eligible,
+                "task_inference_ready": False,
+                "offline_evaluation_eligible": validation_eligible,
+                "cpu_postprocess_ms_per_image": metric_value(asset, "cpu_postprocess_ms_per_image"),
+                "cpu_postprocess_status": clean_text(asset.get("cpu_postprocess_status", "not_applicable")),
+                "notes": clean_text(asset.get("notes", "")),
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["task_id", "artifact_id"]).reset_index(drop=True)
+
+
 def build_model_hub(config: dict[str, Any], *, config_path: Path) -> pd.DataFrame:
+    if clean_text(config.get("prediction_asset_registry")):
+        return build_prediction_asset_hub(config, config_path=config_path)
     config_dir = config_path.parent
     tasks = read_csv(config["task_registry"], config_dir=config_dir)
     registered = read_csv(config.get("registered_models", ""), config_dir=config_dir, required=False)
@@ -600,7 +704,25 @@ def build_model_hub(config: dict[str, Any], *, config_path: Path) -> pd.DataFram
 
 
 def normalize_and_validate_prediction(path: Path, *, n_classes: int) -> pd.DataFrame:
-    frame = normalize_prediction_frame(path, num_classes=n_classes)
+    try:
+        frame = normalize_prediction_frame(path, num_classes=n_classes)
+    except Exception as exc:
+        raw = pd.read_csv(path)
+        aliases = {"case_id": "image_key", "y_true": "true_label", "y_pred": "pred_label"}
+        frame = raw.rename(columns={source: target for source, target in aliases.items() if source in raw})
+        required = {"image_key", "true_label", "pred_label", *[f"prob_{index}" for index in range(n_classes)]}
+        if not required.issubset(frame.columns):
+            raise PairingSkip("skipped_invalid_prediction_schema", f"invalid prediction package {path}: {exc}") from exc
+        frame = frame.copy()
+        frame["image_key"] = frame["image_key"].astype(str)
+        frame["image_path"] = frame.get("image_path", "")
+        probabilities = frame[[f"prob_{index}" for index in range(n_classes)]].astype(float).to_numpy()
+        ordered = np.sort(probabilities, axis=1)
+        frame["confidence"] = probabilities.max(axis=1)
+        frame["margin"] = ordered[:, -1] - ordered[:, -2]
+        frame["entropy"] = -(
+            probabilities * np.log(np.clip(probabilities, 1e-12, 1.0))
+        ).sum(axis=1) / np.log(n_classes)
     if frame["image_key"].duplicated().any():
         raise PairingSkip("skipped_incompatible_image_keys", f"prediction image_key 重复：{path}")
     prob_cols = [f"prob_{index}" for index in range(n_classes)]
@@ -711,6 +833,14 @@ def routing_ranking(context: PairingContext, policy: str) -> pd.DataFrame:
             score = 1.0 - primary["margin"].astype(float).to_numpy()
         elif policy == "high_entropy":
             score = primary["entropy"].astype(float).to_numpy()
+        elif policy == "severe_probability_mass":
+            probability_columns = [
+                column for column in primary.columns if column.startswith("prob_")
+            ]
+            probability_columns.sort(key=lambda column: int(column.removeprefix("prob_")))
+            if len(probability_columns) < 4:
+                raise PairingSkip("skipped_unsupported_policy", "severe probability mass requires ordinal classes")
+            score = primary[probability_columns[3:]].astype(float).sum(axis=1).to_numpy()
         else:
             raise PairingSkip("skipped_unsupported_policy", f"单 Scout 不支持策略：{policy}")
     else:
@@ -736,6 +866,31 @@ def selected_n_for_budget(n_cases: int, budget: float) -> int:
     return min(n_cases, max(0, int(round(n_cases * float(budget)))))
 
 
+def risk_proxy_summary(
+    truth: np.ndarray, scout: np.ndarray, final: np.ndarray, selected: np.ndarray
+) -> dict[str, int | float]:
+    """Label-defined DR grading proxy; never a clinical-outcome inference."""
+    dangerous_scout = (truth >= 3) & (scout < 3)
+    dangerous_final = (truth >= 3) & (final < 3)
+    corrected = dangerous_scout & ~dangerous_final
+    introduced = ~dangerous_scout & dangerous_final
+    selected_dangerous = dangerous_scout & selected
+    total = int(dangerous_scout.sum())
+    selected_n = int(selected.sum())
+    return {
+        "dangerous_total": total,
+        "dangerous_selected": int(selected_dangerous.sum()),
+        "dangerous_corrected": int(corrected.sum()),
+        "dangerous_introduced": int(introduced.sum()),
+        "net_dangerous_reduction": int(corrected.sum() - introduced.sum()),
+        "residual_dangerous_count": int(dangerous_final.sum()),
+        "dangerous_recall_at_k": float(selected_dangerous.sum() / total) if total else np.nan,
+        "dangerous_precision_at_k": float(selected_dangerous.sum() / selected_n) if selected_n else np.nan,
+        "vtdr_miss_count": int(((truth >= 2) & (final < 2)).sum()),
+        "severe_grade_error_count": int((np.abs(truth - final) >= 2).sum()),
+    }
+
+
 def classification_summary(
     truth: np.ndarray,
     prediction: np.ndarray,
@@ -745,6 +900,7 @@ def classification_summary(
     return {
         "accuracy": float(accuracy_score(truth, prediction)),
         "macro_f1": float(f1_score(truth, prediction, average="macro", zero_division=0)),
+        "weighted_f1": float(f1_score(truth, prediction, average="weighted", zero_division=0)),
         "qwk": (
             float(cohen_kappa_score(truth, prediction, weights="quadratic"))
             if qwk_enabled
@@ -761,6 +917,17 @@ def numeric_cost(hub: pd.DataFrame, task_id: str, artifact_id: str) -> float:
     except (TypeError, ValueError):
         return float("nan")
     return value if math.isfinite(value) and value > 0 else float("nan")
+
+
+def has_unmeasured_cpu_postprocess(
+    hub: pd.DataFrame, task_id: str, artifact_ids: list[str]
+) -> bool:
+    """Avoid presenting a GPU-only component as the complete deployed cost."""
+    for artifact_id in artifact_ids:
+        row = get_hub_row(hub, task_id, artifact_id)
+        if clean_text(row.get("cpu_postprocess_status")).lower() == "unmeasured":
+            return True
+    return False
 
 
 def cost_summary(context: PairingContext, hub: pd.DataFrame, call_rate: float) -> dict[str, Any]:
@@ -782,6 +949,21 @@ def cost_summary(context: PairingContext, hub: pd.DataFrame, call_rate: float) -
         }
     scout_sum = float(sum(scout_costs))
     scout_parallel = float(max(scout_costs))
+    if has_unmeasured_cpu_postprocess(
+        hub, task_id, [*context.scout_ids, context.expert_id]
+    ):
+        return {
+            "replay_mode": "cached_prediction_replay",
+            "cost_mode": "partial_component_cost_cpu_probe_unmeasured",
+            "scout_cost_sum_ms_per_image": scout_sum,
+            "scout_parallel_scenario_ms_per_image": scout_parallel,
+            "expert_cost_ms_per_image": expert_cost,
+            "estimated_total_compute_ms_per_image": np.nan,
+            "estimated_online_sequential_latency_ms_per_image": np.nan,
+            "estimated_parallel_latency_ms_per_image": np.nan,
+            "parallel_cost_status": "cpu_probe_unmeasured",
+            "cost_reduction_vs_expert_only": np.nan,
+        }
     total = scout_sum + call_rate * expert_cost
     parallel = scout_parallel + call_rate * expert_cost
     return {
@@ -817,6 +999,51 @@ def evaluate_pairing(
     policies = parse_list(pairing["routing_policies"])
     budgets = parse_budgets(pairing["budget_grid"])
 
+    def append_control(
+        *, kind: str, policy: str, budget: float, selected_mask: np.ndarray
+    ) -> None:
+        selected_n = int(selected_mask.sum())
+        final_prediction = np.where(selected_mask, expert_prediction, primary_prediction)
+        final_metrics = classification_summary(truth, final_prediction, qwk_enabled=qwk_enabled)
+        risk_metrics = risk_proxy_summary(truth, primary_prediction, final_prediction, selected_mask)
+        call_rate = selected_n / len(primary) if len(primary) else 0.0
+        result_rows.append(
+            {
+                "evaluation_kind": kind,
+                "pairing_id": pairing["pairing_id"],
+                "task_id": pairing["task_id"],
+                "scout_artifact_ids": pairing["scout_artifact_ids"],
+                "primary_scout_artifact_id": context.primary_scout_id,
+                "expert_artifact_id": context.expert_id,
+                "routing_policy": policy,
+                "prediction_source_mode": pairing["prediction_source_mode"],
+                "result_semantics": pairing["result_semantics"],
+                "requested_budget": budget,
+                "selected_n": selected_n,
+                "realized_budget": call_rate,
+                "n_scout": len(primary),
+                "n_expert": len(context.expert),
+                "n_overlap": context.n_overlap,
+                "overlap_rate": context.overlap_rate,
+                "n_reviewed": selected_n,
+                "n_auto": len(primary) - selected_n,
+                "expert_call_rate": call_rate,
+                **final_metrics,
+                **risk_metrics,
+                "scout_only_accuracy": scout_baseline["accuracy"],
+                "expert_only_accuracy": expert_baseline["accuracy"],
+                "scout_only_macro_f1": scout_baseline["macro_f1"],
+                "expert_only_macro_f1": expert_baseline["macro_f1"],
+                "expert_only_qwk": expert_baseline["qwk"],
+                **cost_summary(context, hub, call_rate),
+                "status": "completed",
+                "notes": "validation-only label-defined proxy; Oracle is not deployable" if kind == "oracle" else "validation cached probability replay",
+            }
+        )
+
+    append_control(kind="scout_only", policy="none", budget=0.0, selected_mask=np.zeros(len(primary), dtype=bool))
+    append_control(kind="full_expert", policy="none", budget=1.0, selected_mask=np.ones(len(primary), dtype=bool))
+
     for policy in policies:
         ranking = routing_ranking(context, policy)
         rank_by_key = dict(zip(ranking["image_key"], ranking["review_rank"]))
@@ -828,9 +1055,13 @@ def evaluate_pairing(
             selected_mask = primary["image_key"].astype(str).isin(selected).to_numpy()
             final_prediction = np.where(selected_mask, expert_prediction, primary_prediction)
             final_metrics = classification_summary(truth, final_prediction, qwk_enabled=qwk_enabled)
+            risk_metrics = risk_proxy_summary(
+                truth, primary_prediction, final_prediction, selected_mask
+            )
             call_rate = selected_n / len(primary) if len(primary) else 0.0
             result_rows.append(
                 {
+                    "evaluation_kind": "routed",
                     "pairing_id": pairing["pairing_id"],
                     "task_id": pairing["task_id"],
                     "scout_artifact_ids": pairing["scout_artifact_ids"],
@@ -850,6 +1081,7 @@ def evaluate_pairing(
                     "n_auto": len(primary) - selected_n,
                     "expert_call_rate": call_rate,
                     **final_metrics,
+                    **risk_metrics,
                     "scout_only_accuracy": scout_baseline["accuracy"],
                     "expert_only_accuracy": expert_baseline["accuracy"],
                     "scout_only_macro_f1": scout_baseline["macro_f1"],
@@ -863,6 +1095,17 @@ def evaluate_pairing(
                     ),
                 }
             )
+            if policy == policies[0]:
+                seed = int(hashlib.sha256(f"{pairing['pairing_id']}:{budget}".encode()).hexdigest()[:8], 16)
+                random_indices = np.random.default_rng(seed).choice(len(primary), size=selected_n, replace=False)
+                random_mask = np.zeros(len(primary), dtype=bool)
+                random_mask[random_indices] = True
+                append_control(kind="random", policy="random_same_budget", budget=budget, selected_mask=random_mask)
+                beneficial = (primary_prediction != truth) & (expert_prediction == truth)
+                oracle_order = np.lexsort((primary["image_key"].astype(str).to_numpy(), ~beneficial))
+                oracle_mask = np.zeros(len(primary), dtype=bool)
+                oracle_mask[oracle_order[:selected_n]] = True
+                append_control(kind="oracle", policy="oracle_exact_k", budget=budget, selected_mask=oracle_mask)
             if not any(abs(budget - item) < 1e-9 for item in trace_budgets):
                 continue
             for index, record in primary.iterrows():
@@ -940,13 +1183,69 @@ def skipped_pairing_row(pairing: pd.Series, error: PairingSkip) -> dict[str, Any
     }
 
 
+def expanded_pool_pairings(config: dict[str, Any], hub: pd.DataFrame) -> pd.DataFrame:
+    expansion = config.get("pairing_expansion", {})
+    if not expansion or not truthy(expansion.get("enabled", False)):
+        return pd.DataFrame()
+    task_id = clean_text(expansion["task_id"])
+    available = hub.loc[
+        (hub["task_id"].astype(str) == task_id)
+        & hub["validation_selection_eligible"].fillna(False).astype(bool)
+        & hub["compatibility_status"].astype(str).eq("ready_for_pairing"),
+        "artifact_id",
+    ].astype(str).tolist()
+    rows: list[dict[str, Any]] = []
+    budgets = "|".join(str(value) for value in expansion["budgets"])
+    single_policies = "|".join(expansion["single_scout_policies"])
+    multi_policies = "|".join(expansion["multi_scout_policies"])
+    for scout in available:
+        for expert in available:
+            if scout == expert:
+                continue
+            rows.append({
+                "pairing_id": f"{task_id}__{scout}__to__{expert}",
+                "task_id": task_id,
+                "scout_artifact_ids": scout,
+                "primary_scout_artifact_id": scout,
+                "expert_artifact_id": expert,
+                "enabled": True,
+                "prediction_source_mode": "prediction_asset",
+                "routing_policies": single_policies,
+                "budget_grid": budgets,
+                "result_semantics": "validation_cached_probability_replay",
+                "notes": "expanded from registered probability assets",
+            })
+    for left_index, left in enumerate(available):
+        for right in available[left_index + 1 :]:
+            for expert in available:
+                if expert in {left, right}:
+                    continue
+                rows.append({
+                    "pairing_id": f"{task_id}__{left}__{right}__to__{expert}",
+                    "task_id": task_id,
+                    "scout_artifact_ids": f"{left}|{right}",
+                    "primary_scout_artifact_id": left,
+                    "expert_artifact_id": expert,
+                    "enabled": True,
+                    "prediction_source_mode": "prediction_asset",
+                    "routing_policies": multi_policies,
+                    "budget_grid": budgets,
+                    "result_semantics": "validation_cached_probability_replay",
+                    "notes": "expanded two-scout probability disagreement replay",
+                })
+    return pd.DataFrame(rows)
+
+
 def evaluate_pairings(
     config: dict[str, Any],
     *,
     config_path: Path,
     hub: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    pairings = read_csv(config["pairing_protocols"], config_dir=config_path.parent)
+    pairings = read_csv(config.get("pairing_protocols", ""), config_dir=config_path.parent, required=False)
+    generated = expanded_pool_pairings(config, hub)
+    if not generated.empty:
+        pairings = pd.concat([pairings, generated], ignore_index=True)
     required = {
         "pairing_id",
         "task_id",
@@ -990,13 +1289,16 @@ def evaluate_pairings(
     return results, traces
 
 
-def write_run_config(path: Path, config: dict[str, Any], pairings: pd.DataFrame) -> None:
+def write_run_config(
+    path: Path, config: dict[str, Any], pairings: pd.DataFrame, config_path: Path
+) -> None:
     try:
         import yaml
     except ImportError as exc:  # pragma: no cover
         raise ModelHubError("写入 run_config.yaml 需要 PyYAML") from exc
     payload = {
         "protocol_version": config["protocol_id"],
+        "protocol_sha256": sha256_file(config_path),
         "source_versions": config.get("source_versions", []),
         "enabled_pairings": pairings.loc[pairings["status"] == "completed", "pairing_id"].drop_duplicates().tolist(),
         "budget_grid": sorted(pairings.loc[pairings["status"] == "completed", "requested_budget"].dropna().unique().tolist()),
@@ -1007,6 +1309,79 @@ def write_run_config(path: Path, config: dict[str, Any], pairings: pd.DataFrame)
         "notes": "100% 为 Expert prediction replacement；在线成本仍包含 Scout。并行情景未实测。",
     }
     path.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+
+def rank_validation_candidates(pairings: pd.DataFrame) -> pd.DataFrame:
+    candidates = pairings.loc[
+        (pairings["status"] == "completed")
+        & (pairings["evaluation_kind"] == "routed")
+    ].copy()
+    if candidates.empty:
+        return candidates
+    candidates["scout_count"] = candidates["scout_artifact_ids"].astype(str).str.count(r"\|") + 1
+    candidates = candidates.sort_values(
+        [
+            "dangerous_introduced",
+            "net_dangerous_reduction",
+            "macro_f1",
+            "qwk",
+            "requested_budget",
+            "estimated_total_compute_ms_per_image",
+        ],
+        ascending=[True, False, False, False, True, True],
+        kind="mergesort",
+    ).reset_index(drop=True)
+    candidates.insert(0, "validation_rank", np.arange(1, len(candidates) + 1))
+    candidates["selection_status"] = "validation_candidate_not_test_evaluated"
+    return candidates
+
+
+def select_validation_candidates(pairings: pd.DataFrame, hub: pd.DataFrame) -> pd.DataFrame:
+    """Publish a compact, validation-only shortlist without using Oracle as evidence."""
+    ranked = rank_validation_candidates(pairings)
+    selections: list[pd.DataFrame] = []
+    complete_cost = ranked.loc[
+        ranked["cost_mode"].eq("estimated_from_measured_forward_only")
+    ].copy()
+    selection_pool = complete_cost if not complete_cost.empty else ranked
+
+    def pick(label: str, frame: pd.DataFrame, *, low_budget: bool = False) -> None:
+        if frame.empty:
+            return
+        frame = frame.loc[frame["dangerous_introduced"] == 0].copy()
+        if frame.empty:
+            return
+        if low_budget:
+            positive = frame.loc[frame["net_dangerous_reduction"] > 0]
+            frame = positive if not positive.empty else frame
+            frame = frame.loc[frame["requested_budget"] == frame["requested_budget"].min()]
+        selected = frame.sort_values(
+            ["macro_f1", "accuracy", "net_dangerous_reduction", "qwk", "requested_budget"],
+            ascending=[False, False, False, False, True],
+            kind="mergesort",
+        ).head(1).copy()
+        selected.insert(0, "selection_role", label)
+        selections.append(selected)
+
+    pick("primary_single_scout", selection_pool.loc[selection_pool["scout_count"] == 1])
+    pick(
+        "single_scout_ablation",
+        selection_pool.loc[selection_pool["scout_count"] == 1],
+        low_budget=True,
+    )
+    pick("primary_multi_scout", selection_pool.loc[selection_pool["scout_count"] >= 2])
+
+    baselines = hub.copy()
+    if not baselines.empty:
+        baselines = baselines.sort_values(
+            ["macro_f1", "qwk", "accuracy"], ascending=False, kind="mergesort"
+        ).head(1)
+        baselines.insert(0, "selection_role", "strong_single_model_baseline")
+        baselines["selection_status"] = "validation_candidate_not_test_evaluated"
+        selections.append(baselines)
+    if not selections:
+        return pd.DataFrame()
+    return pd.concat(selections, ignore_index=True, sort=False)
 
 
 def render_report(path: Path, hub: pd.DataFrame, pairings: pd.DataFrame) -> None:
@@ -1054,7 +1429,7 @@ th{{background:#eef3f7}} .table{{overflow:auto}}
     path.write_text(document, encoding="utf-8")
 
 
-def write_manifest(output_dir: Path, config: dict[str, Any]) -> None:
+def write_manifest(output_dir: Path, config: dict[str, Any], config_path: Path) -> None:
     created = datetime.now(timezone.utc).isoformat()
     rows = []
     for name in OUTPUT_NAMES:
@@ -1066,6 +1441,7 @@ def write_manifest(output_dir: Path, config: dict[str, Any]) -> None:
         rows.append(
             {
                 "protocol_id": config["protocol_id"],
+                "protocol_sha256": sha256_file(config_path),
                 "artifact_name": name,
                 "path": str(path),
                 "size_bytes": path.stat().st_size,
@@ -1078,11 +1454,43 @@ def write_manifest(output_dir: Path, config: dict[str, Any]) -> None:
     write_csv(
         output_dir / "artifact_manifest.csv",
         pd.DataFrame(rows),
-        ["protocol_id", "artifact_name", "path", "size_bytes", "sha256", "created_at_utc", "source_versions", "notes"],
+        ["protocol_id", "protocol_sha256", "artifact_name", "path", "size_bytes", "sha256", "created_at_utc", "source_versions", "notes"],
     )
 
 
+def verify_resume_artifacts(output_dir: Path, config_path: Path) -> None:
+    manifest_path = output_dir / "artifact_manifest.csv"
+    if not manifest_path.exists():
+        raise ModelHubError("--resume 需要已有 artifact_manifest.csv")
+    manifest = pd.read_csv(manifest_path)
+    required = {"model_hub_snapshot.csv", "pairing_results.csv", "case_routing_trace.csv"}
+    present = set(manifest.get("artifact_name", pd.Series(dtype=str)).astype(str))
+    missing = required - present
+    if missing:
+        raise ModelHubError("--resume 缺少既有结果：" + ", ".join(sorted(missing)))
+    if "protocol_sha256" not in manifest.columns:
+        raise ModelHubError("--resume 需要带 protocol_sha256 的新 manifest")
+    if set(manifest["protocol_sha256"].dropna().astype(str)) != {sha256_file(config_path)}:
+        raise ModelHubError("--resume 配置指纹不一致；请显式重新运行验证集协议")
+    for row in manifest.itertuples(index=False):
+        artifact = output_dir / str(getattr(row, "artifact_name"))
+        if not artifact.exists() or sha256_file(artifact) != str(getattr(row, "sha256")):
+            raise ModelHubError(f"--resume 产物完整性校验失败：{artifact.name}")
+
+
 def validate_config(config: dict[str, Any], config_path: Path) -> None:
+    if clean_text(config.get("prediction_asset_registry")):
+        required = {"protocol_id", "task_registry", "prediction_asset_registry"}
+        missing = required - set(config)
+        if missing:
+            raise ModelHubError("prediction asset protocol missing fields: " + ", ".join(sorted(missing)))
+        for field in required - {"protocol_id"}:
+            path = resolve_path(config[field], config_dir=config_path.parent)
+            if not path.exists():
+                raise ModelHubError(f"missing config input {field}: {path}")
+        if not config.get("pairing_expansion") and not clean_text(config.get("pairing_protocols")):
+            raise ModelHubError("prediction asset protocol requires pairing_expansion or pairing_protocols")
+        return
     required = {
         "protocol_id",
         "task_registry",
@@ -1115,20 +1523,33 @@ def run_protocol(
     output_dir: Path | str | None = None,
     stage: str = "all",
     dry_run: bool = False,
+    resume: bool = False,
 ) -> ProtocolResult:
     config_path = Path(config_path).resolve()
     if stage not in VALID_STAGES:
         raise ModelHubError(f"不支持 stage：{stage}")
     config = load_yaml_or_json(config_path)
     validate_config(config, config_path)
-    output_path = Path(output_dir) if output_dir is not None else resolve_path(config.get("output_dir", "outputs"))
+    output_path = (
+        Path(output_dir)
+        if output_dir is not None
+        else resolve_path(config.get("model_hub_output_dir", config.get("output_dir", "outputs")))
+    )
     if dry_run:
         return ProtocolResult(output_dir=output_path, stage=stage, files=[])
+    if resume:
+        verify_resume_artifacts(output_path, config_path)
+        return ProtocolResult(
+            output_dir=output_path,
+            stage=stage,
+            files=[output_path / name for name in OUTPUT_NAMES if (output_path / name).exists()],
+        )
     output_path.mkdir(parents=True, exist_ok=True)
 
     hub_path = output_path / "model_hub_snapshot.csv"
     pairing_path = output_path / "pairing_results.csv"
     trace_path = output_path / "case_routing_trace.csv"
+    ranking_path = output_path / "candidate_ranking.csv"
     if stage in {"model_hub", "all"}:
         write_csv(hub_path, build_model_hub(config, config_path=config_path), HUB_COLUMNS)
     if stage in {"pairing", "all"}:
@@ -1138,6 +1559,10 @@ def run_protocol(
         pairings, traces = evaluate_pairings(config, config_path=config_path, hub=hub)
         write_csv(pairing_path, pairings, PAIRING_COLUMNS)
         write_csv(trace_path, traces, TRACE_COLUMNS)
+        rank_validation_candidates(pairings).to_csv(ranking_path, index=False)
+        select_validation_candidates(pairings, hub).to_csv(
+            output_path / "candidate_selection.csv", index=False
+        )
     if stage in {"report", "all"}:
         if not hub_path.exists() or not pairing_path.exists() or not trace_path.exists():
             hub = build_model_hub(config, config_path=config_path)
@@ -1145,11 +1570,15 @@ def run_protocol(
             pairings, traces = evaluate_pairings(config, config_path=config_path, hub=hub)
             write_csv(pairing_path, pairings, PAIRING_COLUMNS)
             write_csv(trace_path, traces, TRACE_COLUMNS)
+            rank_validation_candidates(pairings).to_csv(ranking_path, index=False)
+            select_validation_candidates(pairings, hub).to_csv(
+                output_path / "candidate_selection.csv", index=False
+            )
         hub = pd.read_csv(hub_path)
         pairings = pd.read_csv(pairing_path)
-        write_run_config(output_path / "run_config.yaml", config, pairings)
+        write_run_config(output_path / "run_config.yaml", config, pairings, config_path)
         render_report(output_path / "report.html", hub, pairings)
-        write_manifest(output_path, config)
+        write_manifest(output_path, config, config_path)
 
     files = [output_path / name for name in OUTPUT_NAMES if (output_path / name).exists()]
     return ProtocolResult(output_dir=output_path, stage=stage, files=files)
@@ -1161,6 +1590,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--stage", choices=sorted(VALID_STAGES), default="all")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--resume", action="store_true")
     return parser
 
 
@@ -1172,6 +1602,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             stage=args.stage,
             dry_run=args.dry_run,
+            resume=args.resume,
         )
     except (ModelHubError, PairingSkip) as exc:
         print(f"[ERROR] {exc}")

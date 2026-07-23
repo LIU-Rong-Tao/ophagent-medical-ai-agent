@@ -56,7 +56,9 @@ def load_config(path: Path) -> dict[str, Any]:
         try:
             import yaml
         except ImportError as exc:
-            raise RunnerError("YAML config requires PyYAML; install project requirements first") from exc
+            raise RunnerError(
+                "YAML config requires PyYAML; install project requirements first"
+            ) from exc
         data = yaml.safe_load(text)
     if not isinstance(data, dict):
         raise RunnerError("config root must be a mapping")
@@ -97,7 +99,9 @@ def validate_config(config: dict[str, Any]) -> None:
             raise RunnerError(f"duplicated stage id: {stage_id}")
         for dep in raw.get("depends_on", []):
             if dep not in seen:
-                raise RunnerError(f"stage {stage_id} depends on unknown or later stage: {dep}")
+                raise RunnerError(
+                    f"stage {stage_id} depends on unknown or later stage: {dep}"
+                )
         command = raw.get("command")
         if not isinstance(command, list) or not command:
             raise RunnerError(f"stage {stage_id} requires a non-empty command list")
@@ -156,7 +160,9 @@ def read_csv_records(path: Path) -> tuple[list[str], list[dict[str, str]]]:
         return list(reader.fieldnames or []), list(reader)
 
 
-def write_csv_records(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+def write_csv_records(
+    path: Path, fieldnames: list[str], rows: list[dict[str, Any]]
+) -> None:
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -176,7 +182,9 @@ def enabled_registry_row(row: dict[str, str]) -> bool:
     return str(row.get("enabled", "1")).strip().lower() not in {"0", "false", "no"}
 
 
-def load_model_costs(config: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], str | None]:
+def load_model_costs(
+    config: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], str | None]:
     settings = config.get("cost_enrichment", {})
     registry_value = settings.get("model_registry")
     if not registry_value:
@@ -206,7 +214,11 @@ def load_model_costs(config: dict[str, Any]) -> tuple[dict[str, dict[str, Any]],
             continue
         if cost_path not in source_cache:
             _, source_cache[cost_path] = read_csv_records(cost_path)
-        matches = [row for row in source_cache[cost_path] if row.get("model_name") == model_name]
+        matches = [
+            row
+            for row in source_cache[cost_path]
+            if row.get("model_name") == model_name
+        ]
         if len(matches) != 1:
             continue
 
@@ -221,7 +233,8 @@ def load_model_costs(config: dict[str, Any]) -> tuple[dict[str, dict[str, Any]],
             "estimated_forward_ms_per_image": estimate,
             "images_per_second": throughput,
             "peak_allocated_memory_mb": optional_float(
-                row.get("pytorch_peak_allocated_mem_mb") or row.get("peak_allocated_memory_mb")
+                row.get("pytorch_peak_allocated_mem_mb")
+                or row.get("peak_allocated_memory_mb")
             ),
             "checkpoint_mb": optional_float(row.get("checkpoint_mb")),
             "batch_size": row.get("batch_size", ""),
@@ -243,7 +256,13 @@ def enrich_model_baselines(path: Path, config: dict[str, Any]) -> None:
     fieldnames, rows = read_csv_records(path)
     if not rows:
         return
-    model_column = "name" if "name" in fieldnames else "model_name" if "model_name" in fieldnames else None
+    model_column = (
+        "name"
+        if "name" in fieldnames
+        else "model_name"
+        if "model_name" in fieldnames
+        else None
+    )
     if model_column is None:
         return
 
@@ -296,11 +315,14 @@ def validate_risk_columns(fieldnames: list[str], config: dict[str, Any]) -> None
     if str(config.get("risk_metric_profile", "unspecified")) != "generic_multiclass":
         return
     offending = [
-        name for name in fieldnames if any(marker in name.lower() for marker in DR_RISK_COLUMN_MARKERS)
+        name
+        for name in fieldnames
+        if any(marker in name.lower() for marker in DR_RISK_COLUMN_MARKERS)
     ]
     if offending:
         raise RunnerError(
-            "generic_multiclass output contains DR-specific risk columns: " + ", ".join(offending)
+            "generic_multiclass output contains DR-specific risk columns: "
+            + ", ".join(offending)
         )
 
 
@@ -353,7 +375,9 @@ def enrich_routing_results(path: Path, config: dict[str, Any]) -> None:
     write_csv_records(path, fieldnames, rows)
 
 
-def normalize_published_artifact(name: str, target: Path, config: dict[str, Any]) -> None:
+def normalize_published_artifact(
+    name: str, target: Path, config: dict[str, Any]
+) -> None:
     if target.suffix.lower() != ".csv":
         return
     if name == "model_baselines":
@@ -372,21 +396,25 @@ def rewrite_published_paths(target: Path, config: dict[str, Any]) -> None:
         source_prefix = str(rule.get("source_prefix", ""))
         target_prefix = str(rule.get("target_prefix", ""))
         if not source_prefix or not target_prefix:
-            raise RunnerError("publish.path_rewrites requires source_prefix and target_prefix")
+            raise RunnerError(
+                "publish.path_rewrites requires source_prefix and target_prefix"
+            )
         rewritten = rewritten.replace(source_prefix, target_prefix)
     if rewritten != text:
         encoding = "utf-8-sig" if target.suffix.lower() == ".csv" else "utf-8"
         target.write_text(rewritten, encoding=encoding)
 
 
-def render_command(tokens: list[Any], *, config_path: Path, output_dir: Path) -> list[str]:
+def render_command(
+    tokens: list[Any], *, config_path: Path, output_dir: Path
+) -> list[str]:
     values = {
         "python": sys.executable,
         "repo_root": str(REPO_ROOT),
         "config_dir": str(config_path.parent),
         "output_dir": str(output_dir),
     }
-    return [str(token).format(**values) for token in tokens]
+    return [os.path.expandvars(str(token).format(**values)) for token in tokens]
 
 
 def stage_fingerprint(
@@ -423,7 +451,9 @@ def load_state(path: Path) -> dict[str, Any]:
 def write_state(path: Path, state: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     temporary.replace(path)
 
 
@@ -440,7 +470,10 @@ def missing_inputs(paths: list[Path]) -> list[Path]:
 
 
 def is_forced(stage: dict[str, Any], force_values: set[str]) -> bool:
-    return str(stage["id"]) in force_values or str(stage.get("kind", "command")) in force_values
+    return (
+        str(stage["id"]) in force_values
+        or str(stage.get("kind", "command")) in force_values
+    )
 
 
 def run_stage(
@@ -458,29 +491,43 @@ def run_stage(
 ) -> StageResult:
     stage_id = str(stage["id"])
     kind = str(stage.get("kind", "command"))
-    inputs = expand_paths([str(x) for x in stage.get("inputs", [])], repo_root=REPO_ROOT)
+    inputs = expand_paths(
+        [str(x) for x in stage.get("inputs", [])], repo_root=REPO_ROOT
+    )
     outputs = output_paths(stage)
-    command = render_command(stage["command"], config_path=config_path, output_dir=output_dir)
-    fingerprint = stage_fingerprint(stage, command=command, inputs=inputs, config_hash=config_hash)
+    command = render_command(
+        stage["command"], config_path=config_path, output_dir=output_dir
+    )
+    fingerprint = stage_fingerprint(
+        stage, command=command, inputs=inputs, config_hash=config_hash
+    )
     command_text = subprocess.list2cmdline(command)
     forced = is_forced(stage, force_values)
     ready = outputs_exist(outputs)
-    current_output_signatures = [file_signature(path) for path in outputs] if ready else []
+    current_output_signatures = (
+        [file_signature(path) for path in outputs] if ready else []
+    )
 
     if dry_run:
-        missing = [path for path in missing_inputs(inputs) if path not in planned_available]
+        missing = [
+            path for path in missing_inputs(inputs) if path not in planned_available
+        ]
         state_label = "BLOCKED" if missing else "PLANNED"
         print(f"[{state_label}] {stage_id} ({kind})")
         if missing:
             for path in missing:
                 print(f"  missing input: {path}")
         print(f"  command: {command_text}")
-        return StageResult(stage_id, kind, state_label, 0.0, fingerprint, command_text, outputs)
+        return StageResult(
+            stage_id, kind, state_label, 0.0, fingerprint, command_text, outputs
+        )
 
     if kind == "train" and not train_missing:
         if ready and not forced:
             print(f"[SKIPPED] {stage_id}: existing training outputs")
-            return StageResult(stage_id, kind, "skipped", 0.0, fingerprint, command_text, outputs)
+            return StageResult(
+                stage_id, kind, "skipped", 0.0, fingerprint, command_text, outputs
+            )
         raise RunnerError(
             f"stage {stage_id} is a training stage with missing or forced outputs; "
             "rerun with --train-missing to permit training"
@@ -495,9 +542,17 @@ def run_stage(
         and previous.get("outputs") == current_output_signatures
     ):
         print(f"[SKIPPED] {stage_id}: fingerprint unchanged")
-        return StageResult(stage_id, kind, "skipped", 0.0, fingerprint, command_text, outputs)
+        return StageResult(
+            stage_id, kind, "skipped", 0.0, fingerprint, command_text, outputs
+        )
 
-    if resume and not forced and ready and stage.get("reuse_existing", False) and not previous:
+    if (
+        resume
+        and not forced
+        and ready
+        and stage.get("reuse_existing", False)
+        and not previous
+    ):
         print(f"[SKIPPED] {stage_id}: adopted existing outputs")
         state["stages"][stage_id] = {
             "fingerprint": fingerprint,
@@ -505,7 +560,9 @@ def run_stage(
             "adopted": True,
             "outputs": current_output_signatures,
         }
-        return StageResult(stage_id, kind, "adopted", 0.0, fingerprint, command_text, outputs)
+        return StageResult(
+            stage_id, kind, "adopted", 0.0, fingerprint, command_text, outputs
+        )
 
     missing = missing_inputs(inputs)
     if missing:
@@ -520,12 +577,16 @@ def run_stage(
     completed = subprocess.run(command, cwd=cwd, env=env, check=False)
     duration = time.perf_counter() - started
     if completed.returncode != 0:
-        raise RunnerError(f"stage {stage_id} failed with exit code {completed.returncode}")
+        raise RunnerError(
+            f"stage {stage_id} failed with exit code {completed.returncode}"
+        )
 
     missing_outputs = [path for path in outputs if not path.exists()]
     if missing_outputs:
         joined = "\n".join(f"  - {path}" for path in missing_outputs)
-        raise RunnerError(f"stage {stage_id} completed but declared outputs are missing:\n{joined}")
+        raise RunnerError(
+            f"stage {stage_id} completed but declared outputs are missing:\n{joined}"
+        )
 
     state["stages"][stage_id] = {
         "fingerprint": fingerprint,
@@ -534,7 +595,9 @@ def run_stage(
         "outputs": [file_signature(path) for path in outputs],
     }
     print(f"[DONE] {stage_id}: {duration:.2f}s")
-    return StageResult(stage_id, kind, "executed", duration, fingerprint, command_text, outputs)
+    return StageResult(
+        stage_id, kind, "executed", duration, fingerprint, command_text, outputs
+    )
 
 
 def publish_artifacts(
@@ -571,7 +634,9 @@ def publish_artifacts(
         producer_status = "external"
         for result in stage_results:
             if any(source.resolve() == output.resolve() for output in result.outputs):
-                producer_status = "generated" if result.status == "executed" else "reused"
+                producer_status = (
+                    "generated" if result.status == "executed" else "reused"
+                )
                 break
         rows.append(
             {
@@ -581,7 +646,9 @@ def publish_artifacts(
                 "source_path": str(target if stable_manifest_paths else source),
                 "published_path": str(target),
                 "size_bytes": stat.st_size,
-                "mtime_utc": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+                "mtime_utc": datetime.fromtimestamp(
+                    stat.st_mtime, timezone.utc
+                ).isoformat(),
                 "sha256": sha256_file(target),
                 "config_sha256": config_hash,
                 "created_at_utc": created_at,
@@ -682,7 +749,9 @@ def write_html_report(
         if headers:
             head = "".join(f"<th>{html.escape(value)}</th>" for value in headers)
             body = "".join(
-                "<tr>" + "".join(f"<td>{html.escape(value)}</td>" for value in values) + "</tr>"
+                "<tr>"
+                + "".join(f"<td>{html.escape(value)}</td>" for value in values)
+                + "</tr>"
                 for values in preview
             )
             table = f"<div class='table-wrap'><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
@@ -697,7 +766,7 @@ def write_html_report(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(str(config['protocol_id']))} 受控协议报告</title>
+<title>{html.escape(str(config["protocol_id"]))} 受控协议报告</title>
 <style>
 body{{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;margin:0;background:#f4f7fa;color:#14253d}}
 main{{max-width:1180px;margin:0 auto;padding:36px 24px 64px}}
@@ -709,21 +778,29 @@ th{{background:#eaf0f6}} .table-wrap{{overflow:auto;border:1px solid #d9e1ea}} c
 </style>
 </head>
 <body><main>
-<h1>{html.escape(str(config['protocol_id']))} 受控协议报告</h1>
-<div class="meta">运行模式={html.escape(str(config['mode']))} | 选择数据划分={html.escape(str(config['selection_split']))} | 评估数据划分={html.escape(str(config['evaluation_split']))}<br>配置文件=<code>{html.escape(str(config_path))}</code></div>
+<h1>{html.escape(str(config["protocol_id"]))} 受控协议报告</h1>
+<div class="meta">运行模式={html.escape(str(config["mode"]))} | 选择数据划分={html.escape(str(config["selection_split"]))} | 评估数据划分={html.escape(str(config["evaluation_split"]))}<br>配置文件=<code>{html.escape(str(config_path))}</code></div>
 {warning}
 {cost_notice}
 <section><h2>流水线阶段</h2><table><thead><tr><th>阶段</th><th>类型</th><th>状态</th><th>耗时（秒）</th></tr></thead><tbody>{stage_html}</tbody></table></section>
-{''.join(artifact_sections)}
+{"".join(artifact_sections)}
 </main></body></html>"""
     path.write_text(document, encoding="utf-8")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", required=True, help="Controlled protocol JSON/YAML config")
-    parser.add_argument("--dry-run", action="store_true", help="Validate and print the plan without writes")
-    parser.add_argument("--resume", action="store_true", help="Reuse stages with matching fingerprints")
+    parser.add_argument(
+        "--config", required=True, help="Controlled protocol JSON/YAML config"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and print the plan without writes",
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="Reuse stages with matching fingerprints"
+    )
     parser.add_argument(
         "--force-stage",
         action="append",
@@ -745,9 +822,16 @@ def main(argv: list[str] | None = None) -> int:
         config = load_config(config_path)
         validate_config(config)
         config_hash = sha256_file(config_path)
-        output_dir = resolve_path(str(config.get("output_dir", "outputs/controlled_protocol")), repo_root=REPO_ROOT)
+        output_dir = resolve_path(
+            str(config.get("output_dir", "outputs/controlled_protocol")),
+            repo_root=REPO_ROOT,
+        )
         state_path = output_dir / STATE_FILE
-        state = load_state(state_path) if args.resume and not args.dry_run else {"stages": {}}
+        state = (
+            load_state(state_path)
+            if args.resume and not args.dry_run
+            else {"stages": {}}
+        )
         state.update(
             {
                 "protocol_id": config["protocol_id"],
@@ -759,21 +843,37 @@ def main(argv: list[str] | None = None) -> int:
         results: list[StageResult] = []
         planned_available: set[Path] = set()
         for stage in config["stages"]:
-            result = run_stage(
-                stage,
-                config_path=config_path,
-                output_dir=output_dir,
-                config_hash=config_hash,
-                state=state,
-                resume=args.resume,
-                force_values=set(args.force_stage),
-                train_missing=args.train_missing,
-                dry_run=args.dry_run,
-                planned_available=planned_available,
-            )
+            try:
+                result = run_stage(
+                    stage,
+                    config_path=config_path,
+                    output_dir=output_dir,
+                    config_hash=config_hash,
+                    state=state,
+                    resume=args.resume,
+                    force_values=set(args.force_stage),
+                    train_missing=args.train_missing,
+                    dry_run=args.dry_run,
+                    planned_available=planned_available,
+                )
+            except RunnerError as exc:
+                if not bool(stage.get("continue_on_error", False)):
+                    raise
+                stage_id = str(stage["id"])
+                kind = str(stage.get("kind", "command"))
+                print(f"[BLOCKED] {stage_id} ({kind}): {exc}")
+                result = StageResult(
+                    stage_id, kind, "blocked", 0.0, "", str(exc), []
+                )
+                if not args.dry_run:
+                    state["stages"][stage_id] = {
+                        "blocked": True,
+                        "blocked_at": datetime.now(timezone.utc).isoformat(),
+                        "reason": str(exc),
+                    }
             results.append(result)
             planned_available.update(result.outputs)
-            if not args.dry_run and result.status in {"executed", "adopted"}:
+            if not args.dry_run and result.status in {"executed", "adopted", "blocked"}:
                 write_state(state_path, state)
 
         if args.dry_run:

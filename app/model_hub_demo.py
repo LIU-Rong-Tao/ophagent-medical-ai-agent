@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import os
 from pathlib import Path
 
 import streamlit as st
@@ -29,6 +30,11 @@ from app.ui import inject_app_css  # noqa: E402
 LEGACY_CONTROLLED_OUTPUT_DIR = (
     PROJECT_ROOT / "experiments/v0_8_6_interactive_model_hub/outputs"
 )
+
+
+def model_hub_output_dir() -> Path:
+    configured = os.environ.get("OPHAGENT_MODEL_HUB_OUTPUT_DIR", "").strip()
+    return Path(configured) if configured else LEGACY_CONTROLLED_OUTPUT_DIR
 
 
 def _set_workspace(workspace: str) -> None:
@@ -109,12 +115,14 @@ def main() -> None:
     workspace = sidebar_navigation()
     context = "病例回放与路由解释" if workspace == "病例回放" else "模型工程 · v0.8.10"
     page_header(workspace, context=context)
-    data = load_model_hub_outputs(LEGACY_CONTROLLED_OUTPUT_DIR)
+    output_dir = model_hub_output_dir()
+    data = load_model_hub_outputs(output_dir, model_hub_root=output_dir.parent)
     if data["missing"]:
         st.error("受控路由基线产物不完整：" + "、".join(data["missing"]))
         st.code(
             "python scripts/routing/run_controlled_protocol.py --config "
-            "experiments/v0_8_6_interactive_model_hub/configs/controlled_runner.yaml --resume"
+            "python scripts/routing/run_interactive_model_hub.py --config "
+            "experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml"
         )
         st.stop()
     if workspace == "中转台总览":

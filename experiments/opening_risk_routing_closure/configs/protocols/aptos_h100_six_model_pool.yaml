@@ -1,0 +1,120 @@
+protocol_id: aptos_h100_six_model_replay_pool_v1
+mode: exploratory
+selection_split: val
+evaluation_split: test
+output_dir: experiments/opening_risk_routing_closure/selection/h100_six_model_pool_runner
+cost_protocol:
+  device: H100
+  batches: [1, 16]
+  scope: forward_only_excluding_io_and_preprocessing
+risk_events:
+  - id: dangerous_undergrading
+    definition: true_grade_gte_3_and_pred_grade_lt_3
+fixed_budgets: [0.05, 0.10, 0.20, 0.30]
+result_semantics: validation_cached_probability_replay
+model_hub_output_dir: experiments/opening_risk_routing_closure/outputs/model_hub_validation
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+prediction_asset_registry: experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_prediction_assets.csv
+pairing_protocols: experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_pairings.csv
+qwk_enabled_tasks: [aptos_dr_5class]
+case_trace_budgets: [0.20]
+pairing_expansion:
+  enabled: true
+  task_id: aptos_dr_5class
+  budgets: [0.05, 0.10, 0.20, 0.30]
+  single_scout_policies: [low_confidence, low_margin, high_entropy, severe_probability_mass]
+  multi_scout_policies: [mean_uncertainty, disagreement_then_uncertainty]
+models:
+  - model_id: preti
+    adapter: preti_classifier
+    checkpoint_path: replays/preti/seed42_20260722/preti_aptos_task_checkpoint.pth
+    preprocessing_id: preti_rgb224_imagenet_fp32
+    existing_replay: replays/preti/seed42_20260722
+    validation_predictions: predictions/validation_predictions.csv
+    test_predictions: predictions/test_predictions.csv
+    required_artifacts: [run_summary.json, costs/forward_latency.json]
+  - model_id: retfound_cfp
+    adapter: retfound_classifier
+    checkpoint_path: external_h100_asset_reference
+    preprocessing_id: retfound_cfp_bicubic_evalcrop224_fp32
+    existing_replay: replays/retfound_cfp/bicubic_evalcrop_20260722
+    validation_predictions: validation_predictions.csv
+    test_predictions: test_predictions.csv
+    required_artifacts: [run_summary.json, historical_replay_audit.json, forward_cost.csv]
+  - model_id: convnext_tiny
+    adapter: timm_classifier
+    checkpoint_path: external_h100_asset_reference
+    preprocessing_id: timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32
+    existing_replay: replays/convnext_tiny/full_replay_20260722
+    validation_predictions: predictions/validation_predictions.csv
+    test_predictions: predictions/test_predictions.csv
+    required_artifacts: [run_summary.json, replay_audit.json, costs/forward_cost.json]
+  - model_id: swin_tiny
+    adapter: timm_classifier
+    checkpoint_path: external_h100_asset_reference
+    preprocessing_id: timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32
+    existing_replay: replays/swin_tiny/full_replay_20260722
+    validation_predictions: predictions/validation_predictions.csv
+    test_predictions: predictions/test_predictions.csv
+    required_artifacts: [run_summary.json, replay_audit.json, costs/forward_cost.json]
+  - model_id: flair
+    adapter: flair_frozen_encoder_linear_head
+    checkpoint_path: external_h100_asset_reference
+    preprocessing_id: flair_foreground_crop_aspect_canvas512_rgb_fp32
+    existing_replay: replays/flair/full_replay_20260722
+    validation_predictions: predictions/validation_predictions.csv
+    test_predictions: predictions/test_predictions.csv
+    required_artifacts: [run_summary.json, replay_audit.json, costs/forward_cost.json]
+  - model_id: retfound_green
+    adapter: frozen_encoder_sklearn_probe
+    checkpoint_path: external_h100_asset_reference
+    preprocessing_id: retfound_green_v0_1_resize392_bilinear_rgb_halfnorm_fp32
+    existing_replay: replays/retfound_green/full_replay_20260722
+    validation_predictions: predictions/validation_predictions.csv
+    test_predictions: predictions/test_predictions.csv
+    required_artifacts: [run_summary.json, replay_audit.json, costs/forward_cost.json]
+stages:
+  - id: verify_preti_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, preti]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/run_summary.json]
+  - id: verify_retfound_cfp_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, retfound_cfp]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/run_summary.json]
+  - id: verify_convnext_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, convnext_tiny]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/run_summary.json]
+  - id: verify_swin_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, swin_tiny]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/run_summary.json]
+  - id: verify_flair_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, flair]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/run_summary.json]
+  - id: verify_green_existing_replay
+    kind: replay_verification
+    reuse_existing: true
+    continue_on_error: true
+    command: ["{python}", scripts/routing/verify_aptos_replay_pool.py, --config, experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_six_model_pool.yaml, --model, retfound_green]
+    inputs: [scripts/routing/verify_aptos_replay_pool.py, experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/validation_predictions.csv, experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/test_predictions.csv]
+    outputs: [experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/run_summary.json]
+publish:
+  generate_runner_report: false

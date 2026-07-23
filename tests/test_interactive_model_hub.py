@@ -15,7 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.routing.run_interactive_model_hub import HUB_COLUMNS, run_protocol
+from scripts.routing.run_interactive_model_hub import (
+    HUB_COLUMNS,
+    PairingContext,
+    cost_summary,
+    run_protocol,
+)
 from scripts.routing.run_controlled_protocol import load_config
 from scripts.routing.model_metadata import normalized_model_metadata
 from app.model_hub_data import (
@@ -299,6 +304,8 @@ def test_interactive_model_hub_generates_controlled_outputs(tmp_path: Path) -> N
         "case_routing_trace.csv",
         "run_config.yaml",
         "artifact_manifest.csv",
+        "candidate_ranking.csv",
+        "candidate_selection.csv",
         "report.html",
     }
     assert expected == {path.name for path in result.files}
@@ -325,6 +332,11 @@ def test_interactive_model_hub_generates_controlled_outputs(tmp_path: Path) -> N
         "estimated_total_compute_ms_per_image",
         "estimated_parallel_latency_ms_per_image",
     }.issubset(pairings.columns)
+    assert {"routed", "random", "oracle", "scout_only", "full_expert"}.issubset(
+        set(pairings["evaluation_kind"])
+    )
+    assert not pd.read_csv(output_dir / "candidate_ranking.csv").empty
+    assert not pd.read_csv(output_dir / "candidate_selection.csv").empty
 
     single = completed.loc[completed["pairing_id"] == "single_valid"]
     assert single.loc[single["requested_budget"] == 0, "accuracy"].iloc[0] == 0.75
@@ -351,6 +363,9 @@ def test_interactive_model_hub_generates_controlled_outputs(tmp_path: Path) -> N
     for path in result.files:
         assert "work/" not in path.read_text(encoding="utf-8-sig", errors="ignore")
 
+    resumed = run_protocol(config_path, output_dir=output_dir, stage="all", resume=True)
+    assert {path.name for path in resumed.files} == expected
+
 
 def test_controlled_publish_uses_only_stable_manifest_paths() -> None:
     config = load_config(
@@ -372,6 +387,32 @@ def test_dry_run_validates_without_writing(tmp_path: Path) -> None:
 
     assert result.files == []
     assert not output_dir.exists()
+
+
+def test_partial_cpu_probe_cost_is_not_presented_as_complete_total() -> None:
+    pairing = pd.Series({"task_id": "task_a"})
+    context = PairingContext(
+        pairing=pairing,
+        scout_ids=["scout"],
+        primary_scout_id="scout",
+        expert_id="green_probe",
+        scouts={},
+        expert=pd.DataFrame(),
+        n_overlap=4,
+        overlap_rate=1.0,
+    )
+    hub = pd.DataFrame(
+        [
+            {"task_id": "task_a", "artifact_id": "scout", "forward_cost_ms_per_image": 1.0, "cpu_postprocess_status": "not_applicable"},
+            {"task_id": "task_a", "artifact_id": "green_probe", "forward_cost_ms_per_image": 2.0, "cpu_postprocess_status": "unmeasured"},
+        ]
+    )
+
+    summary = cost_summary(context, hub, call_rate=0.2)
+
+    assert summary["cost_mode"] == "partial_component_cost_cpu_probe_unmeasured"
+    assert pd.isna(summary["estimated_total_compute_ms_per_image"])
+    assert summary["parallel_cost_status"] == "cpu_probe_unmeasured"
 
 
 def test_ui_data_supports_five_percent_preview_without_publishing(tmp_path: Path) -> None:

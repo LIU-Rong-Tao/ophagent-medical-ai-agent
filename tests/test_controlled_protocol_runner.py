@@ -162,6 +162,40 @@ def test_resume_reruns_when_declared_output_was_modified(tmp_path: Path):
     assert counter.read_text(encoding="utf-8") == "2"
 
 
+def test_continue_on_error_records_blocked_stage_and_runs_later_stage(tmp_path: Path):
+    marker = tmp_path / "marker.txt"
+    output = tmp_path / "after_block.csv"
+    config = write_config(
+        tmp_path,
+        stages=[
+            {
+                "id": "blocked_asset",
+                "kind": "replay_verification",
+                "continue_on_error": True,
+                "command": ["{python}", "-c", "raise SystemExit(3)"],
+            },
+            {
+                "id": "next_asset",
+                "kind": "replay_verification",
+                "command": counter_command(marker, output),
+                "outputs": [str(output)],
+            },
+        ],
+    )
+
+    result = run_runner(config, "--resume")
+
+    assert result.returncode == 0, result.stderr
+    assert "[BLOCKED] blocked_asset" in result.stdout
+    assert marker.read_text(encoding="utf-8") == "1"
+    state = json.loads(
+        (tmp_path / "published" / ".controlled_runner_state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert state["stages"]["blocked_asset"]["blocked"] is True
+
+
 def test_publish_can_preserve_custom_report(tmp_path: Path):
     source_report = tmp_path / "custom_report.html"
     source_report.write_text(
