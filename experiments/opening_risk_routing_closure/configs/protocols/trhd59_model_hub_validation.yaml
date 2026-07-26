@@ -1,0 +1,40 @@
+protocol_id: trhd59_observed_label_validation_routing_v1
+mode: private_observed_label_validation
+selection_split: val
+evaluation_split: test
+result_semantics: development_internal_validation_weak_single_observed_label
+model_hub_output_dir: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_hub_validation
+task_registry: experiments/opening_risk_routing_closure/configs/protocols/trhd59_model_hub_task_registry.csv
+prediction_asset_registry: experiments/opening_risk_routing_closure/configs/protocols/trhd59_prediction_assets.csv
+pairing_protocols: experiments/opening_risk_routing_closure/configs/protocols/trhd59_pairings.csv
+fixed_budgets:
+  - 0.05
+  - 0.10
+  - 0.20
+  - 0.30
+case_trace_budgets:
+  - 0.10
+qwk_enabled_tasks: []
+pairing_expansion:
+  enabled: true
+  task_id: trhd59_observed_label
+  budgets:
+    - 0.05
+    - 0.10
+    - 0.20
+    - 0.30
+  single_scout_policies:
+    - low_confidence
+    - low_margin
+    - high_entropy
+  multi_scout_policies:
+    - mean_uncertainty
+    - disagreement_then_uncertainty
+label_semantics:
+  full_cohort: observed_positive_only
+  routing_selection_subset: weak_single_observed_label
+  unobserved_classes_treated_as_negative: false
+  patient_level_isolation: unverified
+test_gate:
+  metrics_computed_before_route_freeze: false
+  content_used_for_selection: false

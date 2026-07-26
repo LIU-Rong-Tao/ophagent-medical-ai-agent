@@ -181,6 +181,7 @@ def run_observed_positive_audit(
                 "predicted_class": top_class,
                 "confidence": confidence,
                 "best_observed_rank": int(ranks.min()),
+                "worst_observed_rank": int(ranks.max()),
                 "mean_observed_reciprocal_rank": float(np.mean(1.0 / ranks)),
                 "observed_positive_probability_mass": observed_mass,
                 "top1_observed_consistent": top1_consistent,
@@ -219,6 +220,20 @@ def run_observed_positive_audit(
         if cutoff <= len(probability_columns):
             summary[f"observed_positive_hit_at_{cutoff}"] = float(
                 (case_scores["best_observed_rank"] <= cutoff).mean()
+            )
+            summary[f"all_observed_positive_hit_at_{cutoff}"] = float(
+                (case_scores["worst_observed_rank"] <= cutoff).mean()
+            )
+            multi_observed = case_scores["observed_label_count"] > 1
+            summary[f"multi_observed_all_hit_at_{cutoff}"] = (
+                float(
+                    (
+                        case_scores.loc[multi_observed, "worst_observed_rank"]
+                        <= cutoff
+                    ).mean()
+                )
+                if multi_observed.any()
+                else None
             )
     return ObservedPositiveAudit(summary=summary, case_scores=case_scores)
 

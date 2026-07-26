@@ -23,6 +23,9 @@ def test_observed_positive_audit_does_not_infer_negative_labels():
 
     assert audit.summary["unobserved_classes_treated_as_negative"] is False
     assert audit.summary["observed_positive_hit_at_1"] == pytest.approx(0.5)
+    assert audit.summary["all_observed_positive_hit_at_1"] == pytest.approx(0.5)
+    assert audit.summary["multi_observed_all_hit_at_1"] == pytest.approx(0.0)
+    assert audit.summary["multi_observed_all_hit_at_3"] == pytest.approx(1.0)
     assert audit.summary["high_confidence_observed_label_inconsistency_count"] == 1
     assert audit.case_scores.loc[1, "observed_positive_probability_mass"] == pytest.approx(
         0.2
