@@ -53,7 +53,11 @@ HUB_WORKSPACES = {
 
 TASK_LABELS = {
     "aptos_dr_5class": "DR 五级分级",
+    "deepdrid_dr_5class_external": "DeepDRiD 冻结迁移",
+    "deepdrid_dr_5class_native": "DeepDRiD 原生适配",
     "glaucoma_3class": "青光眼三分类",
+    "glaucoma_binary": "RIM-ONE 青光眼二分类",
+    "trhd59_observed_label": "TRHD59 59 类观测标签",
 }
 
 MODEL_LABELS = {
@@ -259,7 +263,7 @@ def inject_model_hub_css() -> None:
         .hub-page-copy{{color:var(--hub-muted);font-size:.86rem;line-height:1.55;margin-top:.35rem;max-width:920px}}
         .hub-page-context{{white-space:nowrap;color:#5b687a;font-size:.73rem;background:#fff;border:1px solid var(--hub-line);border-radius:4px;padding:.35rem .55rem}}
         .hub-boundary-compact{{display:flex;gap:.6rem;align-items:flex-start;background:#fdf8ec;border:1px solid #ead7aa;border-left:4px solid var(--hub-amber);padding:.65rem .8rem;color:#624d1d;line-height:1.5;font-size:.78rem;margin:0 0 1rem}}
-        .hub-overview-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:.7rem 0 1.1rem}}
+        .hub-overview-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:.7rem 0 1.1rem}}
         .hub-overview-kpi{{background:#fff;border:1px solid var(--hub-line);border-radius:5px;padding:.85rem .95rem;min-height:98px}}
         .hub-overview-kpi span{{display:block;color:var(--hub-muted);font-size:.72rem;font-weight:700}}
         .hub-overview-kpi b{{display:block;color:var(--hub-ink);font-size:1.55rem;line-height:1.2;margin:.25rem 0;font-variant-numeric:tabular-nums}}

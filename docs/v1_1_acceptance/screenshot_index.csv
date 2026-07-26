@@ -1,0 +1,18 @@
+screenshot,page,scenario,input,expected,actual,passed
+01_overview.png,中转台总览,统一资产计数,正式仓库索引,显示 checkpoint/任务资产/数据集/路由结果/单病例入口/正式资格,显示 27/49/7/13/4/0,yes
+02_model_assets.png,模型资产,资产分层状态,当前 CFP 相关资产,分别显示 Runtime Smoke/任务预测/离线批量/单病例入口/正式资格,状态分层显示且未把离线资产写成在线可用,yes
+03_task_datasets_open.png,任务模型,数据集覆盖,任务与数据集选择器,显示全部已登记实验与 REFUGE 准入状态,显示 APTOS/DeepDRiD 两口径/青光眼三级/RIM-ONE/TRHD59/REFUGE,yes
+03a_deepdrid_transfer.png,任务模型,DeepDRiD 冻结迁移,正式 prediction registry,显示 6 个冻结迁移模型及关联路由评测,资产和历史受控评测可追溯,yes
+03b_deepdrid_native.png,任务模型,DeepDRiD 原生适配,正式 prediction registry,显示 10 个原生适配模型及冻结结果,任务资产与冻结结果包可追溯,yes
+03c_glaucoma_three_class.png,任务模型,青光眼三级清理口径,正式 prediction registry,显示 5 个模型和清理口径路由结果,任务资产与冻结路由可追溯,yes
+03d_rim_one.png,任务模型,RIM-ONE 二分类,正式 prediction registry,显示 9 个二分类任务模型和路由结果,独立二分类任务未强行映射三级标签,yes
+03e_trhd59.png,任务模型,TRHD59 观测标签,正式 prediction registry,显示 9 个任务资产和观察标签资格限制,私有任务资产可见且 route_eligible=false,yes
+03f_refuge_admission.png,任务模型,REFUGE 数据准入,覆盖矩阵,仅显示有标签 train/validation 准入且无 prediction asset,未错误借用 RIM-ONE 资产或 onsite Test 标签,yes
+04_route_history.png,研究评测,冻结协议与历史扫描,正式结果包索引,显示历史扫描/冻结评估/协议/组合与结果行,显示 13 个结果包和 1794 个登记组合,yes
+05_route_interactive_pool.png,研究评测,交互式路由探索,APTOS 十模型 Validation 结果包,从正式模型快照加载完整候选池,载入 10 个任务模型且不使用旧 role_candidates,yes
+06_all_jobs.png,任务运行记录,统一后台任务,全部任务命名空间,显示 Smoke/训练/扫描/批量推理等父任务,显示 30 个父任务来源,yes
+07_review_workstation.png,病例回放,离线病例审阅,公开 APTOS validation 病例,窄幅可折叠队列并让图像与任务检查占主区域,队列折叠且无左下大面积空白,yes
+08_review_route.png,病例回放,路由与错误风险,冻结 validation 概率,显示错误风险代理和研究模拟边界,显示 entropy/margin/分歧且未暗示临床结论,yes
+09_review_trace.png,病例回放,资产与调用轨迹,冻结 validation 概率,显示六项工具状态并可展开完整轨迹,工具边界和调用轨迹清晰可追溯,yes
+10_review_1280x720.png,病例回放,窄桌面适配,1280x720 视口,表格/结果卡与图片不重叠,布局可用且无横向遮挡,yes
+11_fault_gate.png,病例回放,结构化故障门禁,offline-only 资产请求原图推理,阻止越权调用并停止后续工具,显示 QUALIFICATION_BLOCKED 与 UPSTREAM_FAILED,yes

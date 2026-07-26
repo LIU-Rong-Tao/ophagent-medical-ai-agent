@@ -99,9 +99,16 @@ def normalize_prediction_frame(path: Path, *, num_classes: int) -> pd.DataFrame:
         (column for column in ("image_path", "path", "filename") if column in frame.columns),
         None,
     )
-    if image_column is None:
-        raise AdapterStageError("failed_manifest", "输入 CSV 缺少 image_path/path/filename")
-    image_paths = frame[image_column].astype(str)
+    if image_column is not None:
+        image_paths = frame[image_column].astype(str)
+    elif "case_id" in frame.columns:
+        # Frozen prediction assets may intentionally omit the original image path.
+        image_paths = frame["case_id"].astype(str)
+    else:
+        raise AdapterStageError(
+            "failed_manifest",
+            "输入 CSV 缺少 image_path/path/filename 或 case_id",
+        )
     if "image_key" in frame.columns:
         image_keys = frame["image_key"].astype(str)
     elif "case_id" in frame.columns:

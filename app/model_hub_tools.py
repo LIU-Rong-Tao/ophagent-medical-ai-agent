@@ -25,6 +25,7 @@ from app.checkpoints import (
     select_preferred_artifacts,
 )
 from app.inference import run_single_image_inference
+from app.model_hub_index import build_task_asset_index
 
 
 TOOL_NAMES = (
@@ -244,27 +245,22 @@ def _qualification_for_asset(row: pd.Series, project_root: Path) -> tuple[str, s
 
 
 def build_review_asset_registry(project_root: Path) -> tuple[pd.DataFrame, dict[str, ModelArtifact]]:
-    """聚合现有任务 prediction registry 与旧单病例真实推理资产。"""
+    """Reuse the Model Hub projection for task assets and case endpoints."""
 
     rows: list[dict[str, Any]] = []
-    for task_id, contract in TASK_CONTRACTS.items():
-        registry_path = project_root / str(contract["asset_registry"])
-        if not registry_path.is_file():
-            continue
-        registry = pd.read_csv(registry_path)
-        for _, source in registry.iterrows():
-            qualification, reason = _qualification_for_asset(source, project_root)
-            rows.append(
-                {
-                    **source.to_dict(),
-                    "task_id": task_id,
-                    "display_name": str(source.get("artifact_id", "")),
-                    "qualification": qualification,
-                    "qualification_reason": reason,
-                    "online_artifact_key": "",
-                    "route_eligible": bool(source.get("route_eligible", False)),
-                }
-            )
+    registry = build_task_asset_index(project_root)
+    for _, source in registry.iterrows():
+        qualification, reason = _qualification_for_asset(source, project_root)
+        rows.append(
+            {
+                **source.to_dict(),
+                "display_name": str(source.get("artifact_id", "")),
+                "qualification": qualification,
+                "qualification_reason": reason,
+                "online_artifact_key": "",
+                "route_eligible": bool(source.get("route_eligible", False)),
+            }
+        )
 
     online_artifacts = select_preferred_artifacts(discover_model_artifacts(project_root))
     for key, artifact in online_artifacts.items():

@@ -236,7 +236,9 @@ def test_ui_source_keeps_feature_inside_research_workspace_and_hides_raw_ids() -
     research_source = (root / "app/model_hub_research.py").read_text(encoding="utf-8")
     audit_ui_source = (root / "app/model_hub_result_audit.py").read_text(encoding="utf-8")
 
-    assert '["路由组合评测", "结果表风险审计"]' in research_source
+    assert '"冻结协议与历史扫描"' in research_source
+    assert '"交互式路由探索"' in research_source
+    assert '"结果表风险审计"' in research_source
     assert "默认使用会话内序号" in audit_ui_source
     assert "临床后果风险：尚未评估" in audit_ui_source
     assert "字段自动识别完成，可直接运行审计" in audit_ui_source

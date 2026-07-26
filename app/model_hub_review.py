@@ -342,7 +342,6 @@ def _render_case_queue(
     selected_index: int,
     state: dict[str, Any],
 ) -> None:
-    st.markdown("#### 病例队列")
     st.caption("仅显示脱敏审阅编号；原始病例键不在页面展示。")
     decisions = state.get("cases", {})
     status_labels = {
@@ -350,19 +349,21 @@ def _render_case_queue(
         "修改输出": "已修改",
         "标记不确定": "不确定",
     }
+    columns = st.columns(min(4, max(1, len(cases))), gap="small")
     for index, case in enumerate(cases):
         decision = decisions.get(case.alias, {})
         status = str(decision.get("decision", "待审阅"))
         active = index == selected_index
         label = f"{case.alias} · {status_labels.get(status, status)}"
-        if st.button(
-            label,
-            key=f"review_case::{case.task_id}::{case.alias}",
-            type="primary" if active else "secondary",
-            width="stretch",
-        ):
-            st.session_state["review_case_index"] = index
-            st.rerun()
+        with columns[index % len(columns)]:
+            if st.button(
+                label,
+                key=f"review_case::{case.task_id}::{case.alias}",
+                type="primary" if active else "secondary",
+                width="stretch",
+            ):
+                st.session_state["review_case_index"] = index
+                st.rerun()
 
 
 def _render_images(case: ReviewCase) -> None:
@@ -743,13 +744,76 @@ def render_offline_case_review_workstation() -> None:
     )
     case = cases[selected_index]
 
-    queue_col, work_col = st.columns([0.28, 0.72], gap="large")
-    with queue_col:
+    with st.expander(
+        f"病例队列 · {case.alias} · {len(cases)} 例",
+        expanded=False,
+    ):
         _render_case_queue(
             cases,
             selected_index=selected_index,
             state=state,
         )
+
+    st.markdown(
+        f"### {html.escape(case.alias)}"
+        f" <span class='hub-chip hub-chip-blue'>{html.escape(TASK_CONTRACTS[task_id]['task_name'])}</span>",
+        unsafe_allow_html=True,
+    )
+    pipeline_key = f"review_pipeline::{scenario}::{case.alias}"
+    if pipeline_key not in st.session_state:
+        if scenario == FAULT_SCENARIO:
+            payload, runtime = _run_fault_pipeline(
+                context,
+                case,
+                artifact_id="flair",
+            )
+        else:
+            payload, runtime = _run_read_only_pipeline(
+                context,
+                case,
+                list(scenario_config["artifact_ids"]),
+            )
+        st.session_state[pipeline_key] = (payload, runtime)
+    payload, runtime = st.session_state[pipeline_key]
+
+    image_column, context_column = st.columns([0.62, 0.38], gap="large")
+    with image_column:
+        _render_images(case)
+    with context_column:
+        _render_input_status(case, payload)
+
+        registry = _model_rows(payload.get("registry", {}))
+        st.markdown("#### 当前审阅范围")
+        st.metric("已登记模型", len(registry))
+        st.caption(
+            "当前病例只读调用冻结 validation prediction；"
+            "离线资产不会被当作新病例原图模型。"
+        )
+
+    if scenario == FAULT_SCENARIO:
+        _render_fault(payload, runtime)
+        return
+
+    result_tab, route_tab, review_tab, trace_tab = st.tabs(
+        ["模型结果", "路由与错误风险", "人工审阅", "资产与调用轨迹"]
+    )
+    with result_tab:
+        _render_predictions(task_id, payload)
+        _render_model_table(payload)
+    with route_tab:
+        _render_audit_and_route(task_id, payload)
+    with review_tab:
+        _render_review_actions(
+            case=case,
+            cases=cases,
+            scenario=scenario,
+            selected_index=selected_index,
+            state=state,
+            payload=payload,
+            runtime=runtime,
+            session_id=session_id,
+        )
+    with trace_tab:
         st.markdown("#### 工具能力")
         status = capability_matrix(context)
         st.dataframe(
@@ -762,49 +826,6 @@ def render_offline_case_review_workstation() -> None:
             ),
             hide_index=True,
             width="stretch",
-            height=250,
-        )
-    with work_col:
-        st.markdown(
-            f"### {html.escape(case.alias)}"
-            f" <span class='hub-chip hub-chip-blue'>{html.escape(TASK_CONTRACTS[task_id]['task_name'])}</span>",
-            unsafe_allow_html=True,
-        )
-        _render_images(case)
-        pipeline_key = f"review_pipeline::{scenario}::{case.alias}"
-        if pipeline_key not in st.session_state:
-            if scenario == FAULT_SCENARIO:
-                payload, runtime = _run_fault_pipeline(
-                    context,
-                    case,
-                    artifact_id="flair",
-                )
-            else:
-                payload, runtime = _run_read_only_pipeline(
-                    context,
-                    case,
-                    list(scenario_config["artifact_ids"]),
-                )
-            st.session_state[pipeline_key] = (payload, runtime)
-        payload, runtime = st.session_state[pipeline_key]
-        _render_input_status(case, payload)
-        if scenario == FAULT_SCENARIO:
-            _render_fault(payload, runtime)
-            return
-        _render_model_table(payload)
-        _render_predictions(task_id, payload)
-        _render_audit_and_route(task_id, payload)
-        _render_review_actions(
-            case=case,
-            cases=cases,
-            scenario=scenario,
-            selected_index=selected_index,
-            state=state,
-            payload=payload,
-            runtime=runtime,
-            session_id=session_id,
         )
         _render_trace(runtime, payload)
-        st.caption(
-            "本工作台只支持离线研究审阅，不提供诊断、治疗或患者分流建议。"
-        )
+    st.caption("本工作台只支持离线研究审阅，不提供诊断、治疗或患者分流建议。")

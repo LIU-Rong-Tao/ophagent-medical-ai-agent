@@ -17,12 +17,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.model_hub_clinical import render_clinical_workspace  # noqa: E402
 from app.model_hub_data import load_model_hub_outputs  # noqa: E402
 from app.model_hub_engineering import render_engineering_workspace  # noqa: E402
+from app.model_hub_index import build_model_hub_index  # noqa: E402
 from app.model_hub_ui import (  # noqa: E402
     boundary_notice,
     inject_model_hub_css,
     page_header,
     sidebar_navigation,
-    task_label,
 )
 from app.ui import inject_app_css  # noqa: E402
 
@@ -49,16 +49,46 @@ def _model_flag(models, column: str, *, default: bool = False):
 
 
 def _render_overview(data: dict[str, object]) -> None:
-    models = data["models"]
-    pairings = data["pairings"]
-    ready = models["compatibility_status"].astype(str).eq("ready_for_pairing")
-    online = _model_flag(models, "task_inference_ready")
-    completed_pairings = pairings["status"].astype(str).eq("completed")
+    hub_index = data["hub_index"]
+    checkpoints = hub_index["checkpoints"]
+    task_assets = hub_index["task_assets"]
+    route_runs = hub_index["route_runs"]
+    protocols = hub_index["protocols"]
+    datasets = hub_index["datasets"]
+    online_endpoints = hub_index.get("online_endpoints")
+    if online_endpoints is None:
+        online_endpoints = checkpoints.iloc[0:0].copy()
     values = [
-        ("可回放任务模型", int(ready.sum()), "具有当前任务冻结预测或在线输出"),
-        ("在线链已验证", int(online.sum()), "Adapter 与任务推理链状态"),
-        ("受控评测组合", int(pairings.loc[completed_pairings, "pairing_id"].nunique()), "已完成的路由/专家组合"),
-        ("已登记任务", int(models["task_id"].nunique()), "当前统一标签空间"),
+        (
+            "基础 Checkpoint",
+            len(checkpoints),
+            f"{int(checkpoints['runtime_smoke_passed'].sum())} 个 Runtime Smoke 通过",
+        ),
+        (
+            "任务预测资产",
+            len(task_assets),
+            f"覆盖 {task_assets['task_id'].nunique()} 个任务契约",
+        ),
+        (
+            "数据集实验",
+            len(datasets),
+            "含冻结迁移、原生适配与数据准入",
+        ),
+        (
+            "路由结果包",
+            len(route_runs),
+            f"{len(protocols)} 份当前协议记录",
+        ),
+        (
+            "单病例原图入口",
+            len(online_endpoints),
+            "与离线 prediction asset 分开统计",
+        ),
+        (
+            "正式路由资格",
+            int(task_assets["route_eligible"].sum()),
+            "当前研究路由均不自动获得资格",
+        ),
     ]
     cards = "".join(
         '<div class="hub-overview-kpi">'
@@ -91,25 +121,44 @@ def _render_overview(data: dict[str, object]) -> None:
             if st.button(label, icon=icon, width="stretch", key=f"overview::{workspace}"):
                 _set_workspace(workspace)
 
-    st.markdown('<div class="hub-section"><h3>当前任务覆盖</h3><p>这里只汇总已登记任务模型，不改变模型资格判断。</p></div>', unsafe_allow_html=True)
-    task_summary = (
-        models.assign(
-            可回放=ready,
-            在线链=online,
-        )
-        .groupby("task_id", as_index=False)
-        .agg(模型记录=("model_id", "nunique"), 可回放=("可回放", "sum"), 在线链=("在线链", "sum"))
+    st.markdown(
+        '<div class="hub-section"><h3>任务与数据集覆盖</h3>'
+        "<p>数量来自正式 prediction registry 与结果包，不再使用旧快照手写汇总。</p></div>",
+        unsafe_allow_html=True,
     )
-    task_summary["任务"] = task_summary["task_id"].map(task_label)
-    task_summary = task_summary[["任务", "模型记录", "可回放", "在线链"]]
+    task_summary = datasets[
+        [
+            "dataset_label",
+            "task_label",
+            "admission_status",
+            "prediction_assets",
+            "online_case_endpoints",
+            "route_runs",
+            "frozen_route_runs",
+            "route_eligible",
+        ]
+    ].rename(
+        columns={
+            "dataset_label": "数据集 / 实验口径",
+            "task_label": "任务",
+            "admission_status": "当前阶段",
+            "prediction_assets": "任务预测资产",
+            "online_case_endpoints": "单病例入口",
+            "route_runs": "路由结果包",
+            "frozen_route_runs": "冻结评估",
+            "route_eligible": "正式路由资格",
+        }
+    )
     st.dataframe(
         task_summary,
         hide_index=True,
         width="stretch",
         column_config={
-            "模型记录": st.column_config.NumberColumn(format="%d"),
-            "可回放": st.column_config.NumberColumn(format="%d"),
-            "在线链": st.column_config.NumberColumn(format="%d"),
+            "任务预测资产": st.column_config.NumberColumn(format="%d"),
+            "单病例入口": st.column_config.NumberColumn(format="%d"),
+            "路由结果包": st.column_config.NumberColumn(format="%d"),
+            "冻结评估": st.column_config.NumberColumn(format="%d"),
+            "正式路由资格": st.column_config.CheckboxColumn(),
         },
     )
 
@@ -119,10 +168,11 @@ def main() -> None:
     inject_app_css()
     inject_model_hub_css()
     workspace = sidebar_navigation()
-    context = "离线审阅 · V1" if workspace == "病例回放" else "模型工程 · v0.8.10"
+    context = "离线审阅 · V1.1" if workspace == "病例回放" else "模型工程 · V1.1"
     page_header(workspace, context=context)
     output_dir = model_hub_output_dir()
     data = load_model_hub_outputs(output_dir, model_hub_root=output_dir.parent)
+    data["hub_index"] = build_model_hub_index(PROJECT_ROOT)
     if data["missing"]:
         st.error("受控路由基线产物不完整：" + "、".join(data["missing"]))
         st.code(

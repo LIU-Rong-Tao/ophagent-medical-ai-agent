@@ -1257,6 +1257,372 @@ def _render_training_wizard(
                 st.rerun()
 
 
+def _family_key(value: object) -> str:
+    return "".join(character for character in str(value).lower() if character.isalnum())
+
+
+def _checkpoint_task_evidence(
+    checkpoints: pd.DataFrame,
+    task_assets: pd.DataFrame,
+) -> pd.DataFrame:
+    evidence = checkpoints.copy()
+    if evidence.empty:
+        return evidence
+    if task_assets.empty:
+        evidence["task_asset_count"] = 0
+        evidence["task_count"] = 0
+        evidence["offline_batch_count"] = 0
+        return evidence
+    task_assets = task_assets.copy()
+    task_assets["family_key"] = task_assets["model_family"].map(_family_key)
+    family_summary = (
+        task_assets.groupby("family_key", as_index=False)
+        .agg(
+            task_asset_count=("artifact_id", "size"),
+            task_count=("task_id", "nunique"),
+            offline_batch_count=("offline_batch_inference_ready", "sum"),
+        )
+        .set_index("family_key")
+    )
+    evidence["family_key"] = evidence["model_id"].map(_family_key)
+    for column in ("task_asset_count", "task_count", "offline_batch_count"):
+        evidence[column] = (
+            evidence["family_key"].map(family_summary[column]).fillna(0).astype(int)
+        )
+    return evidence
+
+
+def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
+    checkpoints = _checkpoint_task_evidence(
+        hub_index["checkpoints"],
+        hub_index["task_assets"],
+    )
+    if checkpoints.empty:
+        st.error("OphBench checkpoint 注册表当前不可读取。")
+        return
+    runtime_passed = checkpoints["runtime_smoke_passed"].astype(bool)
+    blocked = checkpoints["smoke_status"].astype(str).eq("resource_blocked")
+    summary = [
+        ("基础 Checkpoint", len(checkpoints), "OphBench 完整登记"),
+        ("完整前向通过", int(runtime_passed.sum()), "Checkpoint 级 Runtime Smoke"),
+        ("任务预测关联", int((checkpoints["task_asset_count"] > 0).sum()), "至少一个离线任务资产"),
+        ("资源阻塞", int(blocked.sum()), "不等同于运行代码失败"),
+    ]
+    st.markdown(
+        '<div class="hub-mini-strip">'
+        + "".join(
+            '<div class="hub-mini-stat">'
+            f"<span>{html.escape(label)}</span><b>{value}</b>"
+            f"<small>{html.escape(note)}</small></div>"
+            for label, value, note in summary
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "这里分别展示基础资产、Runtime Smoke、任务 prediction、离线批量链和正式路由资格；"
+        "任一状态通过都不会自动推出下一层。"
+    )
+    filter_columns = st.columns([1, 1, 1.2])
+    modality_options = sorted(
+        {
+            modality
+            for value in checkpoints["modalities_text"].astype(str)
+            for modality in value.split(" / ")
+            if modality
+        }
+    )
+    modality = filter_columns[0].selectbox(
+        "输入模态",
+        [""] + modality_options,
+        format_func=lambda value: "全部模态" if not value else value,
+        key="unified_asset_modality",
+    )
+    smoke_status = filter_columns[1].selectbox(
+        "Runtime 状态",
+        ["", "runtime_smoke_passed", "resource_blocked", "not_smoked"],
+        format_func=lambda value: {
+            "": "全部 Runtime 状态",
+            "runtime_smoke_passed": "完整前向通过",
+            "resource_blocked": "资源阻塞",
+            "not_smoked": "尚未 Smoke",
+        }[value],
+        key="unified_asset_smoke",
+    )
+    scope = filter_columns[2].segmented_control(
+        "资产范围",
+        ["当前 CFP 研究相关", "完整 27 Checkpoint"],
+        default="当前 CFP 研究相关",
+        key="unified_asset_scope",
+    )
+    visible = checkpoints.copy()
+    if modality:
+        visible = visible.loc[
+            visible["modalities_text"].astype(str).str.split(" / ").map(
+                lambda values: modality in values
+            )
+        ]
+    if smoke_status:
+        visible = visible.loc[visible["smoke_status"].astype(str).eq(smoke_status)]
+    if scope == "当前 CFP 研究相关":
+        visible = visible.loc[
+            visible["modalities_text"].astype(str).str.split(" / ").map(
+                lambda values: "CFP" in values
+            )
+            & ~visible["model_id"].astype(str).eq("visionfm")
+            & ~visible["artifact_type"].astype(str).eq("generative_model")
+        ]
+    table = visible[
+        [
+            "model_name",
+            "checkpoint_name",
+            "modalities_text",
+            "artifact_type",
+            "smoke_status",
+            "task_asset_count",
+            "task_count",
+            "offline_batch_count",
+            "route_eligible",
+        ]
+    ].rename(
+        columns={
+            "model_name": "模型",
+            "checkpoint_name": "Checkpoint",
+            "modalities_text": "模态",
+            "artifact_type": "资产类型",
+            "smoke_status": "Runtime Smoke",
+            "task_asset_count": "任务预测资产",
+            "task_count": "任务数",
+            "offline_batch_count": "离线批量链",
+            "route_eligible": "正式路由资格",
+        }
+    )
+    st.dataframe(
+        table,
+        hide_index=True,
+        width="stretch",
+        height=min(620, 38 * (len(table) + 1)),
+        column_config={
+            "正式路由资格": st.column_config.CheckboxColumn(),
+            "任务预测资产": st.column_config.NumberColumn(format="%d"),
+            "任务数": st.column_config.NumberColumn(format="%d"),
+            "离线批量链": st.column_config.NumberColumn(format="%d"),
+        },
+    )
+    if visible.empty:
+        return
+    options = visible["checkpoint_id"].astype(str).tolist()
+    selected = st.selectbox(
+        "查看 Checkpoint 证据",
+        options,
+        format_func=lambda checkpoint_id: (
+            f"{visible.loc[visible['checkpoint_id'].astype(str).eq(checkpoint_id), 'model_name'].iloc[0]}"
+            f" · {checkpoint_id}"
+        ),
+        key="unified_asset_selected",
+    )
+    row = visible.loc[visible["checkpoint_id"].astype(str).eq(selected)].iloc[0]
+    task_rows = hub_index["task_assets"].loc[
+        hub_index["task_assets"]["model_family"].map(_family_key).eq(
+            _family_key(row["model_id"])
+        )
+    ]
+    evidence_columns = st.columns(4, gap="small")
+    evidence_columns[0].markdown(
+        f"**资产来源**\n\n{row['checkpoint_provider'] or row['provider_id']}  \n"
+        f"{row['access_type'] or '访问方式未登记'} · {row['license'] or '许可证待核验'}"
+    )
+    evidence_columns[1].markdown(
+        "**运行证据**\n\n"
+        + (
+            "完整模型加载与前向通过"
+            if bool(row["runtime_smoke_passed"])
+            else (
+                f"资源阻塞：{row['smoke_blocker'] or '依赖资源不完整'}"
+                if row["smoke_status"] == "resource_blocked"
+                else "尚无 Runtime Smoke 证据"
+            )
+        )
+    )
+    evidence_columns[2].markdown(
+        f"**任务证据**\n\n{int(row['task_asset_count'])} 条 prediction asset  \n"
+        f"{int(row['task_count'])} 个任务 · {int(row['offline_batch_count'])} 条离线批量链"
+    )
+    evidence_columns[3].markdown(
+        "**中转台资格**\n\n"
+        f"单病例原图：{'已登记' if bool(row.get('task_inference_ready', False)) else '未登记'}  \n"
+        f"正式路由：{'可用' if bool(row['route_eligible']) else '未授予'}"
+    )
+    if not task_rows.empty:
+        linked = task_rows[
+            [
+                "dataset_label",
+                "task_label",
+                "artifact_id",
+                "qualification_status",
+                "cost_status",
+                "route_eligible",
+            ]
+        ].rename(
+            columns={
+                "dataset_label": "数据集 / 实验",
+                "task_label": "任务",
+                "artifact_id": "任务模型",
+                "qualification_status": "评测资格",
+                "cost_status": "成本证据",
+                "route_eligible": "正式路由资格",
+            }
+        )
+        st.dataframe(linked, hide_index=True, width="stretch")
+
+
+def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
+    datasets = hub_index["datasets"]
+    task_assets = hub_index["task_assets"]
+    route_runs = hub_index["route_runs"]
+    if datasets.empty:
+        st.info("尚无正式任务与数据集记录。")
+        return
+    labels = datasets["dataset_label"].astype(str).tolist()
+    selected_label = st.selectbox(
+        "任务与数据集",
+        labels,
+        key="unified_task_dataset",
+    )
+    dataset = datasets.loc[datasets["dataset_label"].astype(str).eq(selected_label)].iloc[0]
+    task_id = str(dataset["task_id"])
+    assets = task_assets.loc[task_assets["task_id"].astype(str).eq(task_id)].copy()
+    runs = route_runs.loc[route_runs["task_id"].astype(str).eq(task_id)].copy()
+    if int(dataset["prediction_assets"]) == 0:
+        assets = task_assets.iloc[0:0].copy()
+    if int(dataset["route_runs"]) == 0:
+        runs = route_runs.iloc[0:0].copy()
+    summary = [
+        ("任务预测资产", int(dataset["prediction_assets"]), "validation / test 独立登记"),
+        ("Validation 资产", int(dataset["validation_assets"]), "只用于结构与阈值选择"),
+        ("路由结果包", int(dataset["route_runs"]), "历史扫描与冻结评估"),
+        ("正式路由资格", int(bool(dataset["route_eligible"])), "当前仍为研究评测"),
+    ]
+    st.markdown(
+        '<div class="hub-mini-strip">'
+        + "".join(
+            '<div class="hub-mini-stat">'
+            f"<span>{html.escape(label)}</span><b>{value}</b>"
+            f"<small>{html.escape(note)}</small></div>"
+            for label, value, note in summary
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="hub-band">'
+        f"<strong>任务：</strong>{html.escape(str(dataset['task_label']))}　"
+        f"<strong>数据集 / 口径：</strong>{html.escape(selected_label)}　"
+        f"<strong>阶段：</strong>{html.escape(str(dataset['admission_status']))}<br>"
+        f"{html.escape(str(dataset['qualification_note']))}</div>",
+        unsafe_allow_html=True,
+    )
+    if assets.empty:
+        st.info("该数据集已完成准入登记，但尚未生成正式任务 prediction asset。")
+        return
+    asset_table = assets[
+        [
+            "artifact_id",
+            "adapter_type",
+            "validation_asset_exists",
+            "test_asset_exists",
+            "current_run_reproducible",
+            "validation_selection_eligible",
+            "qualification_status",
+            "forward_cost_ms_per_image",
+            "cost_status",
+            "route_eligible",
+        ]
+    ].rename(
+        columns={
+            "artifact_id": "任务模型",
+            "adapter_type": "适配类型",
+            "validation_asset_exists": "Validation",
+            "test_asset_exists": "冻结结果集",
+            "current_run_reproducible": "当前运行可复现",
+            "validation_selection_eligible": "可参与 Validation 选择",
+            "qualification_status": "资格限制",
+            "forward_cost_ms_per_image": "H100 成本（ms/图）",
+            "cost_status": "成本状态",
+            "route_eligible": "正式路由资格",
+        }
+    )
+    st.dataframe(
+        asset_table,
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "Validation": st.column_config.CheckboxColumn(),
+            "冻结结果集": st.column_config.CheckboxColumn(),
+            "当前运行可复现": st.column_config.CheckboxColumn(),
+            "可参与 Validation 选择": st.column_config.CheckboxColumn(),
+            "正式路由资格": st.column_config.CheckboxColumn(),
+            "H100 成本（ms/图）": st.column_config.NumberColumn(format="%.3f"),
+        },
+    )
+    if not runs.empty:
+        st.markdown("#### 关联路由评测")
+        run_table = runs[
+            [
+                "stage",
+                "protocol_version",
+                "model_count",
+                "pairing_count",
+                "result_rows",
+                "status",
+                "route_eligible",
+            ]
+        ].rename(
+            columns={
+                "stage": "评测阶段",
+                "protocol_version": "协议",
+                "model_count": "模型池",
+                "pairing_count": "组合",
+                "result_rows": "结果行",
+                "status": "产物状态",
+                "route_eligible": "正式路由资格",
+            }
+        )
+        st.dataframe(run_table, hide_index=True, width="stretch")
+
+
+def _render_unified_job_records(hub_index: dict[str, pd.DataFrame]) -> None:
+    jobs = hub_index["jobs"]
+    if jobs.empty:
+        return
+    st.markdown("#### 全部模型中转台任务")
+    st.caption(
+        "统一显示 Smoke、训练、冻结编码器适配、批量推理和历史扫描；"
+        "下方保留可操作任务的原生详情。"
+    )
+    type_options = sorted(jobs["job_type"].astype(str).unique())
+    selected_types = st.multiselect(
+        "任务类型",
+        type_options,
+        default=type_options,
+        key="unified_job_types",
+    )
+    visible = jobs.loc[jobs["job_type"].isin(selected_types)].copy()
+    table = visible[
+        ["job_type", "job_id", "status", "progress", "created_at", "updated_at"]
+    ].rename(
+        columns={
+            "job_type": "任务类型",
+            "job_id": "任务 ID",
+            "status": "状态",
+            "progress": "进度",
+            "created_at": "创建时间",
+            "updated_at": "结束 / 更新时间",
+        }
+    )
+    st.dataframe(table, hide_index=True, width="stretch", height=520)
+
+
 def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> None:
     if page_mode == "tasks":
         st.markdown("#### 模型接入 · 当前任务模型")
@@ -2100,6 +2466,7 @@ def render_engineering_workspace(
     view: str | None = None,
 ) -> None:
     models = data["models"]
+    hub_index = data.get("hub_index")
     apply_pending_engineering_navigation(st.session_state)
     if view is None:
         legacy_view = st.segmented_control(
@@ -2114,10 +2481,23 @@ def render_engineering_workspace(
             "任务运行记录": "任务运行记录",
         }.get(str(legacy_view), "模型资产")
     if view == "模型资产":
-        _render_model_access(models, page_mode="assets")
+        if isinstance(hub_index, dict):
+            _render_unified_asset_catalog(hub_index)
+            with st.expander("Adapter 与训练接入操作", expanded=False):
+                _render_model_access(models, page_mode="assets")
+        else:
+            _render_model_access(models, page_mode="assets")
     elif view == "任务模型":
-        _render_model_access(models, page_mode="tasks")
+        if isinstance(hub_index, dict):
+            _render_unified_task_catalog(hub_index)
+        else:
+            _render_model_access(models, page_mode="tasks")
     elif view == "研究评测":
-        render_research_workspace(models)
+        render_research_workspace(models, hub_index=hub_index)
     else:
-        _render_job_records()
+        if isinstance(hub_index, dict):
+            _render_unified_job_records(hub_index)
+            with st.expander("可操作任务详情", expanded=False):
+                _render_job_records()
+        else:
+            _render_job_records()

@@ -11,7 +11,11 @@ import numpy as np
 import pandas as pd
 
 from scripts.routing.run_timm_adapter_activation import run_protocol
-from scripts.routing.timm_adapter_runtime import AdapterBackendResult, AdapterStageError
+from scripts.routing.timm_adapter_runtime import (
+    AdapterBackendResult,
+    AdapterStageError,
+    normalize_prediction_frame,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +33,26 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 def read_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
+
+
+def test_normalize_prediction_frame_accepts_path_free_prediction_asset(
+    tmp_path: Path,
+):
+    path = tmp_path / "prediction_asset.csv"
+    pd.DataFrame(
+        {
+            "case_id": ["case-1", "case-2"],
+            "y_true": [0, 1],
+            "y_pred": [0, 1],
+            "prob_0": [0.8, 0.2],
+            "prob_1": [0.2, 0.8],
+        }
+    ).to_csv(path, index=False)
+
+    normalized = normalize_prediction_frame(path, num_classes=2)
+
+    assert normalized["image_key"].tolist() == ["case-1", "case-2"]
+    assert normalized["image_path"].tolist() == ["case-1", "case-2"]
 
 
 def fake_backend(job: pd.Series, manifest: pd.DataFrame) -> AdapterBackendResult:

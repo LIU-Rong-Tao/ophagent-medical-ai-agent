@@ -1284,17 +1284,212 @@ def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
     st.session_state["model_hub_last_label"] = label
 
 
-def render_research_workspace(models: pd.DataFrame) -> None:
+def _render_historical_route_results(
+    hub_index: dict[str, pd.DataFrame],
+) -> None:
+    route_runs = hub_index["route_runs"]
+    protocols = hub_index["protocols"]
+    if route_runs.empty:
+        st.info("尚未发现正式路由结果包。")
+        return
+    summary = [
+        ("结果包", len(route_runs), "Validation、冻结结果集与探索性扫描"),
+        ("登记组合", int(route_runs["pairing_count"].sum()), "按各结果包原始 pairing_id 统计"),
+        ("结果行", int(route_runs["result_rows"].sum()), "含预算、策略与对照记录"),
+        ("当前协议", len(protocols), "不含旧版实验模板"),
+    ]
+    st.markdown(
+        '<div class="hub-mini-strip">'
+        + "".join(
+            '<div class="hub-mini-stat">'
+            f"<span>{html.escape(label)}</span><b>{value:,}</b>"
+            f"<small>{html.escape(note)}</small></div>"
+            for label, value, note in summary
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    task_options = sorted(route_runs["task_label"].astype(str).unique())
+    selected_task = st.selectbox(
+        "任务 / 数据集实验",
+        task_options,
+        key="historical_route_task",
+    )
+    visible_runs = route_runs.loc[
+        route_runs["task_label"].astype(str).eq(selected_task)
+    ].copy()
+    run_table = visible_runs[
+        [
+            "dataset_label",
+            "stage",
+            "protocol_version",
+            "model_count",
+            "pairing_count",
+            "result_rows",
+            "status",
+            "route_eligible",
+        ]
+    ].rename(
+        columns={
+            "dataset_label": "数据集 / 实验",
+            "stage": "评测阶段",
+            "protocol_version": "协议",
+            "model_count": "模型池",
+            "pairing_count": "组合",
+            "result_rows": "结果行",
+            "status": "产物状态",
+            "route_eligible": "正式路由资格",
+        }
+    )
+    st.dataframe(run_table, hide_index=True, width="stretch")
+    selected_run_id = st.selectbox(
+        "查看结果包",
+        visible_runs["run_id"].astype(str).tolist(),
+        format_func=lambda run_id: (
+            visible_runs.loc[
+                visible_runs["run_id"].astype(str).eq(run_id), "stage"
+            ].iloc[0]
+            + " · "
+            + visible_runs.loc[
+                visible_runs["run_id"].astype(str).eq(run_id), "protocol_version"
+            ].iloc[0]
+        ),
+        key="historical_route_run",
+    )
+    selected = visible_runs.loc[
+        visible_runs["run_id"].astype(str).eq(selected_run_id)
+    ].iloc[0]
+    pairings_path = Path(str(selected["_pairing_results_path"]))
+    if pairings_path.is_file():
+        pairings = pd.read_csv(pairings_path)
+        columns = [
+            column
+            for column in [
+                "pairing_id",
+                "scout_ids",
+                "primary_scout_id",
+                "active_expert_ids",
+                "routing_policy",
+                "realized_budget",
+                "accuracy",
+                "macro_f1",
+                "qwk",
+                "estimated_total_compute_ms_per_image",
+                "status",
+            ]
+            if column in pairings.columns
+        ]
+        preview = pairings[columns].head(50).rename(
+            columns={
+                "pairing_id": "组合 ID",
+                "scout_ids": "Scout",
+                "primary_scout_id": "主 Scout",
+                "active_expert_ids": "Expert",
+                "routing_policy": "路由策略",
+                "realized_budget": "专家调用比例",
+                "accuracy": "Accuracy",
+                "macro_f1": "Macro-F1",
+                "qwk": "QWK",
+                "estimated_total_compute_ms_per_image": "H100 成本（ms/图）",
+                "status": "状态",
+            }
+        )
+        st.dataframe(preview, hide_index=True, width="stretch", height=430)
+        st.caption(
+            "这里直接读取正式 pairing_results；仅作历史结果浏览，不据此修改冻结候选。"
+        )
+    if not protocols.empty:
+        with st.expander("冻结协议与资格边界", expanded=False):
+            protocol_table = protocols[
+                [
+                    "task_label",
+                    "protocol_id",
+                    "selection_split",
+                    "test_split",
+                    "route_eligible",
+                ]
+            ].rename(
+                columns={
+                    "task_label": "任务",
+                    "protocol_id": "协议",
+                    "selection_split": "选择集",
+                    "test_split": "冻结结果集",
+                    "route_eligible": "正式路由资格",
+                }
+            )
+            st.dataframe(protocol_table, hide_index=True, width="stretch")
+
+
+def _interactive_models_from_index(
+    fallback: pd.DataFrame,
+    hub_index: dict[str, pd.DataFrame],
+) -> pd.DataFrame:
+    route_runs = hub_index["route_runs"]
+    validation = route_runs.loc[
+        route_runs["stage"].astype(str).eq("Validation 候选扫描")
+        & route_runs["_snapshot_path"].map(lambda value: Path(str(value)).is_file())
+    ].copy()
+    if validation.empty:
+        return fallback
+    task_options = sorted(validation["task_label"].astype(str).unique())
+    selected_task = st.selectbox(
+        "交互式探索任务",
+        task_options,
+        key="interactive_route_task",
+    )
+    candidates = validation.loc[
+        validation["task_label"].astype(str).eq(selected_task)
+    ].sort_values(["model_count", "pairing_count"], ascending=False)
+    selected_run_id = st.selectbox(
+        "模型池来源",
+        candidates["run_id"].astype(str).tolist(),
+        format_func=lambda run_id: (
+            candidates.loc[
+                candidates["run_id"].astype(str).eq(run_id), "protocol_version"
+            ].iloc[0]
+            + " · "
+            + str(
+                int(
+                    candidates.loc[
+                        candidates["run_id"].astype(str).eq(run_id), "model_count"
+                    ].iloc[0]
+                )
+            )
+            + " 模型"
+        ),
+        key="interactive_route_run",
+    )
+    selected = candidates.loc[
+        candidates["run_id"].astype(str).eq(selected_run_id)
+    ].iloc[0]
+    snapshot = pd.read_csv(Path(str(selected["_snapshot_path"])))
+    st.caption(
+        f"当前从正式 Validation 结果包载入 {snapshot['artifact_id'].nunique()} 个任务模型；"
+        "不再使用旧 v0.8.6 role_candidates 快照。"
+    )
+    return snapshot
+
+
+def render_research_workspace(
+    models: pd.DataFrame,
+    *,
+    hub_index: dict[str, pd.DataFrame] | None = None,
+) -> None:
     st.markdown("#### 选择研究评测方式")
     st.caption("路由组合评测使用已登记任务模型；结果表风险审计消费外部预测产物，两者不会互相授予模型资格。")
+    options = ["交互式路由探索", "结果表风险审计"]
+    if hub_index is not None:
+        options.insert(0, "冻结协议与历史扫描")
     workspace = st.segmented_control(
         "研究评测功能",
-        ["路由组合评测", "结果表风险审计"],
-        default="路由组合评测",
+        options,
+        default=options[0],
         key="research_workspace_layer",
     )
     if workspace == "结果表风险审计":
         render_result_table_risk_audit()
+    elif workspace == "冻结协议与历史扫描" and hub_index is not None:
+        _render_historical_route_results(hub_index)
     else:
         st.markdown(
             '<div class="hub-band"><strong>评测边界：</strong>'
@@ -1302,4 +1497,9 @@ def render_research_workspace(models: pd.DataFrame) -> None:
             '公开标签研究审计代理事件不进入在线路由。</div>',
             unsafe_allow_html=True,
         )
-        _render_routing_composition_workspace(models)
+        interactive_models = (
+            _interactive_models_from_index(models, hub_index)
+            if hub_index is not None
+            else models
+        )
+        _render_routing_composition_workspace(interactive_models)
