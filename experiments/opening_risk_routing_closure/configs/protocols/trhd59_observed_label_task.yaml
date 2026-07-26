@@ -1,4 +1,4 @@
-protocol_id: trhd59_observed_label_v1
+protocol_id: trhd59_observed_label_v2
 task_id: trhd59_observed_multilabel
 dataset_id: TRHD59_private_CFP
 task_semantics: observed_positive_multiclass
@@ -65,10 +65,10 @@ class_order:
   - 58
 canonical_protocol_root: /training_data/lizekun/data/trhd59_canonical_protocol
 data_root: /data/datasets/tongrenHandan/trhd3_mergeL_Cls59_Train
-output_root: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/model_adaptation
-manifest_output_dir: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/manifests
-job_root: experiments/model_hub/runtime/trhd59_observed_label_jobs
-compatibility_gate_output: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/cfp_compatibility_gate.csv
+output_root: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_adaptation
+manifest_output_dir: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/manifests
+job_root: experiments/model_hub/runtime/trhd59_observed_label_v2_jobs
+compatibility_gate_output: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/cfp_compatibility_gate.csv
 readiness_registry: experiments/opening_risk_routing_closure/outputs/model_asset_task_triage.csv
 expected_samples: 10049
 expected_split_counts:
@@ -81,7 +81,15 @@ internal_validation_fold: 0
 random_seed: 2026
 feature_batch_size: 32
 probe_max_iter: 2000
+c_candidates:
+  - 0.01
+  - 0.1
+  - 1.0
+  - 10.0
 high_confidence_threshold: 0.8
+label_structure: nominal
+primary_metric: macro_f1
+test_metrics_before_route_freeze: forbidden
 patient_level_isolation: unverified
 unobserved_classes_treated_as_negative: false
 single_observed_label_comparison_is_weak: true

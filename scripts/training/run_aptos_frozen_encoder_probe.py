@@ -568,8 +568,11 @@ def prepare_observed_label_manifests(
         "counts": observed_counts,
         "unobserved_classes_treated_as_negative": False,
         "single_observed_label_comparison_is_weak": True,
+        "primary_metric": "macro_f1",
+        "qwk_status": "not_applicable_nominal_task",
         "patient_level_isolation": "unverified",
         "test_used_for_selection": False,
+        "test_metrics_before_route_freeze": "forbidden",
     }
     contract_path = output_root / "task_contract_resolved.json"
     if contract_path.exists():
@@ -784,6 +787,16 @@ def _select_features(
     return all_features[np.asarray(indices, dtype=int)]
 
 
+def _nominal_metrics(
+    labels: np.ndarray,
+    probabilities: np.ndarray,
+) -> dict:
+    metrics = classification_metrics(labels, probabilities)
+    metrics.pop("quadratic_kappa", None)
+    metrics["qwk_status"] = "not_applicable_nominal_task"
+    return metrics
+
+
 def _cost(forward: Callable, dataset: Dataset, device: str) -> dict:
     import torch
 
@@ -852,7 +865,6 @@ def _run_observed_positive_task(
     weak_test_x = _select_features(test_x, test_keys, manifests["test"])
     train_y = manifests["train"]["label"].astype(int).to_numpy()
     val_y = manifests["val"]["label"].astype(int).to_numpy()
-    test_y = manifests["test"]["label"].astype(int).to_numpy()
 
     choices = []
     c_candidates = task_config.get("c_candidates") or spec["c_candidates"]
@@ -866,7 +878,7 @@ def _run_observed_positive_task(
         probabilities = probe.predict_proba(val_x)
         choices.append(
             (
-                classification_metrics(val_y, probabilities)["macro_f1"],
+                _nominal_metrics(val_y, probabilities)["macro_f1"],
                 float(c_value),
                 probe,
             )
@@ -937,27 +949,26 @@ def _run_observed_positive_task(
         "selected_c": selected_c,
         "test_used_for_selection": False,
         "single_observed_label_comparison_is_weak": True,
-        "validation": classification_metrics(
+        "validation": _nominal_metrics(
             val_y,
             validation_probabilities,
         ),
-        "test": classification_metrics(test_y, test_probabilities),
+        "test_metrics_status": "sealed_not_computed_before_route_freeze",
     }
     probability_columns = [
         f"prob_{index}" for index in range(int(task_config["num_classes"]))
     ]
     observed_audits = {}
-    for split_name, frame in observed_predictions.items():
-        audit = run_observed_positive_audit(
-            frame,
-            probability_columns=probability_columns,
-            high_confidence_threshold=float(
-                task_config["high_confidence_threshold"]
-            ),
-        )
-        observed_audits[split_name.removesuffix("_observed_predictions.csv")] = (
-            audit.summary
-        )
+    development_audit = run_observed_positive_audit(
+        observed_predictions["development_observed_predictions.csv"],
+        probability_columns=probability_columns,
+        high_confidence_threshold=float(task_config["high_confidence_threshold"]),
+    )
+    observed_audits["development"] = development_audit.summary
+    observed_audits["test"] = {
+        "status": "sealed_not_computed_before_route_freeze",
+        "n_cases": int(len(observed_predictions["test_observed_predictions.csv"])),
+    }
     (metrics_root / "metrics.json").write_text(
         json.dumps(
             {
