@@ -368,6 +368,7 @@ def task_metadata(tasks: pd.DataFrame, task_id: str) -> dict[str, Any]:
         "provenance_status": clean_text(row.get("provenance_status", "unverified")),
         "disease_family": clean_text(row.get("disease_family")),
         "label_space": clean_text(row.get("label_space")),
+        "label_structure": clean_text(row.get("label_structure", "nominal")),
         "n_classes": int(row.get("num_classes")),
     }
 
@@ -948,8 +949,23 @@ def risk_proxy_summary(
     selected: np.ndarray,
     *,
     undergrading_threshold: int = 3,
-) -> dict[str, int | float]:
+    enabled: bool = True,
+) -> dict[str, int | float | str]:
     """Label-defined ordered-class proxy; never a clinical-outcome inference."""
+    if not enabled:
+        return {
+            "label_proxy_status": "not_applicable_nominal_task",
+            "dangerous_total": np.nan,
+            "dangerous_selected": np.nan,
+            "dangerous_corrected": np.nan,
+            "dangerous_introduced": np.nan,
+            "net_dangerous_reduction": np.nan,
+            "residual_dangerous_count": np.nan,
+            "dangerous_recall_at_k": np.nan,
+            "dangerous_precision_at_k": np.nan,
+            "vtdr_miss_count": np.nan,
+            "severe_grade_error_count": np.nan,
+        }
     dangerous_scout = (truth >= undergrading_threshold) & (
         scout < undergrading_threshold
     )
@@ -962,6 +978,7 @@ def risk_proxy_summary(
     total = int(dangerous_scout.sum())
     selected_n = int(selected.sum())
     return {
+        "label_proxy_status": "computed_ordinal_label_proxy",
         "dangerous_total": total,
         "dangerous_selected": int(selected_dangerous.sum()),
         "dangerous_corrected": int(corrected.sum()),
@@ -1071,6 +1088,7 @@ def evaluate_pairing(
     qwk_enabled: bool,
     trace_budgets: set[float],
     proxy_undergrading_threshold: int = 3,
+    proxy_risk_enabled: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     pairing = context.pairing
     primary = context.scouts[context.primary_scout_id]
@@ -1096,6 +1114,7 @@ def evaluate_pairing(
             final_prediction,
             selected_mask,
             undergrading_threshold=proxy_undergrading_threshold,
+            enabled=proxy_risk_enabled,
         )
         call_rate = selected_n / len(primary) if len(primary) else 0.0
         result_rows.append(
@@ -1152,6 +1171,7 @@ def evaluate_pairing(
                 final_prediction,
                 selected_mask,
                 undergrading_threshold=proxy_undergrading_threshold,
+                enabled=proxy_risk_enabled,
             )
             call_rate = selected_n / len(primary) if len(primary) else 0.0
             result_rows.append(
@@ -1378,6 +1398,16 @@ def evaluate_pairings(
                 qwk_enabled=clean_text(pairing["task_id"]) in qwk_tasks,
                 trace_budgets=trace_budgets,
                 proxy_undergrading_threshold=proxy_undergrading_threshold,
+                proxy_risk_enabled=(
+                    clean_text(
+                        get_hub_row(
+                            hub,
+                            clean_text(pairing["task_id"]),
+                            context.primary_scout_id,
+                        ).get("label_structure")
+                    )
+                    == "ordinal"
+                ),
             )
             result_frames.append(results)
             trace_frames.append(traces)

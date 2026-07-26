@@ -433,6 +433,19 @@ def test_label_proxy_threshold_supports_glaucoma_advanced_undergrading() -> None
     assert summary["net_dangerous_reduction"] == 0
 
 
+def test_nominal_task_disables_ordered_label_proxy() -> None:
+    summary = risk_proxy_summary(
+        np.array([0, 1]),
+        np.array([1, 0]),
+        np.array([0, 1]),
+        np.array([True, True]),
+        enabled=False,
+    )
+
+    assert summary["label_proxy_status"] == "not_applicable_nominal_task"
+    assert np.isnan(summary["dangerous_corrected"])
+
+
 def test_partial_cpu_probe_cost_is_not_presented_as_complete_total() -> None:
     pairing = pd.Series({"task_id": "task_a"})
     context = PairingContext(
