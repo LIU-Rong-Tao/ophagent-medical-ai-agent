@@ -1,0 +1,24 @@
+protocol_id: trhd59_observed_label_locked_test_v1
+mode: locked_private_observed_label_test
+selection_split: test
+evaluation_split: test
+result_semantics: locked_private_observed_label_test
+model_hub_output_dir: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_hub_locked_test
+task_registry: experiments/opening_risk_routing_closure/configs/protocols/trhd59_model_hub_task_registry.csv
+prediction_asset_registry: experiments/opening_risk_routing_closure/configs/protocols/trhd59_prediction_assets.csv
+pairing_protocols: experiments/opening_risk_routing_closure/configs/protocols/trhd59_locked_test_pairings.csv
+case_trace_budgets:
+  - 0.05
+  - 0.10
+qwk_enabled_tasks: []
+pairing_expansion:
+  enabled: false
+label_semantics:
+  full_cohort: observed_positive_only
+  weak_single_label_subset: weak_single_observed_label
+  unobserved_classes_treated_as_negative: false
+  patient_level_isolation: unverified
+test_gate:
+  protocol_frozen_before_metrics: true
+  content_used_for_selection: false
+  route_eligible: false

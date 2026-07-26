@@ -1,0 +1,96 @@
+{
+  "protocol_id": "trhd59_observed_label_locked_test_v1",
+  "created_at": "2026-07-26T18:35:00+08:00",
+  "implementation_commit_sha": "cc3ab5eb0a2460ae8e8a3305e4cd46d184672add",
+  "selection_split": "development_internal_validation",
+  "test_split": "test",
+  "canonical_split_manifest_sha256": "d085e0d315f9b6474264a02358e9c8624f595b9cd2b6d6e46c8c3d5ab8e59570",
+  "validation_result_manifest_sha256": "ce52c613a33a812353bf64c46ecc14375e1aa763a1182d36f661dd34f04bf428",
+  "validation_pairing_results_sha256": "21d7b446d1a8c382dbf078a881ffe691950e23741845a308c0863babc50283d9",
+  "prediction_asset_registry_sha256": "0097e2ee92ca8ed600859211272dbd4bc0b45e5aeefeace3c3c0bd889aed354a",
+  "excluded_evidence": {
+    "job_id": "trhd59-observed-label-20260726T091300Z",
+    "status": "protocol_invalid",
+    "reason": "test_metrics_computed_before_route_freeze",
+    "used_for_selection": false,
+    "used_for_test_reporting": false
+  },
+  "valid_parent_job_id": "trhd59-observed-label-v2-20260726T093000Z",
+  "valid_parent_job_status": "succeeded",
+  "cohorts": {
+    "development_total": 8542,
+    "development_internal_validation_all": 1708,
+    "development_internal_validation_single_observed": 1674,
+    "development_internal_validation_multi_observed": 34,
+    "test_all": 1507,
+    "test_single_observed": 1478,
+    "test_multi_observed": 29
+  },
+  "label_contract": {
+    "class_order": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
+    "label_structure": "nominal",
+    "unobserved_classes_treated_as_negative": false,
+    "patient_level_isolation": "unverified",
+    "ordered_label_proxy": "not_applicable_nominal_task"
+  },
+  "selection_evidence": {
+    "weak_single_label_primary_metric": "macro_f1",
+    "all_validation_observed_positive_metrics": [
+      "observed_positive_hit_at_k",
+      "mean_observed_reciprocal_rank",
+      "observed_positive_probability_mass",
+      "high_confidence_observed_label_inconsistency",
+      "multi_observed_all_hit_at_k",
+      "model_disagreement"
+    ],
+    "development_training_cases_used_for_selection": false,
+    "development_total_used_for_description_only": true,
+    "test_content_used_for_selection": false
+  },
+  "frozen_candidates": {
+    "best_single_model": {
+      "model_id": "ret_clip",
+      "validation_accuracy": 0.7096774193548387,
+      "validation_macro_f1": 0.5732303549039488
+    },
+    "low_budget_single": {
+      "scout_ids": ["ret_clip"],
+      "expert_id": "retfound_cfp",
+      "policy": "low_margin",
+      "budget": 0.05,
+      "validation_macro_f1": 0.5768817889
+    },
+    "multi_scout": {
+      "scout_ids": ["ret_clip", "retfound_green"],
+      "primary_scout_id": "ret_clip",
+      "expert_id": "keepfit_cfp",
+      "policy": "disagreement_then_uncertainty",
+      "budget": 0.10,
+      "validation_macro_f1": 0.5863102479
+    },
+    "observed_risk_constrained": {
+      "scout_ids": ["ret_clip"],
+      "expert_id": "retizero",
+      "policy": "low_margin",
+      "budget": 0.05,
+      "validation_macro_f1": 0.5762598002,
+      "validation_high_confidence_observed_inconsistency_delta": 0,
+      "validation_observed_hit_at_1_delta": 0.0,
+      "limitation": "mean observed reciprocal rank decreased slightly"
+    }
+  },
+  "test_prediction_assets": {
+    "eyeclip_cfp": "cbf5740002a4a3fd225d26353e72dc5000036752c37ba9a6ee77daf8864d2a37",
+    "flair": "ea7e47dcb7796389a96ecc94e7a47be62bdabe301b20e82bfc9e3135af522556",
+    "keepfit_cfp": "80389c6aac5f2e23863ef13f6361539cc49445cf5fbc6769852a07efd566d03b",
+    "keepfit_half_cfp": "00c15a443ea5dcfbfceec1128b1c30325c6e9e0666abd769f8b6f7fb90470a2a",
+    "preti": "18af0d05c37f9ae4d1752836530ef0edcd8305168fa138d42a402001c3276bbf",
+    "ret_clip": "7e3bf3243eb59900c2393460f8b0558b0ed128ba473cddd94e48f16de10179ed",
+    "retfound_cfp": "9c1c96c58e065d54ebb572d90b76f3ab722ce934ea39f319c89b1a947ebacc67",
+    "retfound_green": "b691e94e29422137c6c425966bbf3430a98f6803a3b6f05fae83ebffd65c7f07",
+    "retizero": "a8b02259c8bdb94550ff74f78302a6632db94f4e89be1a94ea62dd400839efb7"
+  },
+  "test_metrics_computed_before_freeze": false,
+  "test_content_used_for_selection": false,
+  "route_eligible": false
+}

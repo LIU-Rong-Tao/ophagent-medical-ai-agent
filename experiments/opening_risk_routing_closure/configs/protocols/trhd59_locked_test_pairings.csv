@@ -1,0 +1,4 @@
+pairing_id,task_id,scout_artifact_ids,primary_scout_artifact_id,expert_artifact_id,enabled,prediction_source_mode,routing_policies,budget_grid,result_semantics,notes
+trhd59_low_budget_single,trhd59_observed_label,ret_clip,ret_clip,retfound_cfp,true,prediction_asset,low_margin,0.05,locked_private_observed_label_test,validation-selected low-budget single
+trhd59_multi_primary,trhd59_observed_label,ret_clip|retfound_green,ret_clip,keepfit_cfp,true,prediction_asset,disagreement_then_uncertainty,0.10,locked_private_observed_label_test,validation-selected multi-scout
+trhd59_observed_risk_constrained,trhd59_observed_label,ret_clip,ret_clip,retizero,true,prediction_asset,low_margin,0.05,locked_private_observed_label_test,no increase in validation high-confidence observed-label inconsistency and no decrease in observed Hit@1
