@@ -332,6 +332,10 @@ def _verify_expected_sha256(path: Path, expected: str) -> None:
         raise ValueError(f"冻结资产 SHA256 不一致：{path.name}")
 
 
+def _as_bool(value: object) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
 def build_cfp_compatibility_gate(task_config: dict) -> pd.DataFrame:
     from ophbench import load_registry
 
@@ -350,7 +354,7 @@ def build_cfp_compatibility_gate(task_config: dict) -> pd.DataFrame:
         task_model = CHECKPOINT_TASK_MODELS.get(checkpoint_id, "")
         readiness_row = readiness_lookup.get((model_id, checkpoint_id))
         local_asset = bool(
-            readiness_row is not None and bool(readiness_row.h100_local_asset)
+            readiness_row is not None and _as_bool(readiness_row.h100_local_asset)
         )
         smoke_passed = bool(
             readiness_row is not None
@@ -405,7 +409,14 @@ def build_cfp_compatibility_gate(task_config: dict) -> pd.DataFrame:
         )
     output = Path(task_config["compatibility_gate_output"])
     output.parent.mkdir(parents=True, exist_ok=True)
-    gate.to_csv(output, index=False)
+    if output.exists():
+        existing = pd.read_csv(output).fillna("")
+        if existing.to_dict("records") != gate.fillna("").to_dict("records"):
+            raise ValueError("已冻结 CFP 兼容门禁与当前 Registry/readiness 不一致")
+    else:
+        temporary = output.with_suffix(".csv.tmp")
+        gate.to_csv(temporary, index=False)
+        temporary.replace(output)
     return gate
 
 
@@ -538,25 +549,39 @@ def prepare_observed_label_manifests(
     output_root = Path(task_config["manifest_output_dir"])
     output_root.mkdir(parents=True, exist_ok=True)
     for name, frame in frames.items():
-        frame.to_csv(output_root / f"{name}_manifest.csv", index=False)
-    (output_root / "task_contract_resolved.json").write_text(
-        json.dumps(
-            {
-                "task_id": task_config["task_id"],
-                "task_semantics": "observed_positive_multiclass",
-                "class_order": list(range(n_classes)),
-                "split_id": split_id,
-                "counts": observed_counts,
-                "unobserved_classes_treated_as_negative": False,
-                "single_observed_label_comparison_is_weak": True,
-                "patient_level_isolation": "unverified",
-                "test_used_for_selection": False,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+        target = output_root / f"{name}_manifest.csv"
+        if target.exists():
+            existing = pd.read_csv(target)
+            if existing["canonical_id"].astype(str).tolist() != frame[
+                "canonical_id"
+            ].astype(str).tolist():
+                raise ValueError(f"已冻结 {name} manifest 与 canonical 协议不一致")
+        else:
+            temporary = target.with_suffix(".csv.tmp")
+            frame.to_csv(temporary, index=False)
+            temporary.replace(target)
+    contract = {
+        "task_id": task_config["task_id"],
+        "task_semantics": "observed_positive_multiclass",
+        "class_order": list(range(n_classes)),
+        "split_id": split_id,
+        "counts": observed_counts,
+        "unobserved_classes_treated_as_negative": False,
+        "single_observed_label_comparison_is_weak": True,
+        "patient_level_isolation": "unverified",
+        "test_used_for_selection": False,
+    }
+    contract_path = output_root / "task_contract_resolved.json"
+    if contract_path.exists():
+        if json.loads(contract_path.read_text(encoding="utf-8")) != contract:
+            raise ValueError("已冻结 TRHD59 任务契约与当前 canonical 协议不一致")
+    else:
+        temporary = contract_path.with_suffix(".json.tmp")
+        temporary.write_text(
+            json.dumps(contract, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        temporary.replace(contract_path)
     build_cfp_compatibility_gate(task_config)
     return frames, split_id
 
