@@ -1,0 +1,103 @@
+{
+  "evaluation_design": "cross_dataset_frozen_transfer",
+  "task_id": "deepdrid_dr_5class_external",
+  "dataset_id": "DeepDRiD_v1.1",
+  "dataset_source": "https://github.com/deepdrdoc/DeepDRiD/tree/v1.1",
+  "dataset_source_commit": "56d8af71319803150d0e7b90533e0918c7bf85ee",
+  "dataset_license": "CC-BY-SA-4.0",
+  "cohort": {
+    "split": "official_validation",
+    "images": 400,
+    "patients": 100,
+    "manifest_sha256": "89018676fa62908d55b472a75208e694d64b4fdc5c731ad4a7eb966d4b04dea2",
+    "train_patient_overlap": 0,
+    "confirmed_train_validation_duplicate_images": 0,
+    "confirmed_aptos_overlap_images": 0
+  },
+  "selection_or_recalibration_on_deepdrid": false,
+  "test_content_used_for_model_selection": false,
+  "route_eligible": false,
+  "result_root": "external_asset://model_hub/runs/external_transfer/deepdrid_v1.1",
+  "models": [
+    {
+      "model_id": "convnext_tiny",
+      "accuracy": 0.5525,
+      "macro_f1": 0.30631144286472217,
+      "qwk": 0.634194299960674,
+      "prediction_sha256": "84ea1e11e901e4b5b341fd9a4c7c1d06ff984735d02051958877a2a4283e2e26"
+    },
+    {
+      "model_id": "flair",
+      "accuracy": 0.5575,
+      "macro_f1": 0.4464368741073951,
+      "qwk": 0.8039151391940191,
+      "prediction_sha256": "80911e53091513f49d0d6d3105a5fdf0902d5134d32aac1d80f9d0331f50f2a6"
+    },
+    {
+      "model_id": "preti",
+      "accuracy": 0.3475,
+      "macro_f1": 0.2465466197860564,
+      "qwk": 0.3636459439522046,
+      "prediction_sha256": "146b3afa140210f2dcb020e55ad71ed8aa681824ef184e6483505ba58764afe9"
+    },
+    {
+      "model_id": "retfound_cfp",
+      "accuracy": 0.4825,
+      "macro_f1": 0.3379199893673578,
+      "qwk": 0.7095429440004817,
+      "prediction_sha256": "2615da452a02f37e14b0f32e2b7152bf53c23aff5e2767055d819df255561889"
+    },
+    {
+      "model_id": "retfound_green",
+      "accuracy": 0.54,
+      "macro_f1": 0.3397580867663891,
+      "qwk": 0.5150883661283212,
+      "prediction_sha256": "ea70dd2d68de53ebf2abd8b630ebe80719e4db1937fe1f23ee31e4fccf6e96e8"
+    },
+    {
+      "model_id": "swin_tiny",
+      "accuracy": 0.565,
+      "macro_f1": 0.3747465845063095,
+      "qwk": 0.7276053766393777,
+      "prediction_sha256": "1c4e169970b5b3f629f95869f8ad16c7b670bf5d3d26d68adbc764aa9efe224f"
+    }
+  ],
+  "predeclared_routes": [
+    {
+      "route_id": "deepdrid_frozen_six_model_primary",
+      "scouts": ["convnext_tiny", "preti"],
+      "expert": "flair",
+      "policy": "disagreement_then_uncertainty",
+      "budget": 0.1,
+      "accuracy": 0.55,
+      "macro_f1": 0.3276109554319662,
+      "qwk": 0.6470364240835396,
+      "proxy_corrected": 5,
+      "proxy_introduced": 0
+    },
+    {
+      "route_id": "deepdrid_frozen_single_reference",
+      "scouts": ["retfound_cfp"],
+      "expert": "flair",
+      "policy": "low_confidence",
+      "budget": 0.1,
+      "accuracy": 0.515,
+      "macro_f1": 0.3715644862787869,
+      "qwk": 0.739172720708507,
+      "proxy_corrected": 3,
+      "proxy_introduced": 0
+    },
+    {
+      "route_id": "deepdrid_frozen_low_budget",
+      "scouts": ["convnext_tiny"],
+      "expert": "flair",
+      "policy": "low_margin",
+      "budget": 0.05,
+      "accuracy": 0.5475,
+      "macro_f1": 0.3063482662947388,
+      "qwk": 0.6571895377164447,
+      "proxy_corrected": 5,
+      "proxy_introduced": 0
+    }
+  ]
+}
