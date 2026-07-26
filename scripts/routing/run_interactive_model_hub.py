@@ -157,6 +157,7 @@ PAIRING_COLUMNS = [
     "scout_only_macro_f1",
     "expert_only_macro_f1",
     "expert_only_qwk",
+    "label_proxy_status",
     "dangerous_total",
     "dangerous_selected",
     "dangerous_corrected",
