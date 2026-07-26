@@ -189,6 +189,8 @@ RIM-ONE 当前使用第三方镜像。镜像目录和文件命名可对应公开
 
 任务使用 10,049 张 canonical 图像和固定的 8,542/1,507 Development/Test 划分。59 维标签只表示 observed positives，未观测类别不作为真实阴性；`patient_level_isolation=unverified`。
 
+本实验定位为**统一冻结编码器的探索性基线**。线性探针用于比较固定特征在当前观测标签口径下的可分性，不代表各基础模型经过充分任务适配后的最终能力；当前不再优化 probe-level 路由。
+
 9 个 CFP 模型完成冻结编码器任务适配。内部 validation 包含 1,708 例，其中 1,674 例单观测标签用于弱单标签 Macro-F1 选择，34 例双观测标签用于覆盖审计；其余 Development 训练样本只作描述，不参与路由选择。
 
 | 冻结方案 | Validation Macro-F1 | Test Macro-F1 | Test observed Hit@1 | corrected / introduced / net | 预算 | 估算成本 |
@@ -199,3 +201,5 @@ RIM-ONE 当前使用第三方镜像。镜像目录和文件命名可对应公开
 | RetClip → RetiZero，风险约束 | 0.5763 | 0.5782 | 0.7021 | 18 / 14 / +4 | 5% | 2.766 ms/图 |
 
 `corrected/introduced/net` 表示 top-1 与观测阳性集合的一致性变化，不是确诊错误或临床后果。性能优先方案在 Test 提高 Macro-F1 和 Hit@1，但也增加高置信观测标签不一致；风险约束方案保持该事件数不增加，却未保持弱单标签 Macro-F1 增益。该任务证明了路由的性能与观测标签风险代理之间存在真实权衡，当前仍为回顾性私有审计，`route_eligible=false`。
+
+下一门禁是对 106 例高分歧、高置信不一致、双标签及路由纠正/新增病例进行盲化人工复核。漏标共病、标签错误和不可判病例比例确认前，不启动微调。
