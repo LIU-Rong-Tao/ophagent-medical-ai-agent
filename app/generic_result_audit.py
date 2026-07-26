@@ -106,6 +106,123 @@ class AuditResult:
     leakage_checks: pd.DataFrame
 
 
+@dataclass
+class ObservedPositiveAudit:
+    """Positive-only audit that never treats an unobserved class as a negative."""
+
+    summary: dict[str, Any]
+    case_scores: pd.DataFrame
+
+
+def _parse_observed_label_ids(value: Any, *, n_classes: int) -> tuple[int, ...]:
+    labels = tuple(
+        sorted(
+            {
+                int(item.strip())
+                for item in re.split(r"[;|]", str(value))
+                if item.strip()
+            }
+        )
+    )
+    if not labels or labels[0] < 0 or labels[-1] >= n_classes:
+        raise ValueError("观测阳性标签为空或超出概率列范围。")
+    return labels
+
+
+def run_observed_positive_audit(
+    predictions: pd.DataFrame,
+    *,
+    probability_columns: Iterable[str],
+    high_confidence_threshold: float = 0.8,
+) -> ObservedPositiveAudit:
+    """Audit ranks of observed positives without inferring complete multilabel truth."""
+
+    if not 0 <= high_confidence_threshold <= 1:
+        raise ValueError("高置信阈值必须位于 [0,1]。")
+    probability_columns = list(probability_columns)
+    required = {"case_id", "observed_label_ids"}
+    missing = sorted(required - set(predictions.columns))
+    if missing:
+        raise ValueError(f"观测阳性审计缺少字段：{missing}")
+    if len(probability_columns) < 2:
+        raise ValueError("观测阳性审计至少需要两个类别概率列。")
+    probabilities = predictions[probability_columns].astype(float).to_numpy()
+    if (
+        probabilities.shape != (len(predictions), len(probability_columns))
+        or not np.isfinite(probabilities).all()
+        or (probabilities < 0).any()
+        or (probabilities > 1).any()
+        or not np.allclose(probabilities.sum(axis=1), 1.0, atol=1e-5)
+    ):
+        raise ValueError("观测阳性审计收到非法概率矩阵。")
+
+    ranking = np.argsort(-probabilities, axis=1, kind="stable")
+    inverse_rank = np.empty_like(ranking)
+    inverse_rank[np.arange(len(predictions))[:, None], ranking] = np.arange(
+        1, len(probability_columns) + 1
+    )
+    rows: list[dict[str, Any]] = []
+    for row_index, (_, source) in enumerate(predictions.reset_index(drop=True).iterrows()):
+        observed = _parse_observed_label_ids(
+            source["observed_label_ids"],
+            n_classes=len(probability_columns),
+        )
+        observed_array = np.asarray(observed, dtype=int)
+        ranks = inverse_rank[row_index, observed_array]
+        top_class = int(ranking[row_index, 0])
+        confidence = float(probabilities[row_index, top_class])
+        observed_mass = float(probabilities[row_index, observed_array].sum())
+        top1_consistent = top_class in observed
+        rows.append(
+            {
+                "case_id": str(source["case_id"]),
+                "observed_label_ids": ";".join(str(item) for item in observed),
+                "observed_label_count": len(observed),
+                "predicted_class": top_class,
+                "confidence": confidence,
+                "best_observed_rank": int(ranks.min()),
+                "mean_observed_reciprocal_rank": float(np.mean(1.0 / ranks)),
+                "observed_positive_probability_mass": observed_mass,
+                "top1_observed_consistent": top1_consistent,
+                "high_confidence_observed_label_inconsistency": bool(
+                    not top1_consistent and confidence >= high_confidence_threshold
+                ),
+                "observed_label_review_score": float(
+                    0.5 * (1.0 - observed_mass)
+                    + 0.5 * ((ranks.min() - 1) / (len(probability_columns) - 1))
+                ),
+            }
+        )
+    case_scores = pd.DataFrame(rows)
+    summary: dict[str, Any] = {
+        "n_cases": int(len(case_scores)),
+        "n_classes": int(len(probability_columns)),
+        "label_semantics": "observed_positive_only",
+        "unobserved_classes_treated_as_negative": False,
+        "mean_observed_positive_probability_mass": float(
+            case_scores["observed_positive_probability_mass"].mean()
+        ),
+        "mean_observed_reciprocal_rank": float(
+            case_scores["mean_observed_reciprocal_rank"].mean()
+        ),
+        "median_best_observed_rank": float(
+            case_scores["best_observed_rank"].median()
+        ),
+        "top1_observed_consistency": float(
+            case_scores["top1_observed_consistent"].mean()
+        ),
+        "high_confidence_observed_label_inconsistency_count": int(
+            case_scores["high_confidence_observed_label_inconsistency"].sum()
+        ),
+    }
+    for cutoff in (1, 3, 5, 10):
+        if cutoff <= len(probability_columns):
+            summary[f"observed_positive_hit_at_{cutoff}"] = float(
+                (case_scores["best_observed_rank"] <= cutoff).mean()
+            )
+    return ObservedPositiveAudit(summary=summary, case_scores=case_scores)
+
+
 def _normalized_name(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "_", str(value).strip().casefold()).strip("_")
 

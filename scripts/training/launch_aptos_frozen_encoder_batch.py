@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch one resumable parent job for independent frozen-encoder APTOS children."""
+"""Launch one resumable parent job for independent frozen-encoder task children."""
 
 from __future__ import annotations
 
@@ -72,7 +72,11 @@ def main() -> int:
     gpus = tuple(value.strip() for value in args.gpus.split(",") if value.strip())
     if not gpus:
         raise ValueError("至少需要一个 GPU")
-    job_id = args.job_id or f"aptos-frozen-encoder-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid4().hex[:8]}"
+    job_prefix = task_id.replace("_", "-")
+    job_id = args.job_id or (
+        f"{job_prefix}-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-"
+        f"{uuid4().hex[:8]}"
+    )
     job = job_root / job_id
     if job.exists() and not args.resume:
         raise FileExistsError(f"任务已存在：{job_id}")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared frozen-encoder APTOS linear-probe adaptation for registered CFP assets."""
+"""Shared frozen-encoder task adaptation for registered CFP assets."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Callable
 
@@ -33,6 +34,7 @@ from app.aptos_replay_adapters import (  # noqa: E402
     load_registered_aptos_adapter,
 )
 from app.flair_task_adapter import FlairAptosTaskAdapter  # noqa: E402
+from app.generic_result_audit import run_observed_positive_audit  # noqa: E402
 from app.preti_task_adapter import PretiAptosTaskAdapter  # noqa: E402
 from scripts.training.aptos_downstream_common import (  # noqa: E402
     APTOS_MANIFEST_SHA256,
@@ -66,6 +68,16 @@ MODEL_SPECS = {
         "preprocessing_id": "keepfit_preserve_aspect_pad_512_scale_01",
         "adapter_type": "keepfit_frozen_encoder_linear_probe",
         "c_candidates": [0.316],
+    },
+    "keepfit_half_cfp": {
+        "model_id": "keepfit_half_cfp",
+        "checkpoint_id": "keepfit-half-flair-mmretinal-cfp",
+        "checkpoint": ASSET_ROOT
+        / "keepfit/keepfit-half-flair-mmretinal-cfp/KeepFIT (50%flair+MM).pth",
+        "source": SOURCE_ROOT / "keepfit/dbbb1f05b9d27278b01e15e5f837b44b22d32cee",
+        "preprocessing_id": "keepfit_preserve_aspect_pad_512_scale_01",
+        "adapter_type": "keepfit_frozen_encoder_linear_probe",
+        "c_candidates": [0.01, 0.1, 0.316, 1.0, 10.0],
     },
     "ret_clip": {
         "model_id": "ret_clip",
@@ -133,6 +145,18 @@ MODEL_SPECS = {
             "preti/inference_manifest.json"
         ),
     },
+}
+
+CHECKPOINT_TASK_MODELS = {
+    "eyeclip-default": "eyeclip_cfp",
+    "flair-default": "flair",
+    "keepfit-flair-mmretinal-cfp": "keepfit_cfp",
+    "keepfit-half-flair-mmretinal-cfp": "keepfit_half_cfp",
+    "preti-default": "preti",
+    "ret-clip-default": "ret_clip",
+    "retfound-green-v0.1": "retfound_green",
+    "retfound-cfp": "retfound_cfp",
+    "retizero-default": "retizero",
 }
 
 
@@ -270,6 +294,7 @@ def _load_registered(spec: dict, device: str):
 LOADERS = {
     "eyeclip_cfp": _load_eyeclip,
     "keepfit_cfp": _load_keepfit,
+    "keepfit_half_cfp": _load_keepfit,
     "ret_clip": _load_ret_clip,
     "retizero": _load_retizero,
     "convnext_tiny": _load_registered,
@@ -299,6 +324,241 @@ def _load_task_config(path: Path | None) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("任务适配配置必须为 mapping")
     return payload
+
+
+def _verify_expected_sha256(path: Path, expected: str) -> None:
+    actual = _sha256_text(path)
+    if actual != expected:
+        raise ValueError(f"冻结资产 SHA256 不一致：{path.name}")
+
+
+def build_cfp_compatibility_gate(task_config: dict) -> pd.DataFrame:
+    from ophbench import load_registry
+
+    readiness_path = Path(task_config["readiness_registry"])
+    readiness = pd.read_csv(readiness_path).fillna("")
+    readiness_lookup = {
+        (str(row.model_id), str(row.checkpoint_id)): row
+        for row in readiness.itertuples(index=False)
+        if str(row.scope) == "ophbench_catalog"
+    }
+    rows = []
+    for checkpoint in load_registry().checkpoints:
+        checkpoint_id = str(checkpoint.checkpoint_id)
+        model_id = str(checkpoint.model_id)
+        modalities = tuple(str(item) for item in checkpoint.modalities)
+        task_model = CHECKPOINT_TASK_MODELS.get(checkpoint_id, "")
+        readiness_row = readiness_lookup.get((model_id, checkpoint_id))
+        local_asset = bool(
+            readiness_row is not None and bool(readiness_row.h100_local_asset)
+        )
+        smoke_passed = bool(
+            readiness_row is not None
+            and str(readiness_row.runtime_smoke_status) == "runtime_smoke_passed"
+        )
+        cfp_compatible = "CFP" in modalities
+        applicable_type = str(checkpoint.artifact_type) not in {
+            "generative_model",
+            "task_checkpoint",
+        }
+        adapter_available = bool(task_model and task_model in MODEL_SPECS)
+        passed = bool(
+            cfp_compatible
+            and applicable_type
+            and local_asset
+            and smoke_passed
+            and adapter_available
+        )
+        blockers = []
+        if not cfp_compatible:
+            blockers.append("non_cfp_modality")
+        if not applicable_type:
+            blockers.append("artifact_type_not_applicable")
+        if not local_asset:
+            blockers.append("h100_local_asset_missing")
+        if not smoke_passed:
+            blockers.append("runtime_smoke_not_passed")
+        if not adapter_available:
+            blockers.append("task_adapter_unavailable")
+        rows.append(
+            {
+                "model_id": model_id,
+                "checkpoint_id": checkpoint_id,
+                "modalities": "|".join(modalities),
+                "artifact_type": str(checkpoint.artifact_type),
+                "h100_local_asset": local_asset,
+                "runtime_smoke_passed": smoke_passed,
+                "task_adapter": task_model,
+                "cfp_task_compatible": passed,
+                "qualification_limited": not bool(checkpoint.license),
+                "blocker": ";".join(blockers),
+            }
+        )
+    gate = pd.DataFrame(rows)
+    if len(gate) != 27:
+        raise ValueError(f"OphBench checkpoint 数量异常：{len(gate)} != 27")
+    selected = tuple(gate.loc[gate["cfp_task_compatible"], "task_adapter"])
+    configured = tuple(task_config["models"])
+    if set(selected) != set(configured):
+        raise ValueError(
+            f"配置模型与 CFP 门禁结果不一致：gate={selected}, config={configured}"
+        )
+    output = Path(task_config["compatibility_gate_output"])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    gate.to_csv(output, index=False)
+    return gate
+
+
+def prepare_observed_label_manifests(
+    task_config: dict,
+) -> tuple[dict[str, pd.DataFrame], str]:
+    protocol_root = Path(task_config["canonical_protocol_root"])
+    paths = {
+        "samples": protocol_root / "canonical_samples.csv",
+        "source_mapping": protocol_root / "canonical_source_mapping.csv",
+        "split": protocol_root / "canonical_split_manifest_seed2026.csv",
+        "runtime": protocol_root / "h100_canonical_runtime_index.csv",
+        "runtime_summary": protocol_root / "h100_canonical_runtime_index_summary.json",
+        "class_mapping": protocol_root / "class_mapping.csv",
+        "matrix": protocol_root / "observed_multilabel_matrix.npy",
+    }
+    for key, expected in task_config["canonical_asset_sha256"].items():
+        _verify_expected_sha256(paths[key], str(expected))
+    runtime_summary = json.loads(paths["runtime_summary"].read_text(encoding="utf-8"))
+    if not runtime_summary.get("ready") or int(
+        runtime_summary.get("mapped_canonical_rows", 0)
+    ) != int(task_config["expected_samples"]):
+        raise ValueError("H100 原图路径解析器未完整映射 canonical cohort")
+
+    samples = pd.read_csv(paths["samples"])
+    split = pd.read_csv(paths["split"])
+    runtime = pd.read_csv(paths["runtime"])
+    class_mapping = pd.read_csv(paths["class_mapping"])
+    matrix = np.load(paths["matrix"], allow_pickle=False)
+    n_classes = int(task_config["num_classes"])
+    expected_samples = int(task_config["expected_samples"])
+    if (
+        len(samples) != expected_samples
+        or len(split) != expected_samples
+        or len(runtime) != expected_samples
+        or matrix.shape != (expected_samples, n_classes)
+        or class_mapping["class_id"].astype(int).tolist() != list(range(n_classes))
+    ):
+        raise ValueError("canonical 样本、标签矩阵、类别顺序或原图映射数量不一致")
+    merged = (
+        samples.merge(
+            split[
+                [
+                    "canonical_index",
+                    "canonical_id",
+                    "near_duplicate_group",
+                    "split",
+                    "cv_fold",
+                ]
+            ],
+            on=["canonical_index", "canonical_id"],
+            how="inner",
+            validate="one_to_one",
+        )
+        .merge(
+            runtime[["canonical_id", "h100_relative_path"]],
+            on="canonical_id",
+            how="inner",
+            validate="one_to_one",
+        )
+        .sort_values("canonical_index")
+        .reset_index(drop=True)
+    )
+    if len(merged) != expected_samples or merged["canonical_id"].duplicated().any():
+        raise ValueError("canonical manifest 合并不完整")
+    matrix_ids = [
+        tuple(np.flatnonzero(matrix[index]).astype(int).tolist())
+        for index in range(expected_samples)
+    ]
+    manifest_ids = [
+        tuple(int(item) for item in re.split(r"[;|]", str(value)))
+        for value in merged["observed_label_ids"]
+    ]
+    if matrix_ids != manifest_ids:
+        raise ValueError("59 维观测标签矩阵与 canonical manifest 不一致")
+    data_root = Path(task_config["data_root"])
+    missing_images = [
+        path
+        for path in merged["h100_relative_path"].map(data_root.__truediv__)
+        if not path.is_file()
+    ]
+    if missing_images:
+        raise FileNotFoundError(f"canonical cohort 缺少 {len(missing_images)} 张原图")
+
+    merged["image_key"] = merged["canonical_id"].astype(str)
+    merged["relative_path"] = merged["h100_relative_path"].astype(str)
+    merged["patient_id"] = ""
+    merged["label"] = -1
+    single = merged["label_count"].astype(int).eq(1)
+    merged.loc[single, "label"] = merged.loc[single, "observed_label_ids"].astype(int)
+    validation_fold = int(task_config["internal_validation_fold"])
+    development = merged[merged["split"].eq("development")].copy()
+    frozen_test = merged[merged["split"].eq("test")].copy()
+    frames = {
+        "development_observed": development.reset_index(drop=True),
+        "test_observed": frozen_test.reset_index(drop=True),
+        "train": development[
+            single.loc[development.index]
+            & development["cv_fold"].astype(int).ne(validation_fold)
+        ].reset_index(drop=True),
+        "val": development[
+            single.loc[development.index]
+            & development["cv_fold"].astype(int).eq(validation_fold)
+        ].reset_index(drop=True),
+        "test": frozen_test[single.loc[frozen_test.index]].reset_index(drop=True),
+    }
+    expected = task_config["expected_split_counts"]
+    observed_counts = {name: len(frame) for name, frame in frames.items()}
+    if observed_counts != {key: int(value) for key, value in expected.items()}:
+        raise ValueError(
+            f"TRHD59 冻结划分数量不一致：{observed_counts} != {expected}"
+        )
+    if task_config.get("patient_level_isolation") != "unverified":
+        raise ValueError("TRHD59 当前不得声称患者级隔离已验证")
+    canonical = json.dumps(
+        [
+            {
+                "canonical_id": str(row.canonical_id),
+                "split": str(row.split),
+                "cv_fold": None if pd.isna(row.cv_fold) else int(row.cv_fold),
+                "observed_label_ids": str(row.observed_label_ids),
+            }
+            for row in merged.itertuples(index=False)
+        ],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    split_id = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    output_root = Path(task_config["manifest_output_dir"])
+    output_root.mkdir(parents=True, exist_ok=True)
+    for name, frame in frames.items():
+        frame.to_csv(output_root / f"{name}_manifest.csv", index=False)
+    (output_root / "task_contract_resolved.json").write_text(
+        json.dumps(
+            {
+                "task_id": task_config["task_id"],
+                "task_semantics": "observed_positive_multiclass",
+                "class_order": list(range(n_classes)),
+                "split_id": split_id,
+                "counts": observed_counts,
+                "unobserved_classes_treated_as_negative": False,
+                "single_observed_label_comparison_is_weak": True,
+                "patient_level_isolation": "unverified",
+                "test_used_for_selection": False,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    build_cfp_compatibility_gate(task_config)
+    return frames, split_id
 
 
 def prepare_task_manifests(task_config: dict) -> tuple[dict[str, pd.DataFrame], str]:
@@ -403,6 +663,8 @@ def prepare_task_manifests(task_config: dict) -> tuple[dict[str, pd.DataFrame], 
 
 
 def _manifests(task_config: dict) -> tuple[dict[str, pd.DataFrame], str]:
+    if task_config.get("task_semantics") == "observed_positive_multiclass":
+        return prepare_observed_label_manifests(task_config)
     if task_config["task_id"] != "aptos_dr_5class":
         return prepare_task_manifests(task_config)
     root = EXPERIMENT_ROOT / "preti/seed42_20260722/preflight"
@@ -445,7 +707,7 @@ def _prediction_frame(manifest: pd.DataFrame, probabilities: np.ndarray, spec: d
         "image_key": ordered.image_key,
         "image_path": ordered.relative_path,
     })
-    for index in range(5):
+    for index in range(probabilities.shape[1]):
         output[f"prob_{index}"] = probabilities[:, index]
     output["model_id"] = spec["model_id"]
     output["checkpoint_sha256"] = sha256
@@ -454,6 +716,47 @@ def _prediction_frame(manifest: pd.DataFrame, probabilities: np.ndarray, spec: d
     output["inference_run_id"] = run_id
     output["inference_dtype"] = "float32"
     return output
+
+
+def _observed_prediction_frame(
+    manifest: pd.DataFrame,
+    probabilities: np.ndarray,
+    spec: dict,
+    split: str,
+    run_id: str,
+    checkpoint_sha256: str,
+    split_id: str,
+) -> pd.DataFrame:
+    ordered = manifest.reset_index(drop=True)
+    output = pd.DataFrame(
+        {
+            "case_id": ordered["canonical_id"].astype(str),
+            "split": split,
+            "observed_label_ids": ordered["observed_label_ids"].astype(str),
+            "observed_label_names": ordered["observed_label_names"].astype(str),
+            "observed_label_count": ordered["label_count"].astype(int),
+            "y_pred": probabilities.argmax(axis=1),
+        }
+    )
+    for index in range(probabilities.shape[1]):
+        output[f"prob_{index}"] = probabilities[:, index]
+    output["model_id"] = spec["model_id"]
+    output["checkpoint_sha256"] = checkpoint_sha256
+    output["preprocessing_id"] = spec["preprocessing_id"]
+    output["split_id"] = split_id
+    output["inference_run_id"] = run_id
+    output["inference_dtype"] = "float32"
+    return output
+
+
+def _select_features(
+    all_features: np.ndarray,
+    all_keys: list[str],
+    manifest: pd.DataFrame,
+) -> np.ndarray:
+    key_to_index = {str(key): index for index, key in enumerate(all_keys)}
+    indices = [key_to_index[str(key)] for key in manifest["image_key"]]
+    return all_features[np.asarray(indices, dtype=int)]
 
 
 def _cost(forward: Callable, dataset: Dataset, device: str) -> dict:
@@ -481,6 +784,245 @@ def _cost(forward: Callable, dataset: Dataset, device: str) -> dict:
             "peak_memory_mb": float(torch.cuda.max_memory_allocated(device) / 1024**2),
         }
     return {"device": device, "dtype": "float32", "warmup": 10, "repeats": 30, "forward_only": True, "results": results}
+
+
+def _run_observed_positive_task(
+    *,
+    output: Path,
+    task_config: dict,
+    spec: dict,
+    manifests: dict[str, pd.DataFrame],
+    split_id: str,
+    checkpoint_sha256: str,
+    run_id: str,
+    transform: Callable,
+    forward: Callable,
+    device: str,
+) -> Path:
+    data_root = Path(task_config["data_root"])
+    development_dataset = ManifestDataset(
+        manifests["development_observed"],
+        transform,
+        data_root,
+    )
+    test_dataset = ManifestDataset(
+        manifests["test_observed"],
+        transform,
+        data_root,
+    )
+    development_x, _, development_keys = _features(
+        forward,
+        development_dataset,
+        int(task_config.get("feature_batch_size", 32)),
+        device,
+    )
+    test_x, _, test_keys = _features(
+        forward,
+        test_dataset,
+        int(task_config.get("feature_batch_size", 32)),
+        device,
+    )
+    train_x = _select_features(development_x, development_keys, manifests["train"])
+    val_x = _select_features(development_x, development_keys, manifests["val"])
+    weak_test_x = _select_features(test_x, test_keys, manifests["test"])
+    train_y = manifests["train"]["label"].astype(int).to_numpy()
+    val_y = manifests["val"]["label"].astype(int).to_numpy()
+    test_y = manifests["test"]["label"].astype(int).to_numpy()
+
+    choices = []
+    c_candidates = task_config.get("c_candidates") or spec["c_candidates"]
+    for c_value in c_candidates:
+        probe = LogisticRegression(
+            C=float(c_value),
+            class_weight="balanced",
+            max_iter=int(task_config.get("probe_max_iter", 2000)),
+            random_state=int(task_config["random_seed"]),
+        ).fit(train_x, train_y)
+        probabilities = probe.predict_proba(val_x)
+        choices.append(
+            (
+                classification_metrics(val_y, probabilities)["macro_f1"],
+                float(c_value),
+                probe,
+            )
+        )
+    _, selected_c, probe = max(choices, key=lambda item: item[0])
+    class_order = np.asarray(task_config["class_order"])
+    if not np.array_equal(probe.classes_, class_order):
+        raise ValueError(
+            f"探针类别顺序 {probe.classes_.tolist()} 与任务协议 "
+            f"{class_order.tolist()} 不一致"
+        )
+    validation_probabilities = probe.predict_proba(val_x)
+    test_probabilities = probe.predict_proba(weak_test_x)
+    development_probabilities = probe.predict_proba(development_x)
+    full_test_probabilities = probe.predict_proba(test_x)
+
+    prediction_root = output / "predictions"
+    prediction_root.mkdir()
+    standard_predictions = {
+        "validation_predictions.csv": _prediction_frame(
+            manifests["val"],
+            validation_probabilities,
+            spec,
+            "validation",
+            run_id,
+            checkpoint_sha256,
+            split_id,
+        ),
+        "test_predictions.csv": _prediction_frame(
+            manifests["test"],
+            test_probabilities,
+            spec,
+            "test",
+            run_id,
+            checkpoint_sha256,
+            split_id,
+        ),
+    }
+    observed_predictions = {
+        "development_observed_predictions.csv": _observed_prediction_frame(
+            manifests["development_observed"],
+            development_probabilities,
+            spec,
+            "development",
+            run_id,
+            checkpoint_sha256,
+            split_id,
+        ),
+        "test_observed_predictions.csv": _observed_prediction_frame(
+            manifests["test_observed"],
+            full_test_probabilities,
+            spec,
+            "test",
+            run_id,
+            checkpoint_sha256,
+            split_id,
+        ),
+    }
+    for filename, frame in {**standard_predictions, **observed_predictions}.items():
+        frame.to_csv(prediction_root / filename, index=False)
+
+    metrics_root = output / "metrics"
+    metrics_root.mkdir()
+    weak_metrics = {
+        "evaluation_design": "private_observed_label_task_validation",
+        "selection_split": "development_internal_validation",
+        "frozen_evaluation_split": "test",
+        "selected_c": selected_c,
+        "test_used_for_selection": False,
+        "single_observed_label_comparison_is_weak": True,
+        "validation": classification_metrics(
+            val_y,
+            validation_probabilities,
+        ),
+        "test": classification_metrics(test_y, test_probabilities),
+    }
+    probability_columns = [
+        f"prob_{index}" for index in range(int(task_config["num_classes"]))
+    ]
+    observed_audits = {}
+    for split_name, frame in observed_predictions.items():
+        audit = run_observed_positive_audit(
+            frame,
+            probability_columns=probability_columns,
+            high_confidence_threshold=float(
+                task_config["high_confidence_threshold"]
+            ),
+        )
+        observed_audits[split_name.removesuffix("_observed_predictions.csv")] = (
+            audit.summary
+        )
+    (metrics_root / "metrics.json").write_text(
+        json.dumps(
+            {
+                **weak_metrics,
+                "observed_positive_audit": observed_audits,
+                "unobserved_classes_treated_as_negative": False,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    cost_root = output / "costs"
+    cost_root.mkdir()
+    (cost_root / "forward_cost.json").write_text(
+        json.dumps(
+            _cost(forward, development_dataset, device),
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    probe_path = output / "probe.joblib"
+    joblib.dump(
+        {
+            "probe": probe,
+            "class_order": list(task_config["class_order"]),
+            "selected_c": selected_c,
+            "split_id": split_id,
+            "label_semantics": "weak_single_observed_label",
+        },
+        probe_path,
+    )
+    config = {
+        "task_id": task_config["task_id"],
+        "dataset_id": task_config["dataset_id"],
+        "model": spec["model_id"],
+        "adapter_type": spec["adapter_type"],
+        "checkpoint": str(spec["checkpoint"]),
+        "checkpoint_sha256": checkpoint_sha256,
+        "preprocessing_id": spec["preprocessing_id"],
+        "manifest_sha256": split_id,
+        "task_semantics": "observed_positive_multiclass",
+        "selection": {
+            "split": "development_internal_validation",
+            "c_candidates": c_candidates,
+            "selected_c": selected_c,
+        },
+        "unobserved_classes_treated_as_negative": False,
+        "frozen_test_used_for_selection": False,
+        "patient_level_isolation": "unverified",
+        "route_eligible": False,
+    }
+    (output / "config_resolved.json").write_text(
+        json.dumps(config, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (output / "run_summary.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "task_adapted": True,
+                "task_inference_ready": False,
+                "offline_evaluation_eligible": True,
+                "validation_selection_eligible": True,
+                "route_eligible": False,
+                "feature_dim": int(development_x.shape[1]),
+                "metrics": weak_metrics,
+                "observed_positive_audit": observed_audits,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    artifact_rows = []
+    for path in sorted(item for item in output.rglob("*") if item.is_file()):
+        if path.name == "artifact_manifest.csv":
+            continue
+        artifact_rows.append(
+            {
+                "relative_path": path.relative_to(output).as_posix(),
+                "sha256": eyeclip_sha256(path),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    pd.DataFrame(artifact_rows).to_csv(
+        output / "artifact_manifest.csv",
+        index=False,
+    )
+    return output
 
 
 def run(
@@ -515,13 +1057,26 @@ def run(
     smoke_x, _, _ = _features(forward, smoke_dataset, 16, device)
     repeat_x, _, _ = _features(forward, smoke_dataset, 16, device)
     if smoke_x.ndim != 2 or not np.allclose(smoke_x, repeat_x, atol=1e-6, rtol=1e-5):
-        raise RuntimeError("16 张真实 APTOS 图像重复前向不一致")
+        raise RuntimeError("16 张真实任务图像重复前向不一致")
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output = Path(task_config["output_root"]) / model_name / run_id
     output.mkdir(parents=True, exist_ok=False)
     (output / "smoke.json").write_text(json.dumps({"status": "passed", "samples": 16, "feature_dim": int(smoke_x.shape[1]), "checkpoint_sha256": checkpoint_sha256}, indent=2), encoding="utf-8")
     if smoke_only:
         return output
+    if task_config.get("task_semantics") == "observed_positive_multiclass":
+        return _run_observed_positive_task(
+            output=output,
+            task_config=task_config,
+            spec=spec,
+            manifests=manifests,
+            split_id=split_id,
+            checkpoint_sha256=checkpoint_sha256,
+            run_id=run_id,
+            transform=transform,
+            forward=forward,
+            device=device,
+        )
     datasets = {
         split: ManifestDataset(frame, transform, data_root)
         for split, frame in manifests.items()
@@ -631,7 +1186,7 @@ def main() -> int:
         if args.task_config is None:
             parser.error("--prepare-task-only 需要 --task-config")
         task_config = _load_task_config(args.task_config)
-        _, digest = prepare_task_manifests(task_config)
+        _, digest = _manifests(task_config)
         print(digest, flush=True)
         return 0
     if args.model is None:

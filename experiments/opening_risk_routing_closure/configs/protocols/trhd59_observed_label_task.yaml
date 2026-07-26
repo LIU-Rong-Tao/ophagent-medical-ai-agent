@@ -1,0 +1,106 @@
+protocol_id: trhd59_observed_label_v1
+task_id: trhd59_observed_multilabel
+dataset_id: TRHD59_private_CFP
+task_semantics: observed_positive_multiclass
+num_classes: 59
+class_order:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 26
+  - 27
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 35
+  - 36
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+  - 47
+  - 48
+  - 49
+  - 50
+  - 51
+  - 52
+  - 53
+  - 54
+  - 55
+  - 56
+  - 57
+  - 58
+canonical_protocol_root: /training_data/lizekun/data/trhd59_canonical_protocol
+data_root: /data/datasets/tongrenHandan/trhd3_mergeL_Cls59_Train
+output_root: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/model_adaptation
+manifest_output_dir: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/manifests
+job_root: experiments/model_hub/runtime/trhd59_observed_label_jobs
+compatibility_gate_output: experiments/opening_risk_routing_closure/outputs/trhd59_observed_label/cfp_compatibility_gate.csv
+readiness_registry: experiments/opening_risk_routing_closure/outputs/model_asset_task_triage.csv
+expected_samples: 10049
+expected_split_counts:
+  development_observed: 8542
+  test_observed: 1507
+  train: 6701
+  val: 1674
+  test: 1478
+internal_validation_fold: 0
+random_seed: 2026
+feature_batch_size: 32
+probe_max_iter: 2000
+high_confidence_threshold: 0.8
+patient_level_isolation: unverified
+unobserved_classes_treated_as_negative: false
+single_observed_label_comparison_is_weak: true
+test_used_for_selection: false
+models:
+  - eyeclip_cfp
+  - flair
+  - keepfit_cfp
+  - keepfit_half_cfp
+  - preti
+  - ret_clip
+  - retfound_green
+  - retfound_cfp
+  - retizero
+canonical_asset_sha256:
+  samples: e61b82f5bd0cc6c87662c34d0d0c7c7e01a1bedace821604baac719f2e8f5c1e
+  source_mapping: 48cab0fa58c97d6ebdd07fb23422ad000611f1720dda36e121e962930a86194a
+  split: d085e0d315f9b6474264a02358e9c8624f595b9cd2b6d6e46c8c3d5ab8e59570
+  runtime: 834f16df802da88869e9af9812ee02ee8af60b44c01b53599d9d6245a6a8fdb4
+  runtime_summary: 36f5e8dcff741bd54eb1f152a8f4a0573edcbfb8cdb9a54d5ecdfd6f8dd1672a
+  class_mapping: ca27f6f7f1d181e17e8f42b32df12b9da3888405359f944f9f0b1815490a6abe
+  matrix: e692a468916eb872401d2e34ede310462cb373c1f3aa300666ca92197f9835b2
