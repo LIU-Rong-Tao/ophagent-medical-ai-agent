@@ -1,0 +1,20 @@
+{
+  "dataset_id": "rim_one_dl_by_hospital",
+  "status": "admitted_with_provenance_limit",
+  "official_source": "https://github.com/miag-ull/rim-one-dl",
+  "official_commit": "5f56b8c9957656282c2d00d40fc420a850bd1fe4",
+  "mirror_source": "https://www.kaggle.com/datasets/orvile/rim-one-retinal-dataset-for-assessing-glaucoma",
+  "partition": "partitioned_by_hospital",
+  "counts": {
+    "official_train": 311,
+    "internal_train": 249,
+    "internal_validation": 62,
+    "frozen_test": 174
+  },
+  "split_manifest_sha256": "daca013d4477f40e5f28ca8b6e9b3fd29f4b7bc620c0ba7a9ef2900719a4d114",
+  "exact_cross_split_duplicates": 0,
+  "patient_id_status": "not_explicit_in_mirror",
+  "license_boundary": "research_and_education_only; do not redistribute",
+  "test_status": "untouched_before_route_freeze",
+  "refuge_status": "rejected_missing_test_labels"
+}

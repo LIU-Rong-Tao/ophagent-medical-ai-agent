@@ -15,6 +15,7 @@ import numpy as np
 
 ADAPTER_TYPES = {
     "timm_classifier",
+    "retfound_dinov2_classifier",
     "flair_frozen_encoder_linear_head",
     "frozen_encoder_sklearn_probe",
     "retfound_classifier",
@@ -34,6 +35,8 @@ class ReplayAdapterSpec:
     checkpoint_key: str | None = None
     global_pool: str | None = None
     allow_argparse_namespace: bool = False
+    source_num_classes: int = 5
+    output_probability_groups: tuple[tuple[int, ...], ...] | None = None
 
     def __post_init__(self) -> None:
         if self.adapter_type not in ADAPTER_TYPES:
@@ -48,7 +51,10 @@ def load_timm_classifier(spec: ReplayAdapterSpec, *, device: str) -> Any:
     import torch
 
     checkpoint = Path(spec.checkpoint_path)
-    kwargs: dict[str, Any] = {"pretrained": False, "num_classes": 5}
+    kwargs: dict[str, Any] = {
+        "pretrained": False,
+        "num_classes": int(spec.source_num_classes),
+    }
     if spec.global_pool:
         kwargs["global_pool"] = spec.global_pool
     model = timm.create_model(spec.architecture, **kwargs)
@@ -75,6 +81,60 @@ def load_timm_classifier(spec: ReplayAdapterSpec, *, device: str) -> Any:
     result = model.load_state_dict(state, strict=True)
     if result.missing_keys or result.unexpected_keys:
         raise RuntimeError("strict timm loading returned key differences")
+    for parameter in model.parameters():
+        parameter.requires_grad_(False)
+    return model.eval().to(device)
+
+
+def load_retfound_dinov2_classifier(spec: ReplayAdapterSpec, *, device: str) -> Any:
+    """Load the registered RETFound-DINOv2 task checkpoint strictly."""
+    import copy
+    import sys
+
+    import timm
+    import torch
+
+    if not spec.source_root:
+        raise ValueError("RETFound-DINOv2 adapter requires source_root")
+    source_root = Path(spec.source_root)
+    sys.path.insert(0, str(source_root))
+    import models_vit
+
+    original_create_model = timm.create_model
+
+    def create_model_without_download(*args: Any, **kwargs: Any) -> Any:
+        kwargs["pretrained"] = False
+        return original_create_model(*args, **kwargs)
+
+    timm.create_model = create_model_without_download
+    if hasattr(models_vit, "timm"):
+        models_vit.timm.create_model = create_model_without_download
+    try:
+        checkpoint = torch.load(
+            spec.checkpoint_path,
+            map_location="cpu",
+            weights_only=False,
+        )
+        if not isinstance(checkpoint, dict) or "model" not in checkpoint or "args" not in checkpoint:
+            raise TypeError("RETFound-DINOv2 checkpoint must contain model and args")
+        checkpoint_args = copy.deepcopy(checkpoint["args"])
+        constructor = getattr(models_vit, str(checkpoint_args.model))
+        kwargs = {
+            "num_classes": int(spec.source_num_classes),
+            "drop_path_rate": float(checkpoint_args.drop_path),
+            "global_pool": spec.global_pool or "token",
+        }
+        try:
+            model = constructor(args=checkpoint_args, **kwargs)
+        except TypeError:
+            model = constructor(checkpoint_args, **kwargs)
+        result = model.load_state_dict(checkpoint["model"], strict=True)
+        if result.missing_keys or result.unexpected_keys:
+            raise RuntimeError("strict RETFound-DINOv2 loading returned key differences")
+    finally:
+        timm.create_model = original_create_model
+        if hasattr(models_vit, "timm"):
+            models_vit.timm.create_model = original_create_model
     for parameter in model.parameters():
         parameter.requires_grad_(False)
     return model.eval().to(device)
@@ -128,9 +188,16 @@ def load_green_probe_adapter(spec: ReplayAdapterSpec, *, device: str) -> tuple[A
 
 
 class TimmAptosTaskAdapter:
-    """Frozen timm classifier with its registered APTOS evaluation transform."""
+    """Frozen classifier with its registered evaluation transform."""
 
-    def __init__(self, model: Any, *, preprocessing_id: str, device: str):
+    def __init__(
+        self,
+        model: Any,
+        *,
+        preprocessing_id: str,
+        device: str,
+        num_classes: int = 5,
+    ):
         import torch
         from torchvision import transforms
 
@@ -142,13 +209,26 @@ class TimmAptosTaskAdapter:
                 ),
                 transforms.CenterCrop(224),
             ]
-        elif preprocessing_id == "timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32":
+        elif preprocessing_id in {
+            "timm_imagefolder_v1_eval_resize224_bilinear_imagenet_rgb_fp32",
+            "timm_imagefolder_v1_resize224_imagenet_rgb_fp32",
+        }:
             resize = [transforms.Resize((224, 224))]
+        elif preprocessing_id == (
+            "retfound_dinov2_bicubic_resize256_centercrop224_imagenet_rgb_fp32"
+        ):
+            resize = [
+                transforms.Resize(
+                    256,
+                    interpolation=transforms.InterpolationMode.BICUBIC,
+                ),
+                transforms.CenterCrop(224),
+            ]
         else:
-            raise ValueError(f"unsupported timm APTOS preprocessing: {preprocessing_id}")
+            raise ValueError(f"unsupported task preprocessing: {preprocessing_id}")
         self.model = model
         self.device = device
-        self.labels = tuple(range(5))
+        self.labels = tuple(range(int(num_classes)))
         self.preprocess = transforms.Compose(
             [
                 *resize,
@@ -170,6 +250,33 @@ class TimmAptosTaskAdapter:
             probabilities = self._torch.softmax(logits.float(), dim=1).cpu().numpy()
         _validate_probabilities(probabilities, len(self.labels))
         return probabilities
+
+
+class GroupedProbabilityAdapter:
+    """Collapse a registered source label space without retraining or calibration."""
+
+    def __init__(
+        self,
+        adapter: Any,
+        groups: Iterable[Iterable[int]],
+    ):
+        self.adapter = adapter
+        self.groups = tuple(tuple(int(index) for index in group) for group in groups)
+        source_classes = len(adapter.labels)
+        flattened = [index for group in self.groups for index in group]
+        if sorted(flattened) != list(range(source_classes)):
+            raise ValueError(
+                "output_probability_groups must partition every source class exactly once"
+            )
+        self.labels = tuple(range(len(self.groups)))
+
+    def predict_proba(self, images: Iterable[object]) -> np.ndarray:
+        source = np.asarray(self.adapter.predict_proba(images), dtype=float)
+        grouped = np.column_stack(
+            [source[:, list(group)].sum(axis=1) for group in self.groups]
+        )
+        _validate_probabilities(grouped, len(self.labels))
+        return grouped
 
 
 class GreenAptosTaskAdapter:
@@ -222,22 +329,34 @@ def load_registered_aptos_adapter(
 ) -> Any:
     """Resolve an existing APTOS task adapter without training or recalibration."""
     if spec.adapter_type in {"timm_classifier", "retfound_classifier"}:
-        return TimmAptosTaskAdapter(
+        adapter = TimmAptosTaskAdapter(
             load_timm_classifier(spec, device=device),
             preprocessing_id=spec.preprocessing_id,
             device=device,
+            num_classes=spec.source_num_classes,
         )
-    if spec.adapter_type == "flair_frozen_encoder_linear_head":
-        return load_flair_adapter(spec, device=device)
-    if spec.adapter_type == "preti_classifier":
+    elif spec.adapter_type == "retfound_dinov2_classifier":
+        adapter = TimmAptosTaskAdapter(
+            load_retfound_dinov2_classifier(spec, device=device),
+            preprocessing_id=spec.preprocessing_id,
+            device=device,
+            num_classes=spec.source_num_classes,
+        )
+    elif spec.adapter_type == "flair_frozen_encoder_linear_head":
+        adapter = load_flair_adapter(spec, device=device)
+    elif spec.adapter_type == "preti_classifier":
         if not spec.source_root:
             raise ValueError("PRETI adapter requires source_root")
-        return load_preti_adapter(
+        adapter = load_preti_adapter(
             spec,
             device=device,
             source_root=spec.source_root,
         )
-    if spec.adapter_type == "frozen_encoder_sklearn_probe":
+    elif spec.adapter_type == "frozen_encoder_sklearn_probe":
         encoder, probe = load_green_probe_adapter(spec, device=device)
-        return GreenAptosTaskAdapter(encoder, probe, device=device)
-    raise ValueError(f"unsupported registered APTOS adapter: {spec.adapter_type}")
+        adapter = GreenAptosTaskAdapter(encoder, probe, device=device)
+    else:
+        raise ValueError(f"unsupported registered task adapter: {spec.adapter_type}")
+    if spec.output_probability_groups:
+        return GroupedProbabilityAdapter(adapter, spec.output_probability_groups)
+    return adapter

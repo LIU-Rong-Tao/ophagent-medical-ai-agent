@@ -1,0 +1,35 @@
+{
+  "job_id": "rim-one-locked-test-glaucoma_retfound_dinov2",
+  "task_id": "glaucoma_binary",
+  "dataset_id": "rim_one_dl_by_hospital",
+  "artifact_id": "glaucoma_retfound_dinov2",
+  "loader_id": "registered_task_adapter_v1",
+  "checkpoint_sha256": "159e5f80f8d3fba027b0afbc4d923a25879099c6dc11c98ecf53475650f5cb0d",
+  "preprocessing_id": "retfound_dinov2_bicubic_resize256_centercrop224_imagenet_rgb_fp32",
+  "label_structure": "nominal",
+  "num_classes": 2,
+  "batch_size": 16,
+  "device": "cuda:4",
+  "precision": "fp32",
+  "data_root": "/training_data/lizekun/data/model_hub/RIM_ONE_DL_glaucoma_binary",
+  "input_manifest_path": "/data/team/lizekun/repos/ophagent-medical-ai-agent/experiments/model_hub/tasks/glaucoma_binary/configs/rim_one_dl_test_manifest.csv",
+  "output_dir": "/data/team/lizekun/repos/ophagent-medical-ai-agent/experiments/model_hub/tasks/glaucoma_binary/outputs/test_inference/glaucoma_retfound_dinov2",
+  "evaluation_design": "locked_retrospective_test",
+  "adapter_spec": {
+    "adapter_type": "retfound_dinov2_classifier",
+    "architecture": "vit_large_patch14_dinov2.lvd142m",
+    "preprocessing_id": "retfound_dinov2_bicubic_resize256_centercrop224_imagenet_rgb_fp32",
+    "checkpoint_path": "/training_data/lizekun/ophagent_assets/RETFound/output_dir/retfound_dinov2_Glaucoma_fundus_finetune/checkpoint-best.pth",
+    "source_num_classes": 3,
+    "output_probability_groups": [
+      [
+        0
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "source_root": "/training_data/lizekun/ophagent_assets/RETFound/runtime_source"
+  }
+}

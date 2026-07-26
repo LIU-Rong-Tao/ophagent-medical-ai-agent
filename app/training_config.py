@@ -53,7 +53,7 @@ SECTION_FIELDS = {
     "scheduler": {"name", "warmup_epochs", "minimum_learning_rate", "step_size", "gamma"},
     "loss": {"name", "label_smoothing", "class_weights"},
     "augmentation": {"random_resized_crop", "horizontal_flip_probability", "rotation_degrees", "color_jitter"},
-    "evaluation": {"save_best_by", "metrics"},
+    "evaluation": {"save_best_by", "metrics", "defer_test_evaluation"},
     "runtime": {"device", "num_workers"},
     "output": {"run_dir", "output_root"},
     "foundation": {
@@ -540,6 +540,8 @@ def compile_effective_config(
     save_best_by = str(evaluation.get("save_best_by", ""))
     if save_best_by not in metrics and save_best_by != "val_loss":
         raise TrainingConfigError(f"evaluation.save_best_by={save_best_by} 不在任务注册指标 {metrics} 中")
+    if not isinstance(evaluation.get("defer_test_evaluation", False), bool):
+        raise TrainingConfigError("evaluation.defer_test_evaluation 必须是布尔值")
     runtime = submitted["runtime"]
     device = str(runtime.get("device", ""))
     if device not in {"auto", "cpu"} and not device.startswith("cuda"):
@@ -616,4 +618,5 @@ def flatten_effective_config(config: dict[str, Any]) -> dict[str, Any]:
         "rotation_degrees": float(augmentation["rotation_degrees"]),
         "color_jitter": float(augmentation["color_jitter"]),
         "save_best_by": evaluation["save_best_by"],
+        "defer_test_evaluation": bool(evaluation.get("defer_test_evaluation", False)),
     }

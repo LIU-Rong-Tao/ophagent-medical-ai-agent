@@ -8,10 +8,13 @@ import pandas as pd
 from PIL import Image
 import pytest
 
+from app.aptos_replay_adapters import GroupedProbabilityAdapter
 from scripts.routing import run_model_hub_inference_job
 
 
 class _FixedAdapter:
+    labels = (0, 1, 2, 3, 4)
+
     def predict_proba(self, images):
         probabilities = np.array(
             [
@@ -21,6 +24,16 @@ class _FixedAdapter:
             dtype=float,
         )
         return probabilities[: len(images)]
+
+
+def test_grouped_probability_adapter_collapses_source_classes_without_retraining():
+    adapter = GroupedProbabilityAdapter(_FixedAdapter(), ((0,), (1, 2, 3, 4)))
+
+    probabilities = adapter.predict_proba([object(), object()])
+
+    assert adapter.labels == (0, 1)
+    assert np.allclose(probabilities, [[0.8, 0.2], [0.1, 0.9]])
+    assert np.allclose(probabilities.sum(axis=1), 1.0)
 
 
 def _request(tmp_path, manifest_path, checkpoint_path):

@@ -71,6 +71,7 @@ class TrainingConfig:
     rotation_degrees: float = 10.0
     color_jitter: float = 0.0
     save_best_by: str = "accuracy"
+    defer_test_evaluation: bool = False
 
 
 REQUIRED_FIELDS = {
@@ -355,6 +356,7 @@ def publish_training_run(
     class_mapping_path: Path,
     cost_path: Path,
     metrics: dict[str, Any],
+    validation_predictions_path: Path | None = None,
 ) -> tuple[Path, Path]:
     output_dir = Path(config.output_dir)
     artifact_id = config.artifact_id or config.architecture
@@ -381,6 +383,11 @@ def publish_training_run(
             },
             "outputs": {
                 "predictions": str(predictions_path.resolve()),
+                "validation_predictions": (
+                    str(validation_predictions_path.resolve())
+                    if validation_predictions_path is not None
+                    else None
+                ),
                 "metrics": str(metrics_path.resolve()),
                 "forward_cost": str(cost_path.resolve()),
                 "training_config": str(config_path.resolve()),
@@ -396,6 +403,8 @@ def publish_training_run(
         ("forward_cost", cost_path),
         ("run_manifest", run_manifest_path),
     ]
+    if validation_predictions_path is not None and validation_predictions_path.resolve() != predictions_path.resolve():
+        published.append(("validation_predictions", validation_predictions_path))
     for name in ("base_recipe.yaml", "submitted_config.yaml", "effective_config.yaml", "validation_report.json"):
         candidate = output_dir / "configs" / name
         if candidate.is_file() and candidate.resolve() != config_path.resolve():
@@ -448,7 +457,14 @@ def publish_training_run(
                 "cost_status": "measured",
                 "adapter_status": "completed",
                 "onboarding_status": "completed",
-                "compatibility_status": "ready_for_pairing",
+                "compatibility_status": (
+                    "validation_selection_ready"
+                    if config.defer_test_evaluation
+                    else "ready_for_pairing"
+                ),
+                "validation_selection_eligible": True,
+                "task_inference_ready": True,
+                "route_eligible": False,
                 "registration_source": str((output_dir / "registration_record.csv").resolve()),
             }
         ]
@@ -473,7 +489,7 @@ def _benchmark_forward_only(
     model.eval()
     first_batch = next(iter(loader), None)
     if first_batch is None:
-        raise ValueError("测试集为空，无法执行 forward-only 成本测量")
+        raise ValueError("评估 split 为空，无法执行 forward-only 成本测量")
     warmup_images = first_batch[0].to(device)
     with torch.inference_mode():
         for _ in range(3):
@@ -574,8 +590,12 @@ def run_training(config_path: Path | str) -> Path:
     checkpoints = output_dir / "checkpoints"
     configs = output_dir / "configs"
     logs = output_dir / "logs"
-    evaluation = output_dir / "evaluation" / "test"
-    for directory in (checkpoints, configs, logs, evaluation):
+    validation_evaluation = output_dir / "evaluation" / "validation"
+    test_evaluation = output_dir / "evaluation" / "test"
+    directories = [checkpoints, configs, logs, validation_evaluation]
+    if not config.defer_test_evaluation:
+        directories.append(test_evaluation)
+    for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
 
     _set_seed(config.seed)
@@ -691,19 +711,58 @@ def run_training(config_path: Path | str) -> Path:
 
     state = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(state, strict=True)
-    test_loss, truth, probabilities = _evaluate(model, loaders["test"], criterion, device)
-    predictions = _prediction_frame(datasets_by_split["test"], truth, probabilities)
-    predictions.to_csv(evaluation / "test_predictions.csv", index=False)
-    pred = predictions["pred_label"].to_numpy()
-    metrics = {
-        "accuracy": float(accuracy_score(truth, pred)),
-        "macro_f1": float(f1_score(truth, pred, average="macro", zero_division=0)),
-        "qwk": float(cohen_kappa_score(truth, pred, weights="quadratic")) if config.label_structure == "ordinal" else None,
-        "test_loss": test_loss,
-        "n_images": len(predictions),
+    validation_loss, validation_truth, validation_probabilities = _evaluate(
+        model,
+        loaders["val"],
+        criterion,
+        device,
+    )
+    validation_predictions = _prediction_frame(
+        datasets_by_split["val"],
+        validation_truth,
+        validation_probabilities,
+    )
+    validation_predictions_path = validation_evaluation / "validation_predictions.csv"
+    validation_predictions.to_csv(validation_predictions_path, index=False)
+    validation_pred = validation_predictions["pred_label"].to_numpy()
+    validation_metrics = {
+        "accuracy": float(accuracy_score(validation_truth, validation_pred)),
+        "macro_f1": float(f1_score(validation_truth, validation_pred, average="macro", zero_division=0)),
+        "qwk": (
+            float(cohen_kappa_score(validation_truth, validation_pred, weights="quadratic"))
+            if config.label_structure == "ordinal"
+            else None
+        ),
+        "validation_loss": validation_loss,
+        "n_images": len(validation_predictions),
     }
-    predictions_path = evaluation / "test_predictions.csv"
-    metrics_path = evaluation / "metrics.json"
+    (validation_evaluation / "metrics.json").write_text(
+        json.dumps(validation_metrics, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    predictions_path = validation_predictions_path
+    metrics = validation_metrics
+    metrics_path = validation_evaluation / "metrics.json"
+    test_metrics = None
+    if not config.defer_test_evaluation:
+        test_loss, truth, probabilities = _evaluate(model, loaders["test"], criterion, device)
+        predictions = _prediction_frame(datasets_by_split["test"], truth, probabilities)
+        predictions_path = test_evaluation / "test_predictions.csv"
+        predictions.to_csv(predictions_path, index=False)
+        pred = predictions["pred_label"].to_numpy()
+        test_metrics = {
+            "accuracy": float(accuracy_score(truth, pred)),
+            "macro_f1": float(f1_score(truth, pred, average="macro", zero_division=0)),
+            "qwk": (
+                float(cohen_kappa_score(truth, pred, weights="quadratic"))
+                if config.label_structure == "ordinal"
+                else None
+            ),
+            "test_loss": test_loss,
+            "n_images": len(predictions),
+        }
+        metrics = test_metrics
+        metrics_path = test_evaluation / "metrics.json"
     submitted_config_path = Path(config_path).resolve()
     if submitted_config_path.name == "effective_config.yaml" and submitted_config_path.parent == configs.resolve():
         written_config_path = submitted_config_path
@@ -729,17 +788,19 @@ def run_training(config_path: Path | str) -> Path:
         "best_validation_score": best_score,
         "total_train_time_sec": time.time() - started,
         "split_sizes": inspection.split_sizes,
-        "test_metrics": metrics,
+        "validation_metrics": validation_metrics,
+        "test_metrics": test_metrics,
+        "test_evaluation_deferred": config.defer_test_evaluation,
         "checkpoint_path": str(checkpoint_path),
     }
     (logs / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     cost_summary = _benchmark_forward_only(
         model,
-        loaders["test"],
+        loaders["val"] if config.defer_test_evaluation else loaders["test"],
         device,
         config=config,
         checkpoint_path=checkpoint_path,
-        n_images=len(datasets_by_split["test"]),
+        n_images=len(datasets_by_split["val"] if config.defer_test_evaluation else datasets_by_split["test"]),
     )
     cost_path = output_dir / "forward_cost_summary.csv"
     pd.DataFrame([cost_summary]).to_csv(cost_path, index=False, encoding="utf-8-sig")
@@ -752,6 +813,7 @@ def run_training(config_path: Path | str) -> Path:
         class_mapping_path=class_mapping_path,
         cost_path=cost_path,
         metrics=metrics,
+        validation_predictions_path=validation_predictions_path,
     )
     return output_dir
 

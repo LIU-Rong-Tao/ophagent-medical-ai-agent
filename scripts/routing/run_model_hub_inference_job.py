@@ -163,6 +163,9 @@ def _run_registered_aptos_adapter(
         raise ValueError("任务 Adapter 概率和不为 1")
     ordered = np.sort(probabilities, axis=1)
     safe = np.clip(probabilities, np.finfo(float).tiny, 1.0)
+    evaluation_design = str(
+        request.get("evaluation_design", "frozen_external_transfer")
+    )
     predictions = pd.DataFrame(
         {
             "case_id": manifest["case_id"],
@@ -184,7 +187,7 @@ def _run_registered_aptos_adapter(
             "preprocessing_id": request["preprocessing_id"],
             "inference_run_id": request["job_id"],
             "inference_dtype": request.get("precision", "fp32"),
-            "source": "frozen_external_transfer",
+            "source": evaluation_design,
         }
     )
     for index in range(num_classes):
@@ -203,7 +206,7 @@ def _run_registered_aptos_adapter(
                 "dataset_id": request["dataset_id"],
                 "artifact_id": request["artifact_id"],
                 "split": str(manifest["split"].iloc[0]),
-                "evaluation_design": "frozen_external_transfer",
+                "evaluation_design": evaluation_design,
                 "test_used_for_selection": False,
             }
         ]
@@ -252,7 +255,7 @@ def _run_registered_aptos_adapter(
             "input_manifest_sha256": _sha256_file(Path(request["input_manifest_path"])),
             "predictions": str(predictions_path),
             "predictions_sha256": _sha256_file(predictions_path),
-            "evaluation_design": "frozen_external_transfer",
+            "evaluation_design": evaluation_design,
             "model_selection_on_external_data": False,
             "recalibration_on_external_data": False,
             "route_eligible": False,
@@ -266,7 +269,10 @@ def run_request(request: dict[str, Any]) -> Path:
     output_dir = Path(request["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=False)
     manifest, manifest_path = _build_manifest(request, output_dir)
-    if request.get("loader_id") == "aptos_registered_adapter_v1":
+    if request.get("loader_id") in {
+        "aptos_registered_adapter_v1",
+        "registered_task_adapter_v1",
+    }:
         return _run_registered_aptos_adapter(
             request,
             manifest,

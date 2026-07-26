@@ -1,0 +1,42 @@
+protocol_id: rim_one_dl_glaucoma_binary_locked_test_v1
+mode: exploratory
+selection_split: test
+evaluation_split: test
+evaluation_design: locked_retrospective_test
+result_semantics: locked_retrospective_test
+confirmatory_test: false
+test_result_based_selection: false
+route_eligible: false
+output_dir: experiments/model_hub/tasks/glaucoma_binary/outputs/test_locked
+model_hub_output_dir: experiments/model_hub/tasks/glaucoma_binary/outputs/test_locked
+task_registry: experiments/v0_8_5_model_registry_scout_expert_protocol/configs/task_registry.csv
+prediction_asset_registry: experiments/model_hub/tasks/glaucoma_binary/configs/glaucoma_binary_prediction_assets.csv
+pairing_protocols: experiments/model_hub/tasks/glaucoma_binary/configs/glaucoma_binary_locked_test_pairings.csv
+case_exclusion_registry: experiments/model_hub/tasks/glaucoma_binary/configs/glaucoma_binary_case_exclusions.csv
+qwk_enabled_tasks: []
+label_proxy_undergrading_threshold: 1
+case_trace_budgets:
+- 0.1
+pairing_expansion:
+  enabled: false
+  task_id: glaucoma_binary
+  budgets:
+  - 0.05
+  - 0.1
+  - 0.2
+  - 0.3
+  single_scout_policies:
+  - low_confidence
+  - low_margin
+  - high_entropy
+  multi_scout_policies:
+  - mean_uncertainty
+  - disagreement_then_uncertainty
+source_versions:
+- rim_one_dl_by_hospital
+- cross_task_frozen_binary_transfer
+- native_head_only_validation
+notes:
+- Candidates, policies and budgets frozen from validation before Test inference.
+- Test is retrospective and provenance-limited, not pristine confirmatory.
+- route_eligible remains false.

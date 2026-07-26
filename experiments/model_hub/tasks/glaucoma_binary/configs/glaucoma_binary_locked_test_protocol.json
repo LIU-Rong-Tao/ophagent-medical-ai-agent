@@ -1,0 +1,97 @@
+{
+  "protocol_id": "rim_one_dl_glaucoma_binary_locked_test_v1",
+  "created_at": "2026-07-26",
+  "selection_split": "validation",
+  "test_split": "official_by_hospital_test",
+  "evaluation_design": "locked_retrospective_test",
+  "dataset_admission_status": "admitted_with_provenance_limit",
+  "validation_result_manifest_sha256": "24e5063ad8ffa725ad24ce102c6274fc6c4307da88613ac3794611d87c7ce8ab",
+  "test_manifest_sha256": "cf76fbd324d4e10dbcd2fb6430ddac7ed96dfe25bb5fc905f9fcbe7d9e1fc8e9",
+  "test_metrics_computed_before_freeze": false,
+  "test_content_used_for_selection": false,
+  "class_order": [
+    "normal",
+    "glaucoma"
+  ],
+  "primary_single": {
+    "scout": "glaucoma_swin_tiny__rim_one_dl_binary_head_only",
+    "expert": "glaucoma_convnext_tiny__rim_one_dl_binary_head_only",
+    "policy": "low_confidence",
+    "budget": 0.05
+  },
+  "primary_multi": {
+    "scouts": [
+      "glaucoma_convnext_tiny__rim_one_dl_binary_head_only",
+      "glaucoma_retfound_dinov2"
+    ],
+    "primary_scout": "glaucoma_convnext_tiny__rim_one_dl_binary_head_only",
+    "expert": "glaucoma_swin_tiny__rim_one_dl_binary_head_only",
+    "policy": "disagreement_then_uncertainty",
+    "budget": 0.2
+  },
+  "strong_baseline": "glaucoma_swin_tiny__rim_one_dl_binary_head_only",
+  "controls": [
+    "scout_only",
+    "random",
+    "full_expert",
+    "oracle_upper_bound"
+  ],
+  "oracle_used_for_selection": false,
+  "route_eligible": false,
+  "prediction_assets": [
+    {
+      "artifact_id": "glaucoma_convnext_tiny",
+      "validation_sha256": "865f6e75cb0ed5363fe8fd85d9d9236f2c679fc1a3454b9e5f27632b56bf209c",
+      "checkpoint_sha256": "9bdfae566ce55118ffd946fe01fc96a743e20d4799d5f7527f4bf5d423330ea3",
+      "qualification_status": "cross_task_frozen_binary_transfer"
+    },
+    {
+      "artifact_id": "glaucoma_swin_tiny",
+      "validation_sha256": "d98f09d15db9f8760518248d9c621ef0aca4174f99c56ac7a60c7839288ee035",
+      "checkpoint_sha256": "496d3ab393866725dbb89e052ad5ce0172d5465ddbc4445d77c56426fa07debc",
+      "qualification_status": "cross_task_frozen_binary_transfer"
+    },
+    {
+      "artifact_id": "glaucoma_vit_b",
+      "validation_sha256": "903ba0d89a1eda46d38ace5b5b3ad396131f9222e72fc720c2a4dd66873fb51a",
+      "checkpoint_sha256": "e5e7edf42cab29c18b57d5cc3dfc6516caabc140f963e11424bf51d7570bcecf",
+      "qualification_status": "cross_task_frozen_binary_transfer"
+    },
+    {
+      "artifact_id": "glaucoma_vit_l",
+      "validation_sha256": "d0a62bd4e62ae95aed4ecf444d16302e38c48b42d645bd3b3ce174e2ce205095",
+      "checkpoint_sha256": "a27a3cc332a3b05d2e8df731d4f402424c745d426795367082090868fb264c10",
+      "qualification_status": "cross_task_frozen_binary_transfer"
+    },
+    {
+      "artifact_id": "glaucoma_retfound_dinov2",
+      "validation_sha256": "505cee2f2fd28e6333748f78180216d9711688c7f1ae39f4d0b1f3782222e174",
+      "checkpoint_sha256": "159e5f80f8d3fba027b0afbc4d923a25879099c6dc11c98ecf53475650f5cb0d",
+      "qualification_status": "cross_task_frozen_binary_transfer"
+    },
+    {
+      "artifact_id": "glaucoma_convnext_tiny__rim_one_dl_binary_head_only",
+      "validation_sha256": "ad0074c9032af55998594eb643ca10db518e15caed34d841434eaf4f9839fda7",
+      "checkpoint_sha256": "0f77840b712de7852d75dad6828ed12a83e33ed4bc070bb3f09c7a27c4fc43e3",
+      "qualification_status": "native_head_only_validation_selected"
+    },
+    {
+      "artifact_id": "glaucoma_swin_tiny__rim_one_dl_binary_head_only",
+      "validation_sha256": "6cc1ca8f06e0173d1a34c68acd07b3e6c849976e400c6ab2dc89327aa356aa88",
+      "checkpoint_sha256": "c113eb66cbd0aa4d8fc91e3d4d53b4fd73bbbe0a1047d12ca5de206329ef0a83",
+      "qualification_status": "native_head_only_validation_selected"
+    },
+    {
+      "artifact_id": "glaucoma_vit_b__rim_one_dl_binary_head_only",
+      "validation_sha256": "96c4d9fc8d4a7214b75619e691bdf1d79e2d4f23aee446ca06e1398a84d3eccb",
+      "checkpoint_sha256": "7006fe2d3b0f69c0ddab739f4afddba69cf7288685ad5360c609cd4f31c5e1e2",
+      "qualification_status": "native_head_only_validation_selected"
+    },
+    {
+      "artifact_id": "glaucoma_vit_l__rim_one_dl_binary_head_only",
+      "validation_sha256": "f327ab55434d727746c9daedab054120dc701a26ee9304a5fc8fc042aef8d5ce",
+      "checkpoint_sha256": "8edb57f646052ce5683766046ff5d6e995d9285b11dc5a055ff6cfac843085fa",
+      "qualification_status": "native_head_only_validation_selected"
+    }
+  ]
+}

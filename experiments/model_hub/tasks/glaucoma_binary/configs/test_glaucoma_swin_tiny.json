@@ -1,0 +1,34 @@
+{
+  "job_id": "rim-one-locked-test-glaucoma_swin_tiny",
+  "task_id": "glaucoma_binary",
+  "dataset_id": "rim_one_dl_by_hospital",
+  "artifact_id": "glaucoma_swin_tiny",
+  "loader_id": "registered_task_adapter_v1",
+  "checkpoint_sha256": "496d3ab393866725dbb89e052ad5ce0172d5465ddbc4445d77c56426fa07debc",
+  "preprocessing_id": "timm_imagefolder_v1_resize224_imagenet_rgb_fp32",
+  "label_structure": "nominal",
+  "num_classes": 2,
+  "batch_size": 16,
+  "device": "cuda:1",
+  "precision": "fp32",
+  "data_root": "/training_data/lizekun/data/model_hub/RIM_ONE_DL_glaucoma_binary",
+  "input_manifest_path": "/data/team/lizekun/repos/ophagent-medical-ai-agent/experiments/model_hub/tasks/glaucoma_binary/configs/rim_one_dl_test_manifest.csv",
+  "output_dir": "/data/team/lizekun/repos/ophagent-medical-ai-agent/experiments/model_hub/tasks/glaucoma_binary/outputs/test_inference/glaucoma_swin_tiny",
+  "evaluation_design": "locked_retrospective_test",
+  "adapter_spec": {
+    "adapter_type": "timm_classifier",
+    "architecture": "swin_tiny_patch4_window7_224",
+    "preprocessing_id": "timm_imagefolder_v1_resize224_imagenet_rgb_fp32",
+    "checkpoint_path": "/training_data/lizekun/ophagent_assets/experiments/model_hub/runs/training/glaucoma_3class/swin_tiny__aptos_dr_5class__adapter__glaucoma_3class__adapter/20260706-164246/checkpoints/swin_tiny_patch4_window7_224_best.pth",
+    "source_num_classes": 3,
+    "output_probability_groups": [
+      [
+        0
+      ],
+      [
+        1,
+        2
+      ]
+    ]
+  }
+}
