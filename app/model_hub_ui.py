@@ -39,8 +39,8 @@ HUB_WORKSPACES = {
     "病例回放": {
         "icon": ":material/clinical_notes:",
         "group": "workspace",
-        "title": "病例回放与路由解释",
-        "subtitle": "回放模型调用轨迹与路由依据；研究审计标签默认与模型输出隔离。",
+        "title": "离线病例审阅工作台",
+        "subtitle": "使用本地模型资产和冻结概率开展病例审阅；历史路由回放保持只读。",
     },
     "任务运行记录": {
         "icon": ":material/history:",
@@ -296,6 +296,17 @@ def inject_model_hub_css() -> None:
         .hub-class-key>strong{{color:var(--hub-ink);margin-right:.2rem}}
         .hub-class-key span{{display:inline-flex;gap:.3rem;align-items:baseline}}
         .hub-class-key span b{{color:var(--hub-teal);font-variant-numeric:tabular-nums}}
+        .review-offline-banner{{display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#fff;border:1px solid var(--hub-line);border-left:4px solid var(--hub-teal);border-radius:0 5px 5px 0;padding:.75rem .85rem;margin:0 0 1rem}}
+        .review-offline-banner>div:first-child b{{display:block;color:var(--hub-ink);font-size:.92rem}}
+        .review-offline-banner>div:first-child span{{display:block;color:var(--hub-muted);font-size:.72rem;margin-top:.15rem}}
+        .review-result-card{{background:#fff;border:1px solid var(--hub-line);border-top:3px solid var(--hub-teal);border-radius:5px;padding:.72rem .78rem;min-height:112px}}
+        .review-result-card span{{display:block;color:var(--hub-muted);font-size:.7rem;font-weight:700;line-height:1.35}}
+        .review-result-card b{{display:block;color:var(--hub-ink);font-size:1.02rem;line-height:1.35;margin:.35rem 0}}
+        .review-result-card small{{display:block;color:#6b7788;font-size:.7rem;line-height:1.45;font-variant-numeric:tabular-nums}}
+        .review-route-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;margin:.65rem 0}}
+        .review-route-card{{background:#fff;border:1px solid var(--hub-line);border-radius:5px;padding:.68rem .72rem;min-height:88px}}
+        .review-route-card span{{display:block;color:var(--hub-muted);font-size:.7rem;font-weight:700}}
+        .review-route-card b{{display:block;color:var(--hub-ink);font-size:.92rem;line-height:1.35;margin-top:.35rem;overflow-wrap:anywhere}}
         [data-testid="stDataFrame"]{{border:1px solid var(--hub-line);border-radius:4px;overflow:hidden;background:#fff}}
         [data-testid="stTabs"] [data-baseweb="tab-list"]{{gap:1.15rem;border-bottom:1px solid var(--hub-line)}}
         [data-testid="stTabs"] [data-baseweb="tab"]{{padding:.65rem .05rem;border-radius:0;color:#607085}}
@@ -307,7 +318,8 @@ def inject_model_hub_css() -> None:
         div[data-testid="stAlert"]{{border-radius:4px}}
         @media(max-width:1100px){{.hub-audit-kpis{{grid-template-columns:repeat(3,minmax(0,1fr))}}.hub-audit-kpis.compact{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-overview-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow-step:nth-child(2){{border-right:0}}}}
         @media(max-width:900px){{.hub-page-title{{font-size:1.65rem!important}}.hub-page-copy{{font-size:.8rem}}}}
-        @media(max-width:760px){{.main .block-container{{padding:1.15rem .9rem 3rem}}.hub-page-head{{align-items:flex-start;flex-direction:column}}.hub-page-context{{white-space:normal}}.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip,.hub-overview-grid,.hub-audit-kpis,.hub-audit-kpis.compact{{grid-template-columns:1fr 1fr}}.hub-flow,.hub-process{{grid-template-columns:1fr}}.hub-flow-step,.hub-process-item{{border-right:0;border-bottom:1px solid var(--hub-line)}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}}}
+        @media(max-width:900px){{.review-route-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
+        @media(max-width:760px){{.main .block-container{{padding:1.15rem .9rem 3rem}}.hub-page-head{{align-items:flex-start;flex-direction:column}}.hub-page-context{{white-space:normal}}.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip,.hub-overview-grid,.hub-audit-kpis,.hub-audit-kpis.compact{{grid-template-columns:1fr 1fr}}.hub-flow,.hub-process{{grid-template-columns:1fr}}.hub-flow-step,.hub-process-item{{border-right:0;border-bottom:1px solid var(--hub-line)}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}.review-offline-banner{{align-items:flex-start;flex-direction:column}}}}
         </style>
         """,
         unsafe_allow_html=True,

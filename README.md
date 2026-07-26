@@ -11,13 +11,18 @@ OphAgent 是一个面向眼科医学图像模型的交互式模型中转台原�
 
 ---
 
-## 当前主线：v0.8.6 交互式眼科模型中转台
+## 当前主线：OphAgent V1 工具化模型中转台
 
-v0.8.6 将 OphAgent 从早期的“离线模型输出审计 Demo”，推进为一个可交互的眼科模型中转台原型。当前重点不再只是展示某个模型的预测结果，而是围绕“模型如何接入、如何适配当前任务、何时调用专家模型、成本和性能如何权衡、病例级路由过程如何解释”形成完整工作流。
+V1 在现有 Model Hub 内统一模型资产、任务资格、冻结概率审计、研究路由模拟和离线病例审阅。病例工作台只使用本地资产和公开 validation 演示病例，不访问公网，不读取冻结 Test，也不提供诊断或处置建议。
 
 统一入口：
 
     streamlit run app/model_hub_demo.py
+
+离线单机和院内局域网部署方式见
+[`docs/MODEL_HUB_V1_OFFLINE_DEPLOYMENT.md`](docs/MODEL_HUB_V1_OFFLINE_DEPLOYMENT.md)，
+实际页面验收见
+[`docs/v1_acceptance/SCREENSHOT_INDEX.md`](docs/v1_acceptance/SCREENSHOT_INDEX.md)。
 
 ---
 
@@ -120,10 +125,12 @@ Model Hub 会展示服务器已发现的模型，并根据当前任务标记其�
 
 | Path | Description |
 |---|---|
-| `app/model_hub_demo.py` | v0.8.6 交互式模型中转台入口 |
+| `app/model_hub_demo.py` | Model Hub 统一入口 |
 | `app/model_hub_engineering.py` | 模型工程区：模型发现、任务适配、训练任务入口 |
 | `app/model_hub_research.py` | 研究评测区：路由/专家组合、成本-性能评测 |
-| `app/model_hub_clinical.py` | 病例回放与研究审计隔离 |
+| `app/model_hub_clinical.py` | 离线病例审阅与历史路由回放入口 |
+| `app/model_hub_review.py` | 离线病例队列、人工审阅、报告与轨迹页面 |
+| `app/model_hub_tools.py` | 六项工具契约、资格门禁、错误码与统一 trace |
 | `app/training_config.py` | YAML recipe、配置校验、official profile 管理 |
 | `app/training_jobs.py` | 后台训练任务状态、运行包和注册记录 |
 | `scripts/routing/run_interactive_model_hub.py` | 生成 Model Hub 快照、组合评测和病例 trace |

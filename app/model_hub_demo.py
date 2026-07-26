@@ -42,11 +42,17 @@ def _set_workspace(workspace: str) -> None:
     st.rerun()
 
 
+def _model_flag(models, column: str, *, default: bool = False):
+    if column not in models.columns:
+        return models.index.to_series().map(lambda _: default).astype(bool)
+    return models[column].fillna(default).astype(bool)
+
+
 def _render_overview(data: dict[str, object]) -> None:
     models = data["models"]
     pairings = data["pairings"]
     ready = models["compatibility_status"].astype(str).eq("ready_for_pairing")
-    online = models["task_inference_ready"].fillna(False).astype(bool)
+    online = _model_flag(models, "task_inference_ready")
     completed_pairings = pairings["status"].astype(str).eq("completed")
     values = [
         ("可回放任务模型", int(ready.sum()), "具有当前任务冻结预测或在线输出"),
@@ -68,7 +74,7 @@ def _render_overview(data: dict[str, object]) -> None:
         '<div class="hub-flow-step"><i>1</i><b>模型资产</b><span>来源、Checkpoint、访问限制与本地完整性</span></div>'
         '<div class="hub-flow-step"><i>2</i><b>任务接入</b><span>Adapter、基础加载、任务适配与标准概率输出</span></div>'
         '<div class="hub-flow-step"><i>3</i><b>研究评测</b><span>统一任务指标、成本、错误风险与数据隔离</span></div>'
-        '<div class="hub-flow-step"><i>4</i><b>病例回放</b><span>模型调用轨迹、路由依据与研究审计标签隔离</span></div>'
+        '<div class="hub-flow-step"><i>4</i><b>病例回放与路由解释</b><span>模型调用轨迹、路由依据与研究审计标签隔离</span></div>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -113,7 +119,7 @@ def main() -> None:
     inject_app_css()
     inject_model_hub_css()
     workspace = sidebar_navigation()
-    context = "病例回放与路由解释" if workspace == "病例回放" else "模型工程 · v0.8.10"
+    context = "离线审阅 · V1" if workspace == "病例回放" else "模型工程 · v0.8.10"
     page_header(workspace, context=context)
     output_dir = model_hub_output_dir()
     data = load_model_hub_outputs(output_dir, model_hub_root=output_dir.parent)

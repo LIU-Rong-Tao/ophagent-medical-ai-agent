@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from app.model_hub_ui import grade_label, human_model
+from app.model_hub_review import render_offline_case_review_workstation
 
 
 def paginate_cases(frame: pd.DataFrame, page: int, page_size: int) -> tuple[pd.DataFrame, int]:
@@ -174,7 +175,7 @@ def _case_dialog(
             st.info("当前病例未命中已登记的冻结风险代理事件。")
 
 
-def render_clinical_workspace(data: dict[str, object]) -> None:
+def _render_historical_route_replay(data: dict[str, object]) -> None:
     st.markdown("#### 回放视图")
     display_mode = st.segmented_control(
         "展示层",
@@ -303,3 +304,13 @@ def render_clinical_workspace(data: dict[str, object]) -> None:
             label,
             research_mode=research_mode,
         )
+
+
+def render_clinical_workspace(data: dict[str, object]) -> None:
+    workstation_tab, replay_tab = st.tabs(
+        ["离线病例审阅工作台", "历史路由回放"]
+    )
+    with workstation_tab:
+        render_offline_case_review_workstation()
+    with replay_tab:
+        _render_historical_route_replay(data)
