@@ -1,0 +1,34 @@
+protocol_id: deepdrid_v1.1_native_probe_pool_v1
+evaluation_design: deepdrid_native_probe_on_registered_cfp_encoder
+task_id: deepdrid_dr_5class_native
+dataset_id: DeepDRiD_v1.1
+data_root: /training_data/lizekun/data/deepdrid/official_v1.1/regular_fundus_images
+source_manifest: /training_data/lizekun/data/deepdrid/admission_v1/deepdrid_admission_manifest.csv
+source_train_split: official_train
+frozen_test_split: official_validation
+frozen_evaluation_split: official_validation
+manifest_output_dir: /training_data/lizekun/data/deepdrid/native_probe_v1/manifests
+output_root: /training_data/lizekun/ophagent_assets/experiments/model_hub/runs/native_adaptation/deepdrid_v1.1
+job_root: /training_data/lizekun/ophagent_assets/experiments/model_hub/jobs/deepdrid_native_probe
+random_seed: 20260726
+internal_validation_fraction: 0.20
+patient_stratification: maximum_available_eye_grade
+missing_eye_labels: exclude_without_imputation
+class_order: [0, 1, 2, 3, 4]
+c_candidates: [0.01, 0.1, 1.0, 10.0]
+selection_metric: macro_f1
+test_used_for_selection: false
+encoder_policy: frozen_registered_cfp_encoder
+probe: sklearn_logistic_regression_balanced
+models:
+  - convnext_tiny
+  - swin_tiny
+  - retfound_cfp
+  - flair
+  - retfound_green
+  - preti
+  - eyeclip_cfp
+  - keepfit_cfp
+  - ret_clip
+  - retizero
+route_eligible: false

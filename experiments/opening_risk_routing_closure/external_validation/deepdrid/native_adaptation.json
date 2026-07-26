@@ -1,0 +1,257 @@
+{
+  "evaluation_design": "deepdrid_native_probe_on_registered_cfp_encoder",
+  "task_id": "deepdrid_dr_5class_native",
+  "dataset_id": "DeepDRiD_v1.1",
+  "split_protocol": {
+    "source_train_images": 1200,
+    "excluded_missing_label_images": 11,
+    "internal_train_images": 954,
+    "internal_train_patients": 239,
+    "internal_validation_images": 235,
+    "internal_validation_patients": 60,
+    "frozen_official_validation_images": 400,
+    "frozen_official_validation_patients": 100,
+    "patient_overlap": 0,
+    "source_manifest_sha256": "2343c8a402cf8e57670b20aadf13646ac730fe9ac2ef16d0152b5e9c57b8f739",
+    "split_manifest_sha256": "8293ca7e957f951d79693ba2e785d8f938fb1682f05bb58d36756d64ab0ccd45",
+    "selection_split": "internal_validation",
+    "frozen_evaluation_split": "official_validation",
+    "frozen_split_used_for_selection": false
+  },
+  "models": [
+    {
+      "model_id": "convnext_tiny",
+      "feature_dim": 768,
+      "selected_c": 0.1,
+      "validation": {
+        "accuracy": 0.685106,
+        "macro_f1": 0.621282,
+        "qwk": 0.768555
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.665,
+        "macro_f1": 0.58224,
+        "qwk": 0.831823
+      },
+      "batch16_ms_per_image": 0.420034,
+      "validation_prediction_sha256": "f1ce93e81eba7080e825d5e603ea4b25b89439c4addd734c60838d677d7c370c",
+      "frozen_prediction_sha256": "0ca6a1c04dace36224c722f8e2c8d4e213ce7bf68b12b672a1d3bf0dd331134c",
+      "run_id": "20260726T032050Z"
+    },
+    {
+      "model_id": "swin_tiny",
+      "feature_dim": 768,
+      "selected_c": 1.0,
+      "validation": {
+        "accuracy": 0.66383,
+        "macro_f1": 0.575578,
+        "qwk": 0.773061
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.5925,
+        "macro_f1": 0.50554,
+        "qwk": 0.753601
+      },
+      "batch16_ms_per_image": 0.499247,
+      "validation_prediction_sha256": "7b7a492c11be0a7a47804d422728c48607c9389e2b5e34d12d901e89a93928b1",
+      "frozen_prediction_sha256": "381c937383346ea4c3780249390c8751d31c935ea5d3fbbd9952720afa479bf3",
+      "run_id": "20260726T032050Z"
+    },
+    {
+      "model_id": "retfound_cfp",
+      "feature_dim": 1024,
+      "selected_c": 0.01,
+      "validation": {
+        "accuracy": 0.646809,
+        "macro_f1": 0.573884,
+        "qwk": 0.772869
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.6375,
+        "macro_f1": 0.549759,
+        "qwk": 0.796627
+      },
+      "batch16_ms_per_image": 3.445569,
+      "validation_prediction_sha256": "6d87388177721e402c4f0f7b8587f1f36f9a379839c521de46ea5bc578348030",
+      "frozen_prediction_sha256": "00fdbf8ab72e78e4739c82a5da3351fcb82d6f44fc2b6141dc67d526dc2f5ae0",
+      "run_id": "20260726T032055Z"
+    },
+    {
+      "model_id": "flair",
+      "feature_dim": 512,
+      "selected_c": 1.0,
+      "validation": {
+        "accuracy": 0.693617,
+        "macro_f1": 0.655243,
+        "qwk": 0.824339
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.6525,
+        "macro_f1": 0.568236,
+        "qwk": 0.83407
+      },
+      "batch16_ms_per_image": 0.871211,
+      "validation_prediction_sha256": "2cd0eca1d0048fe4db5949f90819e36fd4b014062551a142f04e2fddd67e978b",
+      "frozen_prediction_sha256": "11c33c7a80293dc4d67c95ad215b0f36f988d0b0f522fa52a813cb25fa3d5305",
+      "run_id": "20260726T032056Z"
+    },
+    {
+      "model_id": "retfound_green",
+      "feature_dim": 384,
+      "selected_c": 0.01,
+      "validation": {
+        "accuracy": 0.604255,
+        "macro_f1": 0.536173,
+        "qwk": 0.736215
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.6375,
+        "macro_f1": 0.558409,
+        "qwk": 0.806197
+      },
+      "batch16_ms_per_image": 1.404512,
+      "validation_prediction_sha256": "b2b617371232e53168ac9de7f5df1159a7c0ccefc523600040b9b2a8127141f3",
+      "frozen_prediction_sha256": "f8ee40d925582d3b291caca5ebae753adc3c1abb6dfa5b66a69051836c95b6b7",
+      "run_id": "20260726T032118Z"
+    },
+    {
+      "model_id": "preti",
+      "feature_dim": 768,
+      "selected_c": 0.01,
+      "validation": {
+        "accuracy": 0.544681,
+        "macro_f1": 0.465273,
+        "qwk": 0.654937
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.545,
+        "macro_f1": 0.469512,
+        "qwk": 0.698878
+      },
+      "batch16_ms_per_image": 1.040577,
+      "validation_prediction_sha256": "8a20f6997b8997fa47df29de04ee245057252de40968f8ca143af504c2b10552",
+      "frozen_prediction_sha256": "7e5beead9022328c5baf19a29189b8a7680efbd6879d7b7cc742ebd4864cc7cb",
+      "run_id": "20260726T032123Z"
+    },
+    {
+      "model_id": "eyeclip_cfp",
+      "feature_dim": 512,
+      "selected_c": 10.0,
+      "validation": {
+        "accuracy": 0.455319,
+        "macro_f1": 0.342077,
+        "qwk": 0.505667
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.4125,
+        "macro_f1": 0.289739,
+        "qwk": 0.492594
+      },
+      "batch16_ms_per_image": 0.398935,
+      "validation_prediction_sha256": "b6db5376f2640210d5685470e63079a19baf848a7e7ed124f6314361270d52b6",
+      "frozen_prediction_sha256": "064d4cfc2a8313320af5dbfd855c70a3ac6fad895461897ba15385e3fc56af53",
+      "run_id": "20260726T032134Z"
+    },
+    {
+      "model_id": "keepfit_cfp",
+      "feature_dim": 2048,
+      "selected_c": 0.1,
+      "validation": {
+        "accuracy": 0.668085,
+        "macro_f1": 0.605009,
+        "qwk": 0.776935
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.6825,
+        "macro_f1": 0.620092,
+        "qwk": 0.827715
+      },
+      "batch16_ms_per_image": 0.865356,
+      "validation_prediction_sha256": "5ecd34cd3917630448adeeff4ce6fc164a29eafd4ae19f037bc6f9e07d784924",
+      "frozen_prediction_sha256": "b8c04672d913ee4e40e861837716c1af48011fde5ed854030a60ec74c7a07fdf",
+      "run_id": "20260726T032150Z"
+    },
+    {
+      "model_id": "ret_clip",
+      "feature_dim": 512,
+      "selected_c": 0.01,
+      "validation": {
+        "accuracy": 0.697872,
+        "macro_f1": 0.64954,
+        "qwk": 0.796209
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.7025,
+        "macro_f1": 0.633829,
+        "qwk": 0.828875
+      },
+      "batch16_ms_per_image": 1.131882,
+      "validation_prediction_sha256": "d3413cbbadcce57348a3c0c9eff825c1f40d95560d3e7ef0c129b30ff4a4b19e",
+      "frozen_prediction_sha256": "947ecb6f39b6bbe436cd9364b21a15b0063239d1797ae93fc4a9156c4ea53610",
+      "run_id": "20260726T032212Z"
+    },
+    {
+      "model_id": "retizero",
+      "feature_dim": 512,
+      "selected_c": 10.0,
+      "validation": {
+        "accuracy": 0.655319,
+        "macro_f1": 0.609414,
+        "qwk": 0.779258
+      },
+      "frozen_official_validation": {
+        "accuracy": 0.6475,
+        "macro_f1": 0.571157,
+        "qwk": 0.809487
+      },
+      "batch16_ms_per_image": 3.595749,
+      "validation_prediction_sha256": "39d0e2bc867ff093fcb2516ef299602c07bf135ebe4f37c7e25a581a8d715d42",
+      "frozen_prediction_sha256": "1fb79abba0e09f0143c1c29aab2d3efb9b65f3d313d78c1021dbb74064fa155b",
+      "run_id": "20260726T032215Z"
+    }
+  ],
+  "validation_selected_routes": [
+    {
+      "route_id": "deepdrid_native_primary_single",
+      "scouts": [
+        "keepfit_cfp"
+      ],
+      "expert": "flair",
+      "policy": "high_entropy",
+      "budget": 0.3
+    },
+    {
+      "route_id": "deepdrid_native_primary_multi",
+      "scouts": [
+        "flair",
+        "retfound_green"
+      ],
+      "expert": "swin_tiny",
+      "policy": "disagreement_then_uncertainty",
+      "budget": 0.05
+    }
+  ],
+  "frozen_official_validation_routes": [
+    {
+      "route_id": "deepdrid_native_primary_single",
+      "accuracy": 0.7,
+      "macro_f1": 0.634558,
+      "qwk": 0.846538,
+      "proxy_corrected": 6,
+      "proxy_introduced": 1,
+      "net_proxy_reduction": 5
+    },
+    {
+      "route_id": "deepdrid_native_primary_multi",
+      "accuracy": 0.6525,
+      "macro_f1": 0.57015,
+      "qwk": 0.836996,
+      "proxy_corrected": 1,
+      "proxy_introduced": 0,
+      "net_proxy_reduction": 1
+    }
+  ],
+  "route_eligible": false,
+  "notes": "All model and route selection used internal validation only. The official validation split was evaluated once after freezing candidates. Label-grade events are research proxies, not clinical harm.",
+  "result_root": "external_asset://model_hub/runs/native_adaptation/deepdrid_v1.1"
+}
