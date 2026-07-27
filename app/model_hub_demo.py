@@ -70,9 +70,9 @@ def _render_overview(data: dict[str, object]) -> None:
             f"覆盖 {task_assets['task_id'].nunique()} 个任务契约",
         ),
         (
-            "数据集实验",
-            len(datasets),
-            "含冻结迁移、原生适配与数据准入",
+            "数据集",
+            datasets["dataset_id"].nunique(),
+            f"{len(datasets)} 条实验路径 / 准入记录",
         ),
         (
             "路由结果包",
@@ -97,6 +97,10 @@ def _render_overview(data: dict[str, object]) -> None:
     )
     st.markdown(f'<div class="hub-overview-grid">{cards}</div>', unsafe_allow_html=True)
     boundary_notice()
+    st.info(
+        "当前自动化层级：受控工具链与可追溯工作流，不是可自由规划的自主 Agent。"
+        "敏感数据场景支持院内部署，不要求调用公网 API。"
+    )
     st.markdown(
         '<div class="hub-section"><h3>中转台工作流</h3>'
         '<p>每一层使用独立证据；前一层通过不会自动推出后一层资格。</p></div>'
@@ -129,26 +133,27 @@ def _render_overview(data: dict[str, object]) -> None:
     task_summary = datasets[
         [
             "dataset_label",
+            "experiment_label",
             "task_label",
             "admission_status",
             "prediction_assets",
             "online_case_endpoints",
             "route_runs",
             "frozen_route_runs",
-            "route_eligible",
         ]
     ].rename(
         columns={
-            "dataset_label": "数据集 / 实验口径",
+            "dataset_label": "数据集",
+            "experiment_label": "实验路径 / 准入口径",
             "task_label": "任务",
             "admission_status": "当前阶段",
             "prediction_assets": "任务预测资产",
             "online_case_endpoints": "单病例入口",
             "route_runs": "路由结果包",
             "frozen_route_runs": "冻结评估",
-            "route_eligible": "正式路由资格",
         }
     )
+    task_summary["使用范围"] = "研究评测（未授予正式路由）"
     st.dataframe(
         task_summary,
         hide_index=True,
@@ -158,7 +163,6 @@ def _render_overview(data: dict[str, object]) -> None:
             "单病例入口": st.column_config.NumberColumn(format="%d"),
             "路由结果包": st.column_config.NumberColumn(format="%d"),
             "冻结评估": st.column_config.NumberColumn(format="%d"),
-            "正式路由资格": st.column_config.CheckboxColumn(),
         },
     )
 

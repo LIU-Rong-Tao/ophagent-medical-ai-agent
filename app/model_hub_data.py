@@ -769,6 +769,8 @@ def scan_global_composition_candidates(
     budget_values = sorted({float(value) for value in budgets})
     for scout_combo in _candidate_subsets(scout_ids, max_scouts):
         for expert_combo in _candidate_subsets(expert_ids, max_experts):
+            if set(scout_combo).intersection(expert_combo):
+                continue
             policies = available_routing_policies(len(scout_combo), len(expert_combo))
             if not policies:
                 continue
@@ -937,6 +939,12 @@ def evaluate_exploratory_composition(
 ) -> tuple[dict[str, Any], pd.DataFrame]:
     scout_ids = list(dict.fromkeys(map(str, scout_ids)))
     configured_expert_ids = list(dict.fromkeys(map(str, expert_ids)))
+    overlap = sorted(set(scout_ids).intersection(configured_expert_ids))
+    if overlap:
+        raise ValueError(
+            "Scout 与 Expert 必须是不同模型；请移除重复选择："
+            + "、".join(overlap)
+        )
     if not configured_expert_ids:
         active_expert_ids: list[str] = []
         expert_handoff_mode = "none"

@@ -1272,8 +1272,11 @@ def _checkpoint_task_evidence(
         evidence["task_asset_count"] = 0
         evidence["task_count"] = 0
         evidence["offline_batch_count"] = 0
+        evidence["research_route_count"] = 0
         return evidence
     task_assets = task_assets.copy()
+    if "research_route_participated" not in task_assets:
+        task_assets["research_route_participated"] = False
     task_assets["family_key"] = task_assets["model_family"].map(_family_key)
     family_summary = (
         task_assets.groupby("family_key", as_index=False)
@@ -1281,11 +1284,17 @@ def _checkpoint_task_evidence(
             task_asset_count=("artifact_id", "size"),
             task_count=("task_id", "nunique"),
             offline_batch_count=("offline_batch_inference_ready", "sum"),
+            research_route_count=("research_route_participated", "sum"),
         )
         .set_index("family_key")
     )
     evidence["family_key"] = evidence["model_id"].map(_family_key)
-    for column in ("task_asset_count", "task_count", "offline_batch_count"):
+    for column in (
+        "task_asset_count",
+        "task_count",
+        "offline_batch_count",
+        "research_route_count",
+    ):
         evidence[column] = (
             evidence["family_key"].map(family_summary[column]).fillna(0).astype(int)
         )
@@ -1320,7 +1329,7 @@ def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
         unsafe_allow_html=True,
     )
     st.caption(
-        "这里分别展示基础资产、Runtime Smoke、任务 prediction、离线批量链和正式路由资格；"
+        "这里分别展示基础资产、Runtime Smoke、任务 prediction、研究路由记录和正式路由资格；"
         "任一状态通过都不会自动推出下一层。"
     )
     filter_columns = st.columns([1, 1, 1.2])
@@ -1382,7 +1391,7 @@ def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
             "task_asset_count",
             "task_count",
             "offline_batch_count",
-            "route_eligible",
+            "research_route_count",
         ]
     ].rename(
         columns={
@@ -1394,7 +1403,7 @@ def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
             "task_asset_count": "任务预测资产",
             "task_count": "任务数",
             "offline_batch_count": "离线批量链",
-            "route_eligible": "正式路由资格",
+            "research_route_count": "研究路由记录",
         }
     )
     st.dataframe(
@@ -1403,10 +1412,10 @@ def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
         width="stretch",
         height=min(620, 38 * (len(table) + 1)),
         column_config={
-            "正式路由资格": st.column_config.CheckboxColumn(),
             "任务预测资产": st.column_config.NumberColumn(format="%d"),
             "任务数": st.column_config.NumberColumn(format="%d"),
             "离线批量链": st.column_config.NumberColumn(format="%d"),
+            "研究路由记录": st.column_config.NumberColumn(format="%d"),
         },
     )
     if visible.empty:
@@ -1451,26 +1460,42 @@ def _render_unified_asset_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
     evidence_columns[3].markdown(
         "**中转台资格**\n\n"
         f"单病例原图：{'已登记' if bool(row.get('task_inference_ready', False)) else '未登记'}  \n"
-        f"正式路由：{'可用' if bool(row['route_eligible']) else '未授予'}"
+        f"研究路由：{'有历史记录' if int(row.get('research_route_count', 0)) else '尚无记录'}  \n"
+        f"正式路由：{'已授予' if bool(row['route_eligible']) else '未授予（研究评测）'}"
     )
     if not task_rows.empty:
-        linked = task_rows[
+        linked_rows = task_rows.copy()
+        linked_rows["cost_evidence_display"] = linked_rows.apply(
+            lambda item: (
+                "完整成本已测"
+                if str(item.get("cost_status", "")).lower() == "measured"
+                else (
+                    "Forward-only 已测；总成本不完整"
+                    if bool(item.get("forward_only_cost_available", False))
+                    else "成本证据待补"
+                )
+            ),
+            axis=1,
+        )
+        linked = linked_rows[
             [
                 "dataset_label",
                 "task_label",
                 "artifact_id",
                 "qualification_status",
-                "cost_status",
-                "route_eligible",
+                "cost_evidence_display",
+                "research_route_status",
+                "formal_route_status",
             ]
         ].rename(
             columns={
-                "dataset_label": "数据集 / 实验",
+                "dataset_label": "数据集",
                 "task_label": "任务",
                 "artifact_id": "任务模型",
                 "qualification_status": "评测资格",
-                "cost_status": "成本证据",
-                "route_eligible": "正式路由资格",
+                "cost_evidence_display": "成本证据",
+                "research_route_status": "研究路由",
+                "formal_route_status": "正式路由",
             }
         )
         st.dataframe(linked, hide_index=True, width="stretch")
@@ -1483,13 +1508,30 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
     if datasets.empty:
         st.info("尚无正式任务与数据集记录。")
         return
-    labels = datasets["dataset_label"].astype(str).tolist()
+    dataset_labels = sorted(datasets["dataset_label"].astype(str).unique())
     selected_label = st.selectbox(
-        "任务与数据集",
-        labels,
+        "数据集",
+        dataset_labels,
         key="unified_task_dataset",
     )
-    dataset = datasets.loc[datasets["dataset_label"].astype(str).eq(selected_label)].iloc[0]
+    dataset_options = datasets.loc[
+        datasets["dataset_label"].astype(str).eq(selected_label)
+    ].copy()
+    if len(dataset_options) > 1:
+        selected_task_id = st.selectbox(
+            "实验路径",
+            dataset_options["task_id"].astype(str).tolist(),
+            format_func=lambda task_id: dataset_options.loc[
+                dataset_options["task_id"].astype(str).eq(task_id),
+                "experiment_label",
+            ].iloc[0],
+            key=f"unified_task_experiment::{selected_label}",
+        )
+        dataset = dataset_options.loc[
+            dataset_options["task_id"].astype(str).eq(selected_task_id)
+        ].iloc[0]
+    else:
+        dataset = dataset_options.iloc[0]
     task_id = str(dataset["task_id"])
     assets = task_assets.loc[task_assets["task_id"].astype(str).eq(task_id)].copy()
     runs = route_runs.loc[route_runs["task_id"].astype(str).eq(task_id)].copy()
@@ -1501,7 +1543,7 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
         ("任务预测资产", int(dataset["prediction_assets"]), "validation / test 独立登记"),
         ("Validation 资产", int(dataset["validation_assets"]), "只用于结构与阈值选择"),
         ("路由结果包", int(dataset["route_runs"]), "历史扫描与冻结评估"),
-        ("正式路由资格", int(bool(dataset["route_eligible"])), "当前仍为研究评测"),
+        ("正式路由资格", "未授予", "当前结果均为研究评测"),
     ]
     st.markdown(
         '<div class="hub-mini-strip">'
@@ -1517,7 +1559,8 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
     st.markdown(
         '<div class="hub-band">'
         f"<strong>任务：</strong>{html.escape(str(dataset['task_label']))}　"
-        f"<strong>数据集 / 口径：</strong>{html.escape(selected_label)}　"
+        f"<strong>数据集：</strong>{html.escape(selected_label)}　"
+        f"<strong>实验路径：</strong>{html.escape(str(dataset['experiment_label']))}　"
         f"<strong>阶段：</strong>{html.escape(str(dataset['admission_status']))}<br>"
         f"{html.escape(str(dataset['qualification_note']))}</div>",
         unsafe_allow_html=True,
@@ -1525,7 +1568,20 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
     if assets.empty:
         st.info("该数据集已完成准入登记，但尚未生成正式任务 prediction asset。")
         return
-    asset_table = assets[
+    asset_rows = assets.copy()
+    asset_rows["cost_evidence_display"] = asset_rows.apply(
+        lambda item: (
+            "完整成本已测"
+            if str(item.get("cost_status", "")).lower() == "measured"
+            else (
+                "Forward-only 已测；总成本不完整"
+                if bool(item.get("forward_only_cost_available", False))
+                else "成本证据待补"
+            )
+        ),
+        axis=1,
+    )
+    asset_table = asset_rows[
         [
             "artifact_id",
             "adapter_type",
@@ -1535,8 +1591,9 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
             "validation_selection_eligible",
             "qualification_status",
             "forward_cost_ms_per_image",
-            "cost_status",
-            "route_eligible",
+            "cost_evidence_display",
+            "research_route_status",
+            "formal_route_status",
         ]
     ].rename(
         columns={
@@ -1547,9 +1604,10 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
             "current_run_reproducible": "当前运行可复现",
             "validation_selection_eligible": "可参与 Validation 选择",
             "qualification_status": "资格限制",
-            "forward_cost_ms_per_image": "H100 成本（ms/图）",
-            "cost_status": "成本状态",
-            "route_eligible": "正式路由资格",
+            "forward_cost_ms_per_image": "H100 forward-only（ms/图）",
+            "cost_evidence_display": "成本证据",
+            "research_route_status": "研究路由",
+            "formal_route_status": "正式路由",
         }
     )
     st.dataframe(
@@ -1561,8 +1619,7 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
             "冻结结果集": st.column_config.CheckboxColumn(),
             "当前运行可复现": st.column_config.CheckboxColumn(),
             "可参与 Validation 选择": st.column_config.CheckboxColumn(),
-            "正式路由资格": st.column_config.CheckboxColumn(),
-            "H100 成本（ms/图）": st.column_config.NumberColumn(format="%.3f"),
+            "H100 forward-only（ms/图）": st.column_config.NumberColumn(format="%.3f"),
         },
     )
     if not runs.empty:
@@ -1575,7 +1632,6 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
                 "pairing_count",
                 "result_rows",
                 "status",
-                "route_eligible",
             ]
         ].rename(
             columns={
@@ -1585,9 +1641,9 @@ def _render_unified_task_catalog(hub_index: dict[str, pd.DataFrame]) -> None:
                 "pairing_count": "组合",
                 "result_rows": "结果行",
                 "status": "产物状态",
-                "route_eligible": "正式路由资格",
             }
         )
+        run_table["使用范围"] = "研究结果包（不授予正式路由）"
         st.dataframe(run_table, hide_index=True, width="stretch")
 
 
@@ -1720,6 +1776,11 @@ def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> 
         "候选视图默认隐藏 OphBench 范围排除的 VisionFM legacy 资产、"
         "与当前输入模态不匹配的 checkpoint 及生成模型；完整登记仍保留在上游 Registry。"
     )
+    if page_mode == "assets":
+        st.info(
+            "本区是基础 Checkpoint 的 Adapter / 训练操作入口，不汇总已有离线 prediction asset。"
+            "任务评测和历史路由记录以“资产与证据”页签中的统一索引为准。"
+        )
     if st.button("重新扫描受控目录", icon=":material/refresh:"):
         st.info("扫描由受控 inventory runner 执行；当前页面不会扫描服务器全盘。")
     if layer_catalog.empty:
@@ -1765,8 +1826,13 @@ def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> 
             usable_n = int(family_models["target_task_status"].astype(str).isin({"direct_inference", "offline_replay"}).sum())
             model_name = ui_value(family_models.iloc[0].get("model_name"), empty=human_family(family))
             checkpoint_note = f"{len(family_models)} 个 checkpoint" if group_column == "source_model_id" else f"{len(family_models)} 个任务模型"
+            status_note = (
+                f"{usable_n} 个当前任务可用"
+                if page_mode == "tasks"
+                else f"{int(family_models['target_task_status'].astype(str).eq('adaptable').sum())} 个可启动适配"
+            )
             with st.expander(
-                f"{model_name} · {checkpoint_note} · {usable_n} 个当前任务可用",
+                f"{model_name} · {checkpoint_note} · {status_note}",
                 expanded=False,
             ):
                 for _, row in family_models.sort_values("artifact_id").iterrows():
@@ -1804,7 +1870,19 @@ def _render_model_access(models: pd.DataFrame, *, page_mode: str = "assets") -> 
                 ("主要指标", f"QWK {float(row.get('quadratic_kappa')):.4f} · Macro-F1 {float(row.get('macro_f1')):.4f}" if pd.notna(row.get("quadratic_kappa")) and pd.notna(row.get("macro_f1")) else "尚未登记"),
                 ("在线推理", "已验证" if bool(row.get("task_inference_ready", False)) else "不可用（仅离线回放）"),
                 ("Scout / Expert", "可用" if bool(row.get("route_eligible", False)) else "仅回放可用"),
-                ("Forward-only 成本", f"{float(row.get('forward_cost_ms_per_image')):.3f} ms/图" if str(row.get("cost_status")) == "measured" else "尚未完成统一测量"),
+                (
+                    "Forward-only 成本",
+                    (
+                        f"{float(row.get('forward_cost_ms_per_image')):.3f} ms/图"
+                        + (
+                            "（总成本证据不完整）"
+                            if str(row.get("cost_status", "")).lower() != "measured"
+                            else ""
+                        )
+                    )
+                    if pd.notna(row.get("forward_cost_ms_per_image"))
+                    else "尚未完成统一测量",
+                ),
                 ("科研声明", "集成验证，不用于模型优劣比较"),
             ])
         else:
@@ -2482,8 +2560,15 @@ def render_engineering_workspace(
         }.get(str(legacy_view), "模型资产")
     if view == "模型资产":
         if isinstance(hub_index, dict):
-            _render_unified_asset_catalog(hub_index)
-            with st.expander("Adapter 与训练接入操作", expanded=False):
+            asset_mode = st.segmented_control(
+                "模型资产功能",
+                ["资产与证据", "Adapter 与训练"],
+                default="资产与证据",
+                key="model_asset_mode",
+            )
+            if asset_mode == "资产与证据":
+                _render_unified_asset_catalog(hub_index)
+            else:
                 _render_model_access(models, page_mode="assets")
         else:
             _render_model_access(models, page_mode="assets")

@@ -16,8 +16,8 @@ from app.model_providers import OphBenchProvider
 
 TASK_LABELS = {
     "aptos_dr_5class": "APTOS DR 五级分级",
-    "deepdrid_dr_5class_external": "DeepDRiD 冻结迁移",
-    "deepdrid_dr_5class_native": "DeepDRiD 原生适配",
+    "deepdrid_dr_5class_external": "DR 五级分级",
+    "deepdrid_dr_5class_native": "DR 五级分级",
     "glaucoma_3class": "青光眼三分类",
     "glaucoma_binary": "RIM-ONE 青光眼二分类",
     "trhd59_observed_label": "TRHD59 59 类观测标签",
@@ -25,11 +25,29 @@ TASK_LABELS = {
 
 DATASET_LABELS = {
     "aptos_dr_5class": "APTOS2019",
-    "deepdrid_dr_5class_external": "DeepDRiD · 冻结迁移",
-    "deepdrid_dr_5class_native": "DeepDRiD · 原生适配",
-    "glaucoma_3class": "Glaucoma_fundus · 清理口径",
+    "deepdrid_dr_5class_external": "DeepDRiD",
+    "deepdrid_dr_5class_native": "DeepDRiD",
+    "glaucoma_3class": "Glaucoma_fundus",
     "glaucoma_binary": "RIM-ONE DL",
-    "trhd59_observed_label": "TRHD59 canonical",
+    "trhd59_observed_label": "TRHD59",
+}
+
+EXPERIMENT_LABELS = {
+    "aptos_dr_5class": "原生任务适配",
+    "deepdrid_dr_5class_external": "APTOS 模型冻结迁移",
+    "deepdrid_dr_5class_native": "DeepDRiD 原生任务适配",
+    "glaucoma_3class": "清理口径",
+    "glaucoma_binary": "原生任务适配",
+    "trhd59_observed_label": "canonical 观测标签",
+}
+
+DATASET_IDS = {
+    "aptos_dr_5class": "aptos2019",
+    "deepdrid_dr_5class_external": "deepdrid",
+    "deepdrid_dr_5class_native": "deepdrid",
+    "glaucoma_3class": "glaucoma_fundus",
+    "glaucoma_binary": "rim_one_dl",
+    "trhd59_observed_label": "trhd59_canonical",
 }
 
 JOB_GROUP_LABELS = {
@@ -181,6 +199,8 @@ def build_task_asset_index(project_root: Path) -> pd.DataFrame:
         frame["registry_path"] = _relative(project_root, path)
         frame["dataset_label"] = frame["task_id"].astype(str).map(_dataset_label)
         frame["task_label"] = frame["task_id"].astype(str).map(_task_label)
+        frame["dataset_id"] = frame["task_id"].astype(str).map(DATASET_IDS)
+        frame["experiment_label"] = frame["task_id"].astype(str).map(EXPERIMENT_LABELS)
         frame["validation_asset_exists"] = frame["validation_prediction_path"].map(
             lambda value: _resolve(project_root, value).is_file()
         )
@@ -204,6 +224,14 @@ def build_task_asset_index(project_root: Path) -> pd.DataFrame:
         frame["route_eligible"] = (
             _column(frame, "route_eligible", False).fillna(False).astype(bool)
         )
+        forward_cost = pd.to_numeric(
+            _column(frame, "forward_cost_ms_per_image", float("nan")),
+            errors="coerce",
+        )
+        frame["forward_only_cost_available"] = forward_cost.notna() & forward_cost.ge(0)
+        frame["total_cost_evidence_status"] = _column(
+            frame, "cost_status", "unmeasured"
+        ).fillna("unmeasured")
         frames.append(frame)
     if not frames:
         return pd.DataFrame()
@@ -428,7 +456,11 @@ def build_dataset_index(
                 {
                     "task_id": str(task_id),
                     "task_label": _task_label(str(task_id)),
+                    "dataset_id": DATASET_IDS.get(str(task_id), str(task_id)),
                     "dataset_label": str(dataset_label),
+                    "experiment_label": EXPERIMENT_LABELS.get(
+                        str(task_id), "任务评测"
+                    ),
                     "admission_status": "实验资产已登记",
                     "prediction_assets": int(assets["artifact_id"].nunique()),
                     "validation_assets": int(assets["validation_asset_exists"].sum()),
@@ -470,7 +502,9 @@ def build_dataset_index(
                 {
                     "task_id": "glaucoma_binary",
                     "task_label": "REFUGE 青光眼二分类",
+                    "dataset_id": "refuge",
                     "dataset_label": "REFUGE",
+                    "experiment_label": "数据准入",
                     "admission_status": "仅准入有标签 train/validation",
                     "prediction_assets": 0,
                     "validation_assets": 0,
@@ -488,12 +522,80 @@ def build_dataset_index(
     return pd.DataFrame(rows)
 
 
+def _route_participants(route_runs: pd.DataFrame) -> set[tuple[str, str]]:
+    participants: set[tuple[str, str]] = set()
+    if route_runs.empty:
+        return participants
+    for _, run in route_runs.iterrows():
+        task_id = str(run.get("task_id") or "")
+        snapshot_path = Path(str(run.get("_snapshot_path") or ""))
+        if snapshot_path.is_file():
+            try:
+                snapshot = pd.read_csv(
+                    snapshot_path,
+                    usecols=lambda column: column == "artifact_id",
+                )
+            except (OSError, pd.errors.ParserError, UnicodeError):
+                snapshot = pd.DataFrame()
+            if "artifact_id" in snapshot:
+                participants.update(
+                    (task_id, str(artifact_id))
+                    for artifact_id in snapshot["artifact_id"].dropna().unique()
+                )
+                continue
+        results_path = Path(str(run.get("_pairing_results_path") or ""))
+        if not results_path.is_file():
+            continue
+        try:
+            pairings = pd.read_csv(
+                results_path,
+                usecols=lambda column: column
+                in {
+                    "scout_artifact_ids",
+                    "expert_artifact_id",
+                    "scout_ids",
+                    "active_expert_ids",
+                },
+            )
+        except (OSError, pd.errors.ParserError, UnicodeError):
+            continue
+        for column in pairings.columns:
+            for value in pairings[column].dropna().astype(str):
+                participants.update(
+                    (task_id, artifact_id)
+                    for artifact_id in value.split("|")
+                    if artifact_id
+                )
+    return participants
+
+
 def build_model_hub_index(project_root: Path) -> dict[str, pd.DataFrame]:
     """Build one in-memory projection over existing registries and artifacts."""
 
     checkpoints = build_checkpoint_index(project_root)
     task_assets = build_task_asset_index(project_root)
     route_runs = build_route_run_index(project_root)
+    participants = _route_participants(route_runs)
+    if not task_assets.empty:
+        task_assets["research_route_participated"] = task_assets.apply(
+            lambda row: (str(row["task_id"]), str(row["artifact_id"])) in participants,
+            axis=1,
+        )
+        task_assets["research_route_status"] = task_assets.apply(
+            lambda row: (
+                "已参与历史研究路由"
+                if bool(row["research_route_participated"])
+                else (
+                    "可参与 Validation 研究选择"
+                    if bool(row.get("validation_selection_eligible", False))
+                    else "仅任务评测"
+                )
+            ),
+            axis=1,
+        )
+        task_assets["formal_route_status"] = task_assets["route_eligible"].map(
+            lambda eligible: "已授予" if bool(eligible) else "未授予（研究评测）"
+        )
     protocols = build_protocol_index(project_root)
     jobs = build_job_index(project_root)
     online_endpoints = build_online_endpoint_index(project_root)

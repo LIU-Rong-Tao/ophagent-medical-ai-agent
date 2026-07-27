@@ -55,6 +55,8 @@ from app.model_hub_engineering import (
 )
 from app.model_hub_research import (
     _comparison_plot_frame,
+    _forward_only_cost_mask,
+    _registered_scan_frame,
     build_comparison_table,
     build_proxy_event_table_html,
 )
@@ -789,6 +791,106 @@ def test_global_composition_scan_covers_single_and_multi_route_candidates(tmp_pa
     assert scan["is_pareto"].any()
     assert scan["global_rank_primary"].min() == 1
     assert scan["global_scan_semantics"].eq("exploratory_current_model_pool").all()
+
+
+def test_global_composition_rejects_same_scout_and_expert(tmp_path: Path) -> None:
+    config_path = create_fixture(tmp_path)
+    output_dir = tmp_path / "outputs"
+    run_protocol(config_path, output_dir=output_dir, stage="all")
+    models = load_model_hub_outputs(output_dir)["models"]
+
+    with np.testing.assert_raises_regex(
+        ValueError, "Scout 与 Expert 必须是不同模型"
+    ):
+        evaluate_exploratory_composition(
+            models,
+            task_id="task_a",
+            scout_ids=["scout_a"],
+            primary_scout_id="scout_a",
+            expert_ids=["scout_a"],
+            policy="low_confidence",
+            requested_budget=0.5,
+        )
+
+
+def test_global_scan_skips_overlapping_scout_expert_pairs(tmp_path: Path) -> None:
+    config_path = create_fixture(tmp_path)
+    output_dir = tmp_path / "outputs"
+    run_protocol(config_path, output_dir=output_dir, stage="all")
+    models = load_model_hub_outputs(output_dir)["models"]
+
+    scan = scan_global_composition_candidates(
+        models,
+        task_id="task_a",
+        scout_ids=["scout_a", "scout_b"],
+        expert_ids=["scout_a", "expert_a"],
+        budgets=[0.5],
+        max_scouts=1,
+        max_experts=1,
+    )
+
+    assert not scan.empty
+    assert not scan.apply(
+        lambda row: bool(
+            set(str(row["scout_ids"]).split("|"))
+            & set(str(row["configured_expert_ids"]).split("|"))
+        ),
+        axis=1,
+    ).any()
+
+
+def test_partial_total_cost_can_have_complete_forward_only_evidence() -> None:
+    models = pd.DataFrame(
+        [
+            {
+                "artifact_id": "retfound_green",
+                "forward_cost_ms_per_image": 1.397,
+                "cost_status": "partial",
+                "cost_scope": "H100 GPU encoder forward-only batch16",
+            },
+            {
+                "artifact_id": "missing",
+                "forward_cost_ms_per_image": np.nan,
+                "cost_status": "partial",
+                "cost_scope": "",
+            },
+        ]
+    )
+
+    assert _forward_only_cost_mask(models).tolist() == [True, False]
+
+
+def test_registered_scan_excludes_same_model_degenerate_pairs(tmp_path: Path) -> None:
+    path = tmp_path / "pairing_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "evaluation_kind": "routed",
+                "scout_artifact_ids": "model_a",
+                "primary_scout_artifact_id": "model_a",
+                "expert_artifact_id": "model_a",
+                "routing_policy": "low_confidence",
+                "realized_budget": 0.1,
+                "estimated_total_compute_ms_per_image": 1.0,
+                "status": "completed",
+            },
+            {
+                "evaluation_kind": "routed",
+                "scout_artifact_ids": "model_a",
+                "primary_scout_artifact_id": "model_a",
+                "expert_artifact_id": "model_b",
+                "routing_policy": "low_confidence",
+                "realized_budget": 0.1,
+                "estimated_total_compute_ms_per_image": 1.1,
+                "status": "completed",
+            },
+        ]
+    ).to_csv(path, index=False)
+
+    scan = _registered_scan_frame(path)
+
+    assert len(scan) == 1
+    assert scan.iloc[0]["active_expert_ids"] == "model_b"
 
 
 def test_global_scan_estimate_prevents_interactive_combination_explosion() -> None:

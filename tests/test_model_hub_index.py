@@ -6,6 +6,8 @@ from pathlib import Path
 import pandas as pd
 
 from app.model_hub_index import (
+    DATASET_LABELS,
+    EXPERIMENT_LABELS,
     build_dataset_index,
     build_job_index,
     build_route_run_index,
@@ -48,6 +50,19 @@ def test_task_asset_index_uses_registry_and_existing_assets(tmp_path: Path) -> N
     assert bool(assets.iloc[0]["validation_asset_exists"])
     assert bool(assets.iloc[0]["test_asset_exists"])
     assert not bool(assets.iloc[0]["route_eligible"])
+
+
+def test_deepdrid_dataset_and_experiment_semantics_are_separate() -> None:
+    assert DATASET_LABELS["deepdrid_dr_5class_external"] == "DeepDRiD"
+    assert DATASET_LABELS["deepdrid_dr_5class_native"] == "DeepDRiD"
+    assert (
+        EXPERIMENT_LABELS["deepdrid_dr_5class_external"]
+        == "APTOS 模型冻结迁移"
+    )
+    assert (
+        EXPERIMENT_LABELS["deepdrid_dr_5class_native"]
+        == "DeepDRiD 原生任务适配"
+    )
 
 
 def test_route_index_reads_existing_result_package(tmp_path: Path) -> None:

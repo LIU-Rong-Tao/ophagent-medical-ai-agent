@@ -266,6 +266,14 @@ def _controls(models: pd.DataFrame) -> dict[str, object] | None:
             format_func=human_model,
             key=f"route_models_{task_id}",
         ) or []
+    expert_options = [
+        artifact_id for artifact_id in expert_options if artifact_id not in route_ids
+    ]
+    default_expert = [
+        artifact_id for artifact_id in default_expert if artifact_id in expert_options
+    ]
+    if not default_expert and expert_options:
+        default_expert = expert_options[:1]
     with right:
         expert_ids = st.pills(
             "选择专家模型（可多选，也可不选）",
@@ -275,6 +283,8 @@ def _controls(models: pd.DataFrame) -> dict[str, object] | None:
             format_func=human_model,
             key=f"expert_models_{task_id}",
         ) or []
+        if route_ids:
+            st.caption("已自动排除当前 Scout；同一模型不能同时担任 Scout 与 Expert。")
     if not route_ids and not expert_ids:
         st.warning("至少选择一个路由模型或专家模型。")
         return None
@@ -356,6 +366,21 @@ def _composition_label(config: dict[str, object]) -> str:
     else:
         right = "无专家模型"
     return f"{left} → {right}"
+
+
+def _forward_only_cost_mask(models: pd.DataFrame) -> pd.Series:
+    values = pd.to_numeric(
+        models.get(
+            "forward_cost_ms_per_image",
+            pd.Series(float("nan"), index=models.index),
+        ),
+        errors="coerce",
+    )
+    status = models.get("cost_status", pd.Series("", index=models.index)).astype(str)
+    scope = models.get("cost_scope", pd.Series("", index=models.index)).astype(str)
+    return values.notna() & values.ge(0) & (
+        status.eq("measured") | scope.str.contains("forward-only", case=False, na=False)
+    )
 
 
 def _render_summary(metrics: dict[str, object], display_metrics: list[str]) -> None:
@@ -859,7 +884,101 @@ def _global_scan_audit_dialog(
         st.info("当前组合没有可展示的标签依赖安全代理事件。")
 
 
-def _render_global_scan(models: pd.DataFrame, config: dict[str, object]) -> None:
+def _split_model_ids(value: object) -> set[str]:
+    return {item for item in str(value or "").split("|") if item}
+
+
+def _registered_scan_frame(path: Path) -> pd.DataFrame:
+    try:
+        frame = pd.read_csv(path)
+    except (OSError, pd.errors.ParserError, UnicodeError):
+        return pd.DataFrame()
+    required = {
+        "evaluation_kind",
+        "scout_artifact_ids",
+        "expert_artifact_id",
+        "routing_policy",
+        "realized_budget",
+        "estimated_total_compute_ms_per_image",
+        "status",
+    }
+    if frame.empty or not required.issubset(frame.columns):
+        return pd.DataFrame()
+    frame = frame.loc[frame["evaluation_kind"].astype(str).eq("routed")].copy()
+    overlap = frame.apply(
+        lambda row: bool(
+            _split_model_ids(row["scout_artifact_ids"])
+            & _split_model_ids(row["expert_artifact_id"])
+        ),
+        axis=1,
+    )
+    frame = frame.loc[~overlap].copy()
+    if frame.empty:
+        return frame
+    frame["scout_ids"] = frame["scout_artifact_ids"].astype(str)
+    frame["primary_scout_id"] = frame.get(
+        "primary_scout_artifact_id", frame["scout_artifact_ids"]
+    ).astype(str)
+    frame["configured_expert_ids"] = frame["expert_artifact_id"].astype(str)
+    frame["active_expert_ids"] = frame["expert_artifact_id"].astype(str)
+    frame["fixed_expert_id"] = frame["expert_artifact_id"].astype(str)
+    frame["expert_handoff_mode"] = "fixed_expert"
+    frame["scan_status"] = frame["status"].map(
+        lambda value: "completed" if str(value) == "completed" else "failed"
+    )
+    frame["global_scan_semantics"] = "registered_validation_result_package"
+    return frame
+
+
+def _snapshot_artifact_ids(path_value: object) -> set[str]:
+    path = Path(str(path_value or ""))
+    if not path.is_file():
+        return set()
+    try:
+        frame = pd.read_csv(path, usecols=["artifact_id"])
+    except (OSError, ValueError, pd.errors.ParserError, UnicodeError):
+        return set()
+    return set(frame["artifact_id"].dropna().astype(str))
+
+
+def _registered_validation_scan(
+    hub_index: dict[str, pd.DataFrame] | None,
+    *,
+    task_id: str,
+    artifact_ids: set[str],
+) -> tuple[pd.Series | None, pd.DataFrame]:
+    if not isinstance(hub_index, dict):
+        return None, pd.DataFrame()
+    route_runs = hub_index.get("route_runs", pd.DataFrame())
+    if route_runs.empty:
+        return None, pd.DataFrame()
+    candidates = route_runs.loc[
+        route_runs["task_id"].astype(str).eq(task_id)
+        & route_runs["stage"].astype(str).eq("Validation 候选扫描")
+        & route_runs["status"].astype(str).eq("completed")
+    ].copy()
+    if candidates.empty:
+        return None, pd.DataFrame()
+    candidates["_exact_pool"] = candidates["_snapshot_path"].map(
+        lambda value: _snapshot_artifact_ids(value) == artifact_ids
+    )
+    candidates = candidates.sort_values(
+        ["_exact_pool", "model_count", "result_rows"],
+        ascending=[False, False, False],
+    )
+    for _, run in candidates.iterrows():
+        frame = _registered_scan_frame(Path(str(run["_pairing_results_path"])))
+        if not frame.empty:
+            return run, frame
+    return None, pd.DataFrame()
+
+
+def _render_global_scan(
+    models: pd.DataFrame,
+    config: dict[str, object],
+    *,
+    hub_index: dict[str, pd.DataFrame] | None = None,
+) -> None:
     task_id = str(config["task_id"])
     task_models, _ = split_task_models(models, task_id)
     route_pool = _role_models(task_models, "scout")
@@ -957,24 +1076,47 @@ def _render_global_scan(models: pd.DataFrame, config: dict[str, object]) -> None
             )
             st.success(f"已提交后台全局扫描任务：{job_id}。可到“任务运行记录”查看进度。")
 
-    latest_scan = latest_completed_global_scan(task_id)
-    if latest_scan:
-        if session_key not in st.session_state:
+    registered_run, registered_scan = _registered_validation_scan(
+        hub_index,
+        task_id=task_id,
+        artifact_ids=set(route_ids) | set(expert_ids),
+    )
+    if registered_run is not None:
+        if session_key not in st.session_state and not registered_scan.empty:
+            st.session_state[session_key] = registered_scan
+        st.caption(
+            "已有正式 Validation 全池扫描："
+            f"{registered_run['protocol_version']} · {len(registered_scan):,} 个非退化路由结果"
+        )
+        if st.button(
+            "载入已有 Validation 全池扫描",
+            key=f"load_registered_scan_{task_id}",
+        ):
+            st.session_state[session_key] = registered_scan
+            st.rerun()
+    else:
+        latest_scan = latest_completed_global_scan(task_id)
+        if latest_scan:
             loaded = load_global_scan_results(latest_scan)
             if not loaded.empty:
-                st.session_state[session_key] = loaded
-        st.caption(f"最近完成后台扫描：{latest_scan.get('job_id')} · {latest_scan.get('estimated_points', '未知')} 个候选点")
-        if st.button("载入最近完成后台扫描", key=f"load_latest_global_scan_{task_id}"):
-            loaded = load_global_scan_results(latest_scan)
-            if loaded.empty:
-                st.warning("最近后台扫描没有可读取的结果文件。")
+                if session_key not in st.session_state:
+                    st.session_state[session_key] = loaded
+                st.caption(
+                    f"旧版后台扫描：{latest_scan.get('job_id')} · "
+                    f"{latest_scan.get('estimated_points', '未知')} 个候选点"
+                )
             else:
-                st.session_state[session_key] = loaded
-                st.rerun()
+                st.warning(
+                    "旧版后台任务仅保留状态记录，结果目录已失效；"
+                    "当前没有可替代的正式 Validation 扫描结果包。"
+                )
 
     scan = st.session_state.get(session_key)
     if not isinstance(scan, pd.DataFrame) or scan.empty:
-        st.info("还没有运行全局候选扫描。先点击“运行全局候选扫描”，再查看最高性能、推荐折中和 Pareto 前沿。")
+        st.info(
+            "当前没有可读取的扫描结果。可运行小规模交互扫描，"
+            "或提交新的后台扫描任务。"
+        )
         return
 
     completed = scan.loc[scan["scan_status"].eq("completed")].copy()
@@ -1222,7 +1364,11 @@ def _render_comparison(task_id: str, display_metrics: list[str]) -> None:
         st.rerun()
 
 
-def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
+def _render_routing_composition_workspace(
+    models: pd.DataFrame,
+    *,
+    hub_index: dict[str, pd.DataFrame] | None = None,
+) -> None:
     mode = st.segmented_control(
         "评测模式",
         ["性能回放", "成本—性能评测"],
@@ -1233,12 +1379,28 @@ def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
         st.caption("使用同任务、同数据集、同标签空间的冻结 prediction；不要求成本数据。")
         selectable = models
     else:
-        st.caption("只显示已完成统一 forward-only 测量的模型。")
-        measured = models.get("cost_status", pd.Series("", index=models.index)).astype(str).eq(
-            "measured"
+        st.caption(
+            "只显示已有 H100 forward-only 数值的模型；"
+            "完整端到端成本与 CPU 探针后处理是否齐全会另行标注。"
         )
+        measured = _forward_only_cost_mask(models)
         selectable = models.loc[measured].copy()
-        st.success(f"当前有 {len(selectable)} 个已测成本模型可进入曲线比较。")
+        st.success(
+            f"当前有 {len(selectable)} 个模型具备可比的 H100 forward-only 证据。"
+        )
+        partial = selectable.loc[
+            selectable.get(
+                "cost_status", pd.Series("", index=selectable.index)
+            ).astype(str).ne("measured")
+        ]
+        if not partial.empty:
+            names = ", ".join(
+                partial["artifact_id"].map(human_model).astype(str).unique()
+            )
+            st.info(
+                f"{names} 的 GPU forward-only 已测，但 CPU 探针后处理或端到端总成本未完整测量；"
+                "曲线只比较已登记的 forward-only 成本。"
+            )
         active = models.get("lifecycle_status", pd.Series("active", index=models.index)).fillna(
             "active"
         ).astype(str).ne("superseded")
@@ -1275,7 +1437,7 @@ def _render_routing_composition_workspace(models: pd.DataFrame) -> None:
         _add_comparison(label, metrics)
     if mode == "成本—性能评测":
         _render_tradeoff(curve, str(config["primary_metric"]))
-    _render_global_scan(models, config)
+    _render_global_scan(models, config, hub_index=hub_index)
     _render_task_evaluation(str(config["task_id"]), metrics, cases)
     _render_comparison(str(config["task_id"]), list(config["display_metrics"]))
     st.session_state["model_hub_last_cases"] = build_online_case_view(cases)
@@ -1327,7 +1489,6 @@ def _render_historical_route_results(
             "pairing_count",
             "result_rows",
             "status",
-            "route_eligible",
         ]
     ].rename(
         columns={
@@ -1338,9 +1499,9 @@ def _render_historical_route_results(
             "pairing_count": "组合",
             "result_rows": "结果行",
             "status": "产物状态",
-            "route_eligible": "正式路由资格",
         }
     )
+    run_table["使用范围"] = "研究结果包（未授予正式路由）"
     st.dataframe(run_table, hide_index=True, width="stretch")
     selected_run_id = st.selectbox(
         "查看结果包",
@@ -1406,7 +1567,6 @@ def _render_historical_route_results(
                     "protocol_id",
                     "selection_split",
                     "test_split",
-                    "route_eligible",
                 ]
             ].rename(
                 columns={
@@ -1414,9 +1574,9 @@ def _render_historical_route_results(
                     "protocol_id": "协议",
                     "selection_split": "选择集",
                     "test_split": "冻结结果集",
-                    "route_eligible": "正式路由资格",
                 }
             )
+            protocol_table["使用范围"] = "研究协议"
             st.dataframe(protocol_table, hide_index=True, width="stretch")
 
 
@@ -1444,18 +1604,20 @@ def _interactive_models_from_index(
         "模型池来源",
         candidates["run_id"].astype(str).tolist(),
         format_func=lambda run_id: (
-            candidates.loc[
-                candidates["run_id"].astype(str).eq(run_id), "protocol_version"
-            ].iloc[0]
-            + " · "
-            + str(
-                int(
+            (
+                "十模型扩展池（六模型基础池 + EyeCLIP / KeepFIT / RET-CLIP / RetiZero）"
+                if int(
                     candidates.loc[
                         candidates["run_id"].astype(str).eq(run_id), "model_count"
                     ].iloc[0]
                 )
+                == 10
+                else "六模型基础池"
             )
-            + " 模型"
+            + " · "
+            + candidates.loc[
+                candidates["run_id"].astype(str).eq(run_id), "protocol_version"
+            ].iloc[0]
         ),
         key="interactive_route_run",
     )
@@ -1465,7 +1627,7 @@ def _interactive_models_from_index(
     snapshot = pd.read_csv(Path(str(selected["_snapshot_path"])))
     st.caption(
         f"当前从正式 Validation 结果包载入 {snapshot['artifact_id'].nunique()} 个任务模型；"
-        "不再使用旧 v0.8.6 role_candidates 快照。"
+        "十模型池包含六模型基础池，二者是基线与扩展实验，不是两套互斥模型。"
     )
     return snapshot
 
@@ -1502,4 +1664,7 @@ def render_research_workspace(
             if hub_index is not None
             else models
         )
-        _render_routing_composition_workspace(interactive_models)
+        _render_routing_composition_workspace(
+            interactive_models,
+            hub_index=hub_index,
+        )
