@@ -1,0 +1,96 @@
+{
+  "schema_version": "ophagent.route_qualification_contract.v1",
+  "protocol_id": "route_qualification_gate_v1",
+  "purpose": "deterministic_research_route_qualification",
+  "decision_basis": "layered_constraints_without_weighted_score",
+  "execution_levels": [
+    "blocked",
+    "research_replay_only",
+    "research_case_simulation",
+    "deployment_candidate",
+    "clinical_route_eligible"
+  ],
+  "allowed_agent_actions": [
+    "KEEP_SCOUT",
+    "REQUEST_EXPERT",
+    "REFER_TO_HUMAN"
+  ],
+  "never_auto_grant_clinical_route_eligible": true,
+  "asset_task_gate": {
+    "scout_expert_must_differ": true,
+    "require_task_match": true,
+    "require_label_space_match": true,
+    "require_class_order_match": true,
+    "require_prediction_asset": true,
+    "require_matching_cost_protocol_for_deployment": true,
+    "require_online_case_entry_for_deployment": true
+  },
+  "research_evidence_gate": {
+    "selection_split": "validation",
+    "require_frozen_protocol": true,
+    "beneficial": "validation_delta_vs_scout > 0 and introduced == 0 and net >= 0",
+    "risk_tradeoff": "validation_delta_vs_scout > 0 and (introduced > 0 or net < 0)",
+    "ineffective": "validation_delta_vs_scout <= 0",
+    "unstable": "bootstrap lower bound <= 0 or frozen main/proxy outcome reverses",
+    "oracle_may_grant_qualification": false,
+    "exploratory_test_may_grant_qualification": false,
+    "protocol_invalid_may_grant_qualification": false
+  },
+  "task_policies": {
+    "aptos_dr_5class": {
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "deepdrid_dr_5class_external": {
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "deepdrid_dr_5class_native": {
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "glaucoma_3class": {
+      "n_classes": 3,
+      "class_order": [0, 1, 2],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "fallback_is_qualification_limited": true,
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "glaucoma_binary": {
+      "n_classes": 2,
+      "class_order": [0, 1],
+      "primary_metric": "macro_f1",
+      "fallback_metric": "accuracy",
+      "proxy_semantics": "false_negative_proxy_not_clinical_outcome"
+    },
+    "trhd59_observed_label": {
+      "n_classes": 59,
+      "class_order": "0..58",
+      "primary_metric": "macro_f1",
+      "fallback_metric": "accuracy",
+      "proxy_semantics": "weak_single_observed_label_comparison"
+    }
+  },
+  "execution_gate": {
+    "research_replay_only": "valid frozen assets without sufficient route evidence",
+    "research_case_simulation": "beneficial or risk_tradeoff validation evidence using cached predictions",
+    "deployment_candidate": "beneficial, stable, zero introduced events, complete cost and online entries",
+    "clinical_route_eligible": "manual external governance only"
+  },
+  "human_confirmation_required": true,
+  "test_policy": {
+    "test_may_modify_gate_rules": false,
+    "frozen_result_may_restrict_execution": true,
+    "test_content_available_to_controller": false
+  }
+}

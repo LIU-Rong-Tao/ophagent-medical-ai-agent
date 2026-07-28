@@ -311,6 +311,18 @@ def inject_model_hub_css() -> None:
         .review-route-card{{background:#fff;border:1px solid var(--hub-line);border-radius:5px;padding:.68rem .72rem;min-height:88px}}
         .review-route-card span{{display:block;color:var(--hub-muted);font-size:.7rem;font-weight:700}}
         .review-route-card b{{display:block;color:var(--hub-ink);font-size:.92rem;line-height:1.35;margin-top:.35rem;overflow-wrap:anywhere}}
+        .agent-decision-head{{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1rem 0 .55rem}}
+        .agent-decision-head>div b{{display:block;color:var(--hub-ink);font-size:1rem}}
+        .agent-decision-head>div span{{display:block;color:var(--hub-muted);font-size:.72rem;margin-top:.15rem}}
+        .agent-decision-strip{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--hub-line);border-radius:5px;overflow:hidden;background:#fff}}
+        .agent-decision-step{{position:relative;min-height:112px;padding:.78rem .85rem;border-right:1px solid var(--hub-line);border-top:3px solid #94a3b8}}
+        .agent-decision-step:last-child{{border-right:0}}
+        .agent-decision-step span{{display:block;color:var(--hub-muted);font-size:.68rem;font-weight:750}}
+        .agent-decision-step b{{display:block;color:var(--hub-ink);font-size:1rem;line-height:1.35;margin:.38rem 0}}
+        .agent-decision-step small{{display:block;color:#6b7788;font-size:.69rem;line-height:1.4}}
+        .agent-decision-step.ok{{border-top-color:var(--hub-teal)}}
+        .agent-decision-step.attention{{border-top-color:var(--hub-amber);background:#fffdf7}}
+        .agent-decision-step.restricted{{border-top-color:var(--hub-red);background:#fffafa}}
         [data-testid="stDataFrame"]{{border:1px solid var(--hub-line);border-radius:4px;overflow:hidden;background:#fff}}
         [data-testid="stTabs"] [data-baseweb="tab-list"]{{gap:1.15rem;border-bottom:1px solid var(--hub-line)}}
         [data-testid="stTabs"] [data-baseweb="tab"]{{padding:.65rem .05rem;border-radius:0;color:#607085}}
@@ -322,8 +334,8 @@ def inject_model_hub_css() -> None:
         div[data-testid="stAlert"]{{border-radius:4px}}
         @media(max-width:1100px){{.hub-audit-kpis{{grid-template-columns:repeat(3,minmax(0,1fr))}}.hub-audit-kpis.compact{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-overview-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow-step:nth-child(2){{border-right:0}}}}
         @media(max-width:900px){{.hub-page-title{{font-size:1.65rem!important}}.hub-page-copy{{font-size:.8rem}}}}
-        @media(max-width:900px){{.review-route-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
-        @media(max-width:760px){{.main .block-container{{padding:1.15rem .9rem 3rem}}.hub-page-head{{align-items:flex-start;flex-direction:column}}.hub-page-context{{white-space:normal}}.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip,.hub-overview-grid,.hub-audit-kpis,.hub-audit-kpis.compact{{grid-template-columns:1fr 1fr}}.hub-flow,.hub-process{{grid-template-columns:1fr}}.hub-flow-step,.hub-process-item{{border-right:0;border-bottom:1px solid var(--hub-line)}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}.review-offline-banner{{align-items:flex-start;flex-direction:column}}}}
+        @media(max-width:900px){{.review-route-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.agent-decision-strip{{grid-template-columns:1fr}}.agent-decision-step{{border-right:0;border-bottom:1px solid var(--hub-line)}}.agent-decision-step:last-child{{border-bottom:0}}}}
+        @media(max-width:760px){{.main .block-container{{padding:1.15rem .9rem 3rem}}.hub-page-head{{align-items:flex-start;flex-direction:column}}.hub-page-context{{white-space:normal}}.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip,.hub-overview-grid,.hub-audit-kpis,.hub-audit-kpis.compact{{grid-template-columns:1fr 1fr}}.hub-flow,.hub-process{{grid-template-columns:1fr}}.hub-flow-step,.hub-process-item{{border-right:0;border-bottom:1px solid var(--hub-line)}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}.review-offline-banner,.agent-decision-head{{align-items:flex-start;flex-direction:column}}}}
         </style>
         """,
         unsafe_allow_html=True,

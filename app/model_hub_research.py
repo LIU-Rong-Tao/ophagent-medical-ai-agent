@@ -32,6 +32,12 @@ from app.model_hub_scan_jobs import (
 )
 from app.model_hub_result_audit import render_result_table_risk_audit
 from app.model_hub_ui import grade_label, human_model, task_label
+from app.route_qualification import (
+    OUTPUT_RELATIVE_DIR,
+    evaluate_route_qualification,
+    load_route_qualification_contract,
+    route_qualification_request_from_row,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -1503,6 +1509,107 @@ def _render_historical_route_results(
     )
     run_table["使用范围"] = "研究结果包（未授予正式路由）"
     st.dataframe(run_table, hide_index=True, width="stretch")
+    qualification_path = (
+        PROJECT_ROOT
+        / OUTPUT_RELATIVE_DIR
+        / "route_qualification_matrix.csv"
+    )
+    if qualification_path.is_file():
+        qualification = pd.read_csv(qualification_path)
+        task_ids = set(visible_runs["task_id"].astype(str))
+        qualification = qualification.loc[
+            qualification["task_id"].astype(str).isin(task_ids)
+        ].copy()
+        if not qualification.empty:
+            contract, contract_sha = load_route_qualification_contract(
+                PROJECT_ROOT
+            )
+            decisions = [
+                evaluate_route_qualification(
+                    route_qualification_request_from_row(row),
+                    contract=contract,
+                    contract_sha256=contract_sha,
+                )
+                for _, row in qualification.iterrows()
+            ]
+            qualification["evidence_label"] = [
+                decision.evidence_label for decision in decisions
+            ]
+            qualification["execution_level"] = [
+                decision.execution_level for decision in decisions
+            ]
+            qualification["error_codes"] = [
+                " | ".join(decision.error_codes) for decision in decisions
+            ]
+            qualification["evidence_label"] = qualification[
+                "evidence_label"
+            ].map(
+                {
+                    "beneficial": "有益",
+                    "risk_tradeoff": "存在代理事件权衡",
+                    "ineffective": "无明显收益",
+                    "unstable": "不稳定",
+                }
+            ).fillna(qualification["evidence_label"])
+            qualification["execution_level"] = qualification[
+                "execution_level"
+            ].map(
+                {
+                    "blocked": "阻塞",
+                    "research_replay_only": "仅历史回放",
+                    "research_case_simulation": "研究病例模拟",
+                    "deployment_candidate": "部署候选",
+                    "clinical_route_eligible": "临床路由资格",
+                }
+            ).fillna(qualification["execution_level"])
+            with st.expander("路由资格门控（确定性规则）", expanded=True):
+                st.caption(
+                    "先核验资产与任务，再核验 Validation 与冻结结果证据，"
+                    "最后决定允许的执行层级；不使用加权总分，也不自动授予临床路由资格。"
+                )
+                display = qualification[
+                    [
+                        "scout_artifact_ids",
+                        "expert_artifact_id",
+                        "routing_policy",
+                        "requested_budget",
+                        "evidence_label",
+                        "execution_level",
+                        "validation_delta_vs_scout",
+                        "validation_introduced",
+                        "validation_net",
+                        "frozen_delta_vs_scout",
+                        "error_codes",
+                    ]
+                ].rename(
+                    columns={
+                        "scout_artifact_ids": "Scout",
+                        "expert_artifact_id": "Expert",
+                        "routing_policy": "策略",
+                        "requested_budget": "预算",
+                        "validation_delta_vs_scout": "Validation 主指标增量",
+                        "validation_introduced": "Validation 新增代理事件",
+                        "validation_net": "Validation 净变化",
+                        "frozen_delta_vs_scout": "冻结结果主指标增量",
+                        "evidence_label": "证据结论",
+                        "execution_level": "允许执行层级",
+                        "error_codes": "限制码",
+                    }
+                )
+                st.dataframe(
+                    display.style.format(
+                        {
+                            "预算": "{:.0%}",
+                            "Validation 主指标增量": "{:+.4f}",
+                            "冻结结果主指标增量": "{:+.4f}",
+                            "Validation 新增代理事件": "{:.0f}",
+                            "Validation 净变化": "{:.0f}",
+                        },
+                        na_rep="未提供",
+                    ),
+                    hide_index=True,
+                    width="stretch",
+                )
     selected_run_id = st.selectbox(
         "查看结果包",
         visible_runs["run_id"].astype(str).tolist(),

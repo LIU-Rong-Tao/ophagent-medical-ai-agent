@@ -12,6 +12,7 @@ from app.model_hub_tools import (
     ToolRuntime,
     capability_matrix,
 )
+from app.route_qualification import CONTRACT_RELATIVE_PATH
 
 
 def _context(tmp_path: Path) -> ToolContext:
@@ -224,6 +225,12 @@ def test_cached_route_trace_is_research_only_and_never_reads_test(
     )
     protocol_path.parent.mkdir(parents=True)
     protocol_path.write_text('{"route_eligible": false}', encoding="utf-8")
+    qualification_contract_path = tmp_path / CONTRACT_RELATIVE_PATH
+    qualification_contract_path.parent.mkdir(parents=True, exist_ok=True)
+    qualification_contract_path.write_text(
+        '{"protocol_id": "route_qualification_gate_v1"}',
+        encoding="utf-8",
+    )
     runtime = ToolRuntime(context)
     result = runtime.run(
         ToolRequest(
@@ -238,4 +245,18 @@ def test_cached_route_trace_is_research_only_and_never_reads_test(
     assert result.data["evaluation_design"] == "research_simulation"
     assert result.data["route_eligible"] is False
     assert result.data["test_content_used"] is False
+    assert (
+        result.data["route_qualification"]["execution_level"]
+        == "research_replay_only"
+    )
     assert "true_label" not in result.data
+
+    blocked = ToolRuntime(context).run(
+        ToolRequest(
+            "routing_protocol.evaluate",
+            task_id="aptos_dr_5class",
+            case_id="CASE-0001",
+            payload={"split": "test", "source_case_key": "source-1"},
+        )
+    )
+    assert blocked.code == "TEST_LOCKED"

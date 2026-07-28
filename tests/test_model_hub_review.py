@@ -46,6 +46,10 @@ def test_workstation_exposes_review_actions_and_research_boundaries() -> None:
         "单模型输出",
         "模型输出错误风险审计",
         "Scout / Expert 研究模拟",
+        "受控 Agent 决策",
+        "资格判定",
+        "风险判定",
+        "最终动作",
         "接受模型输出",
         "修改输出",
         "标记不确定",
@@ -56,9 +60,22 @@ def test_workstation_exposes_review_actions_and_research_boundaries() -> None:
     ):
         assert text in source
     assert "route_eligible=false" in source
+    assert "确定性规则基线" in source
     assert "不提供诊断、治疗或患者分流建议" in source
     assert "http://" not in source
     assert "https://" not in source
+
+
+def test_read_only_pipeline_checks_route_before_prediction_assets() -> None:
+    source = (ROOT / "app/model_hub_review.py").read_text(encoding="utf-8")
+    pipeline = source[
+        source.index("def _run_read_only_pipeline") :
+        source.index("def _run_fault_pipeline")
+    ]
+
+    assert pipeline.index('"routing_protocol.evaluate"') < pipeline.index(
+        '"prediction_asset.validate"'
+    )
 
 
 def test_report_schema_excludes_source_case_key_and_test_content() -> None:

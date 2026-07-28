@@ -13,6 +13,10 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.model_hub_agent import (
+    ControlledAgentRequest,
+    ControlledAgentRuntime,
+)
 from app.model_hub_tools import (
     TASK_CONTRACTS,
     ToolContext,
@@ -23,6 +27,12 @@ from app.model_hub_tools import (
     trace_frame,
 )
 from app.model_hub_ui import grade_label, human_model
+from app.route_qualification import (
+    RouteQualificationRequest,
+    evaluate_route_qualification,
+    load_route_qualification_contract,
+    route_qualification_decision_from_dict,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -106,6 +116,7 @@ def _load_case_rows(project_root_text: str, task_id: str) -> list[dict[str, Any]
             "requested_budget",
             "scout_disagreement",
             "routing_score",
+            "is_reviewed_by_expert",
         ],
     )
     trace = trace.loc[
@@ -119,6 +130,15 @@ def _load_case_rows(project_root_text: str, task_id: str) -> list[dict[str, Any]
         ["scout_disagreement", "routing_score"],
         ascending=[False, False],
     ).drop_duplicates("image_key")
+    high_risk = trace.head(10)
+    keep_scout = (
+        trace.loc[~trace["is_reviewed_by_expert"].astype(bool)]
+        .sort_values("routing_score", ascending=True)
+        .head(2)
+    )
+    trace = pd.concat([high_risk, keep_scout], ignore_index=True).drop_duplicates(
+        "image_key"
+    )
 
     relative_paths: dict[str, str] = {}
     manifest_path = root / str(contract.get("manifest", ""))
@@ -154,8 +174,6 @@ def _load_case_rows(project_root_text: str, task_id: str) -> list[dict[str, Any]
                 "routing_score": float(row["routing_score"]),
             }
         )
-        if len(rows) >= 12:
-            break
     return rows
 
 
@@ -196,6 +214,65 @@ def build_review_cases(project_root: Path, task_id: str) -> list[ReviewCase]:
     return cases
 
 
+def _run_controlled_agent(
+    context: ToolContext,
+    case: ReviewCase,
+    *,
+    tool_payload: dict[str, Any],
+    case_scope: str,
+) -> dict[str, Any]:
+    route = tool_payload.get("route", {})
+    route_data = route.get("data", {}) if isinstance(route, dict) else {}
+    qualification_payload = route_data.get("route_qualification")
+    if isinstance(qualification_payload, dict):
+        qualification = route_qualification_decision_from_dict(
+            qualification_payload
+        )
+    else:
+        contract, contract_sha = load_route_qualification_contract(
+            context.project_root
+        )
+        qualification = evaluate_route_qualification(
+            RouteQualificationRequest(
+                task_id=case.task_id,
+                pairing_id=str(route_data.get("pairing_id", "unavailable")),
+                scout_artifact_ids=tuple(
+                    str(value)
+                    for value in route_data.get("scout_artifact_ids", [])
+                ),
+                expert_artifact_id=str(
+                    route_data.get("expert_artifact_id", "")
+                ),
+                request_scope=case_scope,
+                prediction_assets_valid=False,
+            ),
+            contract=contract,
+            contract_sha256=contract_sha,
+        )
+    gate_evidence = route_data.get("gate_evidence", {})
+    expected_cost = gate_evidence.get("expected_cost_ms_per_image")
+    pairing_id = str(route_data.get("pairing_id", "unavailable"))
+    request = ControlledAgentRequest(
+        task_id=case.task_id,
+        case_alias=case.alias,
+        case_scope=case_scope,
+        scout_artifact_ids=tuple(
+            str(value) for value in route_data.get("scout_artifact_ids", [])
+        ),
+        expert_artifact_id=str(route_data.get("expert_artifact_id", "")),
+        protocol_requests_expert=bool(route_data.get("expert_invoked", False)),
+        expected_route_cost_ms_per_image=(
+            float(expected_cost) if expected_cost is not None else None
+        ),
+        idempotency_key=f"{case.alias}:{pairing_id}:{case_scope}",
+    )
+    return ControlledAgentRuntime().decide(
+        request,
+        qualification=qualification,
+        tool_payload=tool_payload,
+    ).to_dict()
+
+
 def _run_read_only_pipeline(
     context: ToolContext,
     case: ReviewCase,
@@ -220,8 +297,18 @@ def _run_read_only_pipeline(
     registry_response = runtime.run(
         ToolRequest("model_registry.inspect", payload={}, **common)
     )
+    route_response = runtime.run(
+        ToolRequest(
+            "routing_protocol.evaluate",
+            payload={
+                "split": "validation",
+                "source_case_key": case.source_case_key,
+            },
+            **common,
+        )
+    )
     predictions = []
-    if input_response.ok and registry_response.ok:
+    if input_response.ok and registry_response.ok and route_response.ok:
         for artifact_id in artifact_ids:
             response = runtime.run(
                 ToolRequest(
@@ -244,24 +331,21 @@ def _run_read_only_pipeline(
             **common,
         )
     )
-    route_response = runtime.run(
-        ToolRequest(
-            "routing_protocol.evaluate",
-            payload={
-                "split": "validation",
-                "source_case_key": case.source_case_key,
-            },
-            **common,
-        )
+    tool_payload = {
+        "input": input_response.to_dict(),
+        "registry": registry_response.to_dict(),
+        "predictions": predictions,
+        "audit": audit_response.to_dict(),
+        "route": route_response.to_dict(),
+    }
+    tool_payload["agent"] = _run_controlled_agent(
+        context,
+        case,
+        tool_payload=tool_payload,
+        case_scope="cached_prediction_replay",
     )
     return (
-        {
-            "input": input_response.to_dict(),
-            "registry": registry_response.to_dict(),
-            "predictions": predictions,
-            "audit": audit_response.to_dict(),
-            "route": route_response.to_dict(),
-        },
+        tool_payload,
         runtime,
     )
 
@@ -303,13 +387,20 @@ def _run_fault_pipeline(
             **common,
         )
     )
+    tool_payload = {
+        "input": input_response.to_dict(),
+        "registry": registry_response.to_dict(),
+        "inference": inference_response.to_dict(),
+        "downstream": downstream_response.to_dict(),
+    }
+    tool_payload["agent"] = _run_controlled_agent(
+        context,
+        case,
+        tool_payload=tool_payload,
+        case_scope="new_case",
+    )
     return (
-        {
-            "input": input_response.to_dict(),
-            "registry": registry_response.to_dict(),
-            "inference": inference_response.to_dict(),
-            "downstream": downstream_response.to_dict(),
-        },
+        tool_payload,
         runtime,
     )
 
@@ -455,6 +546,93 @@ def _render_predictions(task_id: str, payload: dict[str, Any]) -> None:
             )
 
 
+def _render_controlled_agent_trace(payload: dict[str, Any]) -> None:
+    agent = payload.get("agent", {})
+    if not agent:
+        return
+    qualification = agent.get("qualification", {})
+    level_labels = {
+        "blocked": "资格阻止",
+        "research_replay_only": "仅历史回放",
+        "research_case_simulation": "研究病例模拟",
+        "deployment_candidate": "部署候选",
+        "clinical_route_eligible": "临床路由资格",
+    }
+    evidence_labels = {
+        "beneficial": "Validation 有益",
+        "risk_tradeoff": "存在代理事件权衡",
+        "ineffective": "Validation 未见增益",
+        "unstable": "证据不稳定",
+    }
+    risk_labels = {
+        "protocol_requests_expert": "冻结协议触发专家",
+        "model_disagreement_observed": "观察到模型分歧",
+        "protocol_keeps_scout": "冻结协议保持 Scout",
+        "qualification_restricted": "资格限制",
+        "cost_restricted": "成本限制",
+        "not_evaluated": "上游失败，未继续评估",
+    }
+    action_labels = {
+        "KEEP_SCOUT": "保持 Scout",
+        "REQUEST_EXPERT": "请求 Expert",
+        "REFER_TO_HUMAN": "转人工处理",
+    }
+    level = str(agent.get("qualification_level", "blocked"))
+    evidence = str(agent.get("evidence_label", "unstable"))
+    risk_state = str(agent.get("risk_state", "not_evaluated"))
+    action = str(agent.get("action", "REFER_TO_HUMAN"))
+    level_class = (
+        "ok"
+        if level in {"research_case_simulation", "deployment_candidate"}
+        else "restricted"
+    )
+    action_class = {
+        "KEEP_SCOUT": "ok",
+        "REQUEST_EXPERT": "attention",
+        "REFER_TO_HUMAN": "restricted",
+    }.get(action, "restricted")
+    codes = " · ".join(
+        str(value) for value in qualification.get("error_codes", [])[:2]
+    )
+    cards = [
+        (
+            "01 · 资格判定",
+            level_labels.get(level, level),
+            evidence_labels.get(evidence, evidence),
+            level_class,
+        ),
+        (
+            "02 · 风险判定",
+            risk_labels.get(risk_state, risk_state),
+            "只使用模型输出与冻结协议信号",
+            "attention" if "expert" in risk_state else "neutral",
+        ),
+        (
+            "03 · 最终动作",
+            action_labels.get(action, action),
+            "等待人工确认后才写入审阅结论",
+            action_class,
+        ),
+    ]
+    content = "".join(
+        '<div class="agent-decision-step '
+        f'{css_class}"><span>{html.escape(label)}</span>'
+        f"<b>{html.escape(value)}</b>"
+        f"<small>{html.escape(note)}</small></div>"
+        for label, value, note, css_class in cards
+    )
+    st.markdown(
+        '<div class="agent-decision-head">'
+        "<div><b>受控 Agent 决策</b>"
+        "<span>确定性规则基线，不由语言模型裁决资格</span></div>"
+        '<span class="hub-chip hub-chip-blue">三动作状态机</span></div>'
+        f'<div class="agent-decision-strip">{content}</div>',
+        unsafe_allow_html=True,
+    )
+    if codes:
+        st.caption(f"当前限制码：{codes}")
+
+
 def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
     audit = payload["audit"]
     route = payload["route"]
@@ -518,6 +696,7 @@ def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
         )
     else:
         st.error(f"{route['code']} · {route['message']}")
+    _render_controlled_agent_trace(payload)
 
 
 def _review_report(
@@ -550,6 +729,7 @@ def _review_report(
         "model_outputs": predictions,
         "risk_audit": payload.get("audit", {}).get("data", {}),
         "routing_simulation": payload.get("route", {}).get("data", {}),
+        "controlled_agent": payload.get("agent", {}),
         "human_review": decision,
         "trace": runtime.to_dict(),
         "boundaries": {
@@ -692,6 +872,23 @@ def _render_trace(runtime: ToolRuntime, payload: dict[str, Any]) -> None:
                 f"Commit：{route.get('git_commit', '未记录')} · "
                 "成本口径来自模型 registry 的 H100 forward-only 记录。"
             )
+        agent = payload.get("agent", {})
+        if agent:
+            agent_trace = pd.DataFrame(agent.get("trace", []))
+            if not agent_trace.empty:
+                st.markdown("##### 受控 Agent 状态轨迹")
+                st.dataframe(
+                    agent_trace,
+                    hide_index=True,
+                    width="stretch",
+                )
+            qualification = agent.get("qualification", {})
+            st.caption(
+                "Route Qualification Contract SHA256："
+                f"{qualification.get('contract_sha256', '未记录')} · "
+                "Evidence fingerprint："
+                f"{qualification.get('evidence_fingerprint', '未记录')}"
+            )
 
 
 def _render_fault(payload: dict[str, Any], runtime: ToolRuntime) -> None:
@@ -707,6 +904,7 @@ def _render_fault(payload: dict[str, Any], runtime: ToolRuntime) -> None:
         f"后续风险审计状态：{downstream['code']}。"
         "上游失败后没有继续执行越权调用。"
     )
+    _render_controlled_agent_trace(payload)
     _render_trace(runtime, payload)
 
 
@@ -759,7 +957,10 @@ def render_offline_case_review_workstation() -> None:
         f" <span class='hub-chip hub-chip-blue'>{html.escape(TASK_CONTRACTS[task_id]['task_name'])}</span>",
         unsafe_allow_html=True,
     )
-    pipeline_key = f"review_pipeline::{scenario}::{case.alias}"
+    pipeline_key = (
+        f"review_pipeline::route-gate-v1::{scenario}::"
+        f"{case.alias}::{case.source_case_key}"
+    )
     if pipeline_key not in st.session_state:
         if scenario == FAULT_SCENARIO:
             payload, runtime = _run_fault_pipeline(

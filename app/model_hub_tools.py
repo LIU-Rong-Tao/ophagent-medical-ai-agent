@@ -26,6 +26,12 @@ from app.checkpoints import (
 )
 from app.inference import run_single_image_inference
 from app.model_hub_index import build_task_asset_index
+from app.route_qualification import (
+    RouteQualificationRequest,
+    evaluate_route_qualification,
+    find_route_qualification_record,
+    load_route_qualification_contract,
+)
 
 
 TOOL_NAMES = (
@@ -804,6 +810,12 @@ def _routing_protocol_evaluate(
     request: ToolRequest,
 ) -> tuple[dict[str, Any], str | None]:
     contract = _task_contract(request)
+    split = str(request.payload.get("split", "validation")).strip().lower()
+    if split not in {"validation", "val"}:
+        raise ToolError(
+            "TEST_LOCKED",
+            "病例工作台只能读取 Validation 路由轨迹",
+        )
     trace_path = context.project_root / str(contract["route_trace"])
     protocol_path = context.project_root / str(contract["route_protocol"])
     if not trace_path.is_file() or not protocol_path.is_file():
@@ -820,12 +832,71 @@ def _routing_protocol_evaluate(
     if rows.empty:
         raise ToolError("ASSET_NOT_FOUND", "冻结 validation trace 中没有当前病例")
     row = rows.iloc[0]
+    try:
+        scout_artifact_ids = tuple(
+            str(value)
+            for value in json.loads(str(row["scout_pred_labels"])).keys()
+        )
+    except (AttributeError, json.JSONDecodeError, TypeError):
+        scout_artifact_ids = ()
+    if not scout_artifact_ids:
+        scout_artifact_ids = (str(row["primary_scout_artifact_id"]),)
+
+    qualification_record = find_route_qualification_record(
+        context.project_root,
+        task_id=request.task_id,
+        pairing_id=str(row["pairing_id"]),
+        routing_policy=str(row["routing_policy"]),
+        requested_budget=float(row["requested_budget"]),
+        scout_artifact_ids=scout_artifact_ids,
+        expert_artifact_id=str(row["expert_artifact_id"]),
+        request_scope="cached_prediction_replay",
+    )
+    if qualification_record is None:
+        qualification_contract, qualification_contract_sha = (
+            load_route_qualification_contract(context.project_root)
+        )
+        qualification_request = RouteQualificationRequest(
+            task_id=request.task_id,
+            pairing_id=str(row["pairing_id"]),
+            scout_artifact_ids=scout_artifact_ids,
+            expert_artifact_id=str(row["expert_artifact_id"]),
+            request_scope="cached_prediction_replay",
+            prediction_assets_valid=True,
+            protocol_frozen=True,
+            selection_split="",
+            protocol_sha256=compute_file_sha256(protocol_path),
+        )
+        route_qualification = evaluate_route_qualification(
+            qualification_request,
+            contract=qualification_contract,
+            contract_sha256=qualification_contract_sha,
+        )
+        gate_evidence: dict[str, Any] = {
+            "matrix_record_found": False,
+            "reason": "尚未生成正式资格矩阵，仅允许保守只读回放",
+        }
+    else:
+        route_qualification, gate_evidence = qualification_record
+        gate_evidence["matrix_record_found"] = True
+
+    if not route_qualification.allow_cached_replay:
+        raise ToolError(
+            "QUALIFICATION_BLOCKED",
+            "冻结路由未通过资产与任务门禁",
+            details={
+                "qualification": route_qualification.execution_level,
+                "route_qualification": route_qualification.to_dict(),
+                "gate_evidence": gate_evidence,
+            },
+        )
     return (
         {
             "execution_mode": "cached_prediction_replay",
             "evaluation_design": "research_simulation",
             "route_eligible": False,
             "pairing_id": str(row["pairing_id"]),
+            "scout_artifact_ids": list(scout_artifact_ids),
             "routing_policy": str(row["routing_policy"]),
             "requested_budget": float(row["requested_budget"]),
             "realized_budget": float(row["realized_budget"]),
@@ -845,8 +916,10 @@ def _routing_protocol_evaluate(
             "trace_asset_sha256": compute_file_sha256(trace_path),
             "git_commit": _git_commit(context.project_root),
             "test_content_used": False,
+            "route_qualification": route_qualification.to_dict(),
+            "gate_evidence": gate_evidence,
         },
-        "analytical_asset_only",
+        route_qualification.execution_level,
     )
 
 

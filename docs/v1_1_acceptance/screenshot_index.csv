@@ -19,3 +19,7 @@ screenshot,page,scenario,input,expected,actual,passed
 09_review_trace.png,病例回放,资产与调用轨迹,冻结 validation 概率,显示六项工具状态并可展开完整轨迹,工具边界和调用轨迹清晰可追溯,yes
 10_review_1280x720.png,病例回放,窄桌面适配,1280x720 视口,表格/结果卡与图片不重叠,布局可用且无横向遮挡,yes
 11_fault_gate.png,病例回放,结构化故障门禁,offline-only 资产请求原图推理,阻止越权调用并停止后续工具,显示 QUALIFICATION_BLOCKED 与 UPSTREAM_FAILED,yes
+12_route_qualification_matrix.png,研究评测,统一路由资格矩阵,正式冻结协议与已有结果包,页面与 Agent 共用确定性资格函数且不自动授予临床资格,显示分层门禁/Validation 与冻结结果证据/执行层级,yes
+13_agent_request_expert.png,病例回放,高风险三动作门控,冻结 APTOS validation 高风险病例,资格通过研究模拟且冻结协议请求 Expert,显示资格判定/风险判定/REQUEST_EXPERT 与限制码,yes
+14_agent_keep_scout.png,病例回放,低风险三动作门控,冻结 APTOS validation 低风险病例,资格通过研究模拟且冻结协议保持 Scout,显示资格判定/风险判定/KEEP_SCOUT 且 Expert 未调用,yes
+15_agent_fault_gate.png,病例回放,Agent 故障停止,offline-only 资产请求新病例原图推理,阻断推理并转人工且不运行下游风险审计,显示 QUALIFICATION_BLOCKED/UPSTREAM_FAILED/REFER_TO_HUMAN,yes
