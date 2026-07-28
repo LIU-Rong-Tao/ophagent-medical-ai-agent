@@ -1,0 +1,12 @@
+{
+  "schema_version": "ophagent.route_qualification_artifacts.v1",
+  "route_count": 16,
+  "task_count": 6,
+  "contract_path": "experiments/opening_risk_routing_closure/configs/protocols/route_qualification_contract_v1.json",
+  "contract_sha256": "e52dbc9a069505189f3982a0fe879b93de151d19c5037ffce44e8da397f21bf8",
+  "matrix_sha256": "f32b0d90fa96b369f0b04fa470cd1f828b4157c9b86b8c3b1c0fe1781413c2d2",
+  "comparison_sha256": "c1a07af258334c9c1aacb41f20df20df8d645e2ece6ff33300d08960d66677c7",
+  "source_commit_sha": "81b0f784fc44ef3f19051886f9702f5468e9a5ea",
+  "frozen_inputs_modified": false,
+  "clinical_route_eligible": false
+}

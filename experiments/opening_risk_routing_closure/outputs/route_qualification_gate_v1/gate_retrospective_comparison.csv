@@ -1,0 +1,8 @@
+task_id,formal_frozen_routes,frozen_favorable_routes,ungated_research_actions,gated_research_actions,ineffective_route_interception_rate,beneficial_route_retention_rate,ungated_false_grant_rate,gated_false_grant_rate,gated_false_rejection_rate,test_reversal_interception_rate,introduced_risk_deployment_limited_rate,research_action_coverage,mean_expected_cost_ms_per_image
+aptos_dr_5class,4,1,4,2,0.3333333333333333,0.0,0.75,1.0,1.0,1.0,1.0,0.5,1.8996408828928277
+deepdrid_dr_5class_external,3,3,3,0,,0.0,0.0,,1.0,,,0.0,
+deepdrid_dr_5class_native,2,2,2,2,,1.0,0.0,0.0,0.0,,1.0,1.0,1.7137023132294416
+glaucoma_3class,2,1,2,0,1.0,0.0,0.5,,1.0,1.0,1.0,0.0,
+glaucoma_binary,2,1,2,1,1.0,1.0,0.5,0.0,0.0,1.0,1.0,0.5,4.68787579539423
+trhd59_observed_label,3,2,3,2,1.0,1.0,0.3333333333333333,0.0,0.0,1.0,,0.6666666666666666,6.425753392199034
+all_tasks,16,10,16,7,0.6666666666666666,0.5,0.375,0.2857142857142857,0.5,1.0,1.0,0.4375,3.5380098531481194
