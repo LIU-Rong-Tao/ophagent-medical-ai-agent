@@ -408,3 +408,5 @@ def test_benchmark_writer_records_hashes_and_read_only_boundaries(
         newline="",
     ) as handle:
         assert len(list(csv.DictReader(handle))) == 24
+    assert b"\r\n" not in paths["scenario_results"].read_bytes()
+    assert b"\r\n" not in paths["summary"].read_bytes()
