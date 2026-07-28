@@ -1,0 +1,64 @@
+{
+  "schema_version": "ophagent.route_qualification_benchmark.v1_1",
+  "protocol_id": "route_qualification_gate_v1_1",
+  "formal_route_count": 16,
+  "task_count": 6,
+  "v1": {
+    "beneficial_route_retention_rate": 0.5,
+    "false_grant_rate": 0.2857142857142857,
+    "false_rejection_rate": 0.5,
+    "ineffective_route_interception_rate": 0.6666666666666666,
+    "test_reversal_interception_rate": 1.0,
+    "executable_coverage_rate": 0.4375
+  },
+  "v1_1_leave_one_task_out": {
+    "beneficial_route_retention_rate": 0.1,
+    "false_grant_rate": 0.5,
+    "false_rejection_rate": 0.9,
+    "ineffective_route_interception_rate": 0.8333333333333334,
+    "test_reversal_interception_rate": 0.75,
+    "risk_tradeoff_limitation_rate": 1.0,
+    "executable_coverage_rate": 0.125,
+    "cost_protocol_group_count": 2,
+    "comparable_cost_by_protocol_json": "{\"h100_fp32_forward_only_batch1_batch16_w10_r30_v1\": {\"change_ms_per_image\": -36.71276591311907, \"gated_ms_per_image_sum\": 10.187074205605313, \"ungated_ms_per_image_sum\": 46.899840118724384}, \"h100_fp32_forward_only_batch32_split5_v1\": {\"change_ms_per_image\": -1.0581103716826727, \"gated_ms_per_image_sum\": 0.0, \"ungated_ms_per_image_sum\": 1.0581103716826727}}",
+    "comparable_cost_change_ms_per_image": null,
+    "expert_budget_change": -1.7
+  },
+  "v1_1_post_freeze_safety_overlay": {
+    "beneficial_route_retention_rate": 0.1,
+    "false_grant_rate": 0.0,
+    "false_rejection_rate": 0.9,
+    "ineffective_route_interception_rate": 1.0,
+    "test_reversal_interception_rate": 1.0,
+    "risk_tradeoff_limitation_rate": 1.0,
+    "executable_coverage_rate": 0.0625
+  },
+  "loto_leakage_control": {
+    "held_out_frozen_outcomes_used_for_primary_prediction": false,
+    "selection_source_dependencies_excluded": true,
+    "post_freeze_overlay_reported_separately": true
+  },
+  "v1_to_v1_1_change": {
+    "beneficial_route_retention_rate_change": -0.4,
+    "false_grant_rate_change": 0.2142857142857143,
+    "judgement": "not_improved_on_primary_loto_metrics",
+    "comparison_scope": "v1 retrospective frozen-gate metrics versus v1.1 validation-only leave-one-task-out predictions; post-freeze safety overlay is reported separately"
+  },
+  "v1_failure_explanation": {
+    "false_grants": [
+      "aptos_locked_performance_primary",
+      "aptos_locked_single_reference"
+    ],
+    "cause": "v1允许risk_tradeoff进入研究病例模拟，且负稳定性下界只会降级beneficial，不会阻断risk_tradeoff",
+    "false_rejections": [
+      "aptos_locked_zero_introduced",
+      "deepdrid_frozen_low_budget",
+      "deepdrid_frozen_single_reference",
+      "deepdrid_frozen_six_model_primary",
+      "glaucoma_locked_single"
+    ]
+  },
+  "interpretation_boundary": "retrospective research evidence; not independent deployment or clinical validation",
+  "clinical_route_eligible": false,
+  "source_commit_sha": "77eeb6491f9c53a27cd37000e04ca655c5c87ca8"
+}

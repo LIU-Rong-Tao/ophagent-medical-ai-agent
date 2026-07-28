@@ -1,0 +1,30 @@
+{
+  "schema_version": "ophagent.controlled_agent_benchmark_manifest.v1_1",
+  "metric_semantics_version": "ophagent.controlled_agent_metrics.v2",
+  "generated_at": "2026-07-28T10:47:12.076006+00:00",
+  "source_commit_sha": "77eeb6491f9c53a27cd37000e04ca655c5c87ca8",
+  "evaluation_path": "experiments/opening_risk_routing_closure/configs/controller_v1_v2_evaluation_set.json",
+  "evaluation_sha256": "a91a932cf5523cb74221e1a6b413378d9d9dbe29eeaaa95cd551461442df51f0",
+  "scenario_count": 12,
+  "controller_versions": [
+    "v1_fixed_workflow",
+    "v2_rule_state_machine"
+  ],
+  "qualification_contract": {
+    "path": "experiments/opening_risk_routing_closure/configs/protocols/route_qualification_contract_v1_1.json",
+    "sha256": "9e982ca1193ec2fdb68b1bb08ff00b24fd791a6c7570c71674a0475724880777"
+  },
+  "schema_versions": {
+    "orchestration": "ophagent.controlled_orchestration.v2",
+    "case_state": "ophagent.case_state.v2",
+    "controller_proposal": "ophagent.controller_proposal.v1"
+  },
+  "locked_split_content_used": false,
+  "real_model_inference_used": false,
+  "files": {
+    "controller_v1_v2_scenario_results.csv": "9c7eb711e0612cf60f0072389d030fd75a1737e28a9d6807c5a2f12b0f72af15",
+    "controller_v1_v2_summary.csv": "fdbf08f450691ade4c8cb38644b01ac815647d2509ba22e4b17b45834ea2e6b4",
+    "extensibility_acceptance.json": "4bcc0a31d82bffda60acd8f18b55057f7768f200811f90a99a80c1a1a2f05f3e",
+    "controlled_agent_v2_benchmark.json": "3e272b06a886cb256204d4aaed07c9bdc515514bb1b48be685dd5cc1fa06b789"
+  }
+}

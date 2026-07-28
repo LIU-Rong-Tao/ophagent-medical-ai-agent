@@ -1,0 +1,218 @@
+{
+  "schema_version": "ophagent.local_controller_benchmark_manifest.v1_1",
+  "generated_at": "2026-07-28T10:47:12.276856+00:00",
+  "manifest_build_commit_sha": "77eeb6491f9c53a27cd37000e04ca655c5c87ca8",
+  "source_commit_sha": "77eeb6491f9c53a27cd37000e04ca655c5c87ca8",
+  "evaluation_config_path": "experiments/opening_risk_routing_closure/configs/controllers/local_controller_eval_v1.json",
+  "evaluation_config_sha256": "e5bf16ff32f8d17e417f50cc27cbb6d57095cac325cc7a41f54f75569ee26dd3",
+  "prompt_config_path": "experiments/opening_risk_routing_closure/configs/controllers/local_controller_prompt_v1.json",
+  "prompt_config_sha256": "c71449de7b75357cfe5900b6353d2bd0644a08f522192270c4a3a71341dab32a",
+  "prompt_eval_isolation": {
+    "example_count": 4,
+    "evaluation_count": 12,
+    "id_overlap_count": 0,
+    "exact_context_overlap_count": 0,
+    "isolation_passed": true
+  },
+  "controllers": [
+    {
+      "controller_label": "qwen3_5_27b_few_shot",
+      "status": "completed",
+      "blocking_reason": "",
+      "metrics": {
+        "case_count": 12,
+        "next_action_accuracy": 1.0,
+        "legal_action_rate": 1.0,
+        "schema_valid_rate": 1.0,
+        "unauthorized_action_proposal_rate": 0.0,
+        "task_completion_rate": 1.0,
+        "fault_recovery_rate": 1.0,
+        "unnecessary_expert_proposal_rate": 0.0,
+        "unnecessary_expert_execution_rate": 0.0,
+        "human_referral_rate": 0.5,
+        "report_fidelity_rate": 1.0,
+        "gate_intercept_count": 2,
+        "gate_intercept_rate": 0.16666666666666666,
+        "runtime_error_count": 0,
+        "latency_ms_mean": 1945.67809595416,
+        "latency_ms_p50": 1959.2835432849824,
+        "latency_ms_p95": 1975.684554129839,
+        "peak_vram_allocated_mib": 53035.75634765625,
+        "peak_vram_reserved_mib": 53732.0,
+        "input_tokens": 22617,
+        "output_tokens": 393,
+        "local_token_cost": 23010,
+        "monetary_api_cost": 0.0
+      }
+    },
+    {
+      "controller_label": "qwen3_5_27b_zero_shot",
+      "status": "completed",
+      "blocking_reason": "",
+      "metrics": {
+        "case_count": 12,
+        "next_action_accuracy": 0.6666666666666666,
+        "legal_action_rate": 1.0,
+        "schema_valid_rate": 1.0,
+        "unauthorized_action_proposal_rate": 0.0,
+        "task_completion_rate": 0.8333333333333334,
+        "fault_recovery_rate": 1.0,
+        "unnecessary_expert_proposal_rate": 0.14285714285714285,
+        "unnecessary_expert_execution_rate": 0.0,
+        "human_referral_rate": 0.6666666666666666,
+        "report_fidelity_rate": 0.6666666666666666,
+        "gate_intercept_count": 2,
+        "gate_intercept_rate": 0.16666666666666666,
+        "runtime_error_count": 0,
+        "latency_ms_mean": 1710.6589127797633,
+        "latency_ms_p50": 1668.626201339066,
+        "latency_ms_p95": 1890.958759887144,
+        "peak_vram_allocated_mib": 52533.578125,
+        "peak_vram_reserved_mib": 52642.0,
+        "input_tokens": 6081,
+        "output_tokens": 407,
+        "local_token_cost": 6488,
+        "monetary_api_cost": 0.0
+      }
+    },
+    {
+      "controller_label": "qwen3_5_4b_few_shot",
+      "status": "completed",
+      "blocking_reason": "",
+      "metrics": {
+        "case_count": 12,
+        "next_action_accuracy": 0.9166666666666666,
+        "legal_action_rate": 1.0,
+        "schema_valid_rate": 1.0,
+        "unauthorized_action_proposal_rate": 0.0,
+        "task_completion_rate": 0.9166666666666666,
+        "fault_recovery_rate": 1.0,
+        "unnecessary_expert_proposal_rate": 0.0,
+        "unnecessary_expert_execution_rate": 0.0,
+        "human_referral_rate": 0.5833333333333334,
+        "report_fidelity_rate": 0.9166666666666666,
+        "gate_intercept_count": 2,
+        "gate_intercept_rate": 0.16666666666666666,
+        "runtime_error_count": 0,
+        "latency_ms_mean": 897.3951646282027,
+        "latency_ms_p50": 901.4857322908938,
+        "latency_ms_p95": 904.7272010240704,
+        "peak_vram_allocated_mib": 9275.76708984375,
+        "peak_vram_reserved_mib": 9646.0,
+        "input_tokens": 22617,
+        "output_tokens": 418,
+        "local_token_cost": 23035,
+        "monetary_api_cost": 0.0
+      }
+    },
+    {
+      "controller_label": "qwen3_5_4b_zero_shot",
+      "status": "completed",
+      "blocking_reason": "",
+      "metrics": {
+        "case_count": 12,
+        "next_action_accuracy": 0.3333333333333333,
+        "legal_action_rate": 1.0,
+        "schema_valid_rate": 1.0,
+        "unauthorized_action_proposal_rate": 0.0,
+        "task_completion_rate": 0.5,
+        "fault_recovery_rate": 1.0,
+        "unnecessary_expert_proposal_rate": 0.0,
+        "unnecessary_expert_execution_rate": 0.0,
+        "human_referral_rate": 1.0,
+        "report_fidelity_rate": 0.25,
+        "gate_intercept_count": 0,
+        "gate_intercept_rate": 0.0,
+        "runtime_error_count": 0,
+        "latency_ms_mean": 902.7467145739744,
+        "latency_ms_p50": 837.0183324441314,
+        "latency_ms_p95": 1094.64545994997,
+        "peak_vram_allocated_mib": 8953.29345703125,
+        "peak_vram_reserved_mib": 9044.0,
+        "input_tokens": 6081,
+        "output_tokens": 443,
+        "local_token_cost": 6524,
+        "monetary_api_cost": 0.0
+      }
+    },
+    {
+      "controller_label": "rule_controller",
+      "status": "completed",
+      "blocking_reason": "",
+      "metrics": {
+        "case_count": 12,
+        "next_action_accuracy": 0.8333333333333334,
+        "legal_action_rate": 0.9166666666666666,
+        "schema_valid_rate": 1.0,
+        "unauthorized_action_proposal_rate": 0.08333333333333333,
+        "task_completion_rate": 1.0,
+        "fault_recovery_rate": 1.0,
+        "unnecessary_expert_proposal_rate": 0.0,
+        "unnecessary_expert_execution_rate": 0.0,
+        "human_referral_rate": 0.5,
+        "report_fidelity_rate": 0.8333333333333334,
+        "gate_intercept_count": 4,
+        "gate_intercept_rate": 0.3333333333333333,
+        "runtime_error_count": 0,
+        "latency_ms_mean": 0.05661525453130404,
+        "latency_ms_p50": 0.053132884204387665,
+        "latency_ms_p95": 0.0740536954253912,
+        "peak_vram_allocated_mib": 0.0,
+        "peak_vram_reserved_mib": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "local_token_cost": 0,
+        "monetary_api_cost": 0.0
+      }
+    }
+  ],
+  "result_artifacts": [
+    {
+      "path": "experiments/opening_risk_routing_closure/outputs/local_controller_benchmark_v1/qwen3_5_27b_few_shot_results.json",
+      "sha256": "aff055b842c1d2d780f45aa4c27ca85881138cab4935350f08933638f007d821"
+    },
+    {
+      "path": "experiments/opening_risk_routing_closure/outputs/local_controller_benchmark_v1/qwen3_5_27b_zero_shot_results.json",
+      "sha256": "ab7e85ff7d63fe1d814da3128891b41e3ee944cb4f2b6087d31775eedd54f185"
+    },
+    {
+      "path": "experiments/opening_risk_routing_closure/outputs/local_controller_benchmark_v1/qwen3_5_4b_few_shot_results.json",
+      "sha256": "6d85e324e959ae6b6969d81b0887538efe144121049b64ebcb655d530be731e7"
+    },
+    {
+      "path": "experiments/opening_risk_routing_closure/outputs/local_controller_benchmark_v1/qwen3_5_4b_zero_shot_results.json",
+      "sha256": "8fdff9f93f459cc517a44f5b9c01ee94c1b3e4ec3fd58474008db86d3062bbab"
+    },
+    {
+      "path": "experiments/opening_risk_routing_closure/outputs/local_controller_benchmark_v1/rule_controller_results.json",
+      "sha256": "ed66b20ce485735964396a3518177d13ee7fa0f1446a83bb9ef711e10b76de9f"
+    }
+  ],
+  "results_reused": true,
+  "result_execution_commit_sha": null,
+  "result_execution_commit_recorded": false,
+  "reuse_validation": {
+    "validated": true,
+    "source_manifest_sha256": "d4a4bc3bb3dc83adc05933bade3ba7dd9a7085e865b9bf92dcc24b8835a91292",
+    "evaluation_config_sha256": "e5bf16ff32f8d17e417f50cc27cbb6d57095cac325cc7a41f54f75569ee26dd3",
+    "prompt_config_sha256": "c71449de7b75357cfe5900b6353d2bd0644a08f522192270c4a3a71341dab32a",
+    "required_completed_controller_labels": [
+      "qwen3_5_27b_few_shot",
+      "qwen3_5_27b_zero_shot",
+      "qwen3_5_4b_few_shot",
+      "qwen3_5_4b_zero_shot",
+      "rule_controller"
+    ],
+    "result_sha_binding_from_prior_manifest": true,
+    "model_inference_rerun": false
+  },
+  "controller_proposal_schema_version": "ophagent.controller_proposal.v1",
+  "network_used": false,
+  "training_performed": false,
+  "test_assets_used": false,
+  "raw_images_used": false,
+  "decision_report": {
+    "path": "controller_decision_report.json",
+    "sha256": "fe64e7208375855f519d66be31d69ec93307d62db0075963b2c72b315771a403"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "ophagent.route_qualification_artifacts.v1_1",
+  "contract_path": "experiments/opening_risk_routing_closure/configs/protocols/route_qualification_contract_v1_1.json",
+  "contract_sha256": "9e982ca1193ec2fdb68b1bb08ff00b24fd791a6c7570c71674a0475724880777",
+  "evidence_sources_path": "experiments/opening_risk_routing_closure/configs/protocols/route_qualification_evidence_sources_v1_1.json",
+  "evidence_sources_sha256": "ee01c4f8e5b4a4029cb0f08efdcc7140f7fd5f82dc97754eb083e736634ea897",
+  "source_commit_sha": "77eeb6491f9c53a27cd37000e04ca655c5c87ca8",
+  "frozen_inputs_modified": false,
+  "clinical_route_eligible": false,
+  "artifacts": {
+    "evidence_matrix": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/route_qualification_evidence_matrix.csv",
+      "sha256": "ed165a80e58fb201824e0ac7adb731950e85a48dad694496c0206bc85a1a0dbd"
+    },
+    "leave_one_task_out": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/leave_one_task_out_results.csv",
+      "sha256": "c15c8285a2a68d214072084060d9988cdaa2099d04de902f507284ac7fe1964d"
+    },
+    "ablation": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/ablation_results.csv",
+      "sha256": "32747217167cfd6134b540df0afbe1ff383da1d286825768ac7af199a413282f"
+    },
+    "sensitivity": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/sensitivity_results.csv",
+      "sha256": "430323c3227014dd0448c11e55f4e95e49dfc286fb7ffe94722fc691688533f4"
+    },
+    "failure_case_audit": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/failure_case_audit.csv",
+      "sha256": "43d0e5e93509d69d7c00705e36c0a2089a6bdee8881f7adc0ec363d396564c37"
+    },
+    "benchmark_summary": {
+      "path": "experiments/opening_risk_routing_closure/outputs/route_qualification_benchmark_v1_1/benchmark_summary.json",
+      "sha256": "75ec1494dcceef784d61797b68f4fc4e280e8ae5b34ad0a1f48ce41512ff59b5"
+    }
+  }
+}

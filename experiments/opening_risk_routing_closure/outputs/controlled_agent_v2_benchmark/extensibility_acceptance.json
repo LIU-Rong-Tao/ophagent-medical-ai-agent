@@ -1,0 +1,31 @@
+{
+  "schema_version": "ophagent.extensibility_acceptance.v1",
+  "checks": [
+    {
+      "check_id": "new_task_spec_without_state_machine_change",
+      "passed": true,
+      "detail": "REVIEW_PENDING"
+    },
+    {
+      "check_id": "fake_model_adapter_without_agent_change",
+      "passed": true,
+      "detail": "fake-model"
+    },
+    {
+      "check_id": "controller_adapter_substitution",
+      "passed": true,
+      "detail": "rule_controller|local_llm_controller"
+    },
+    {
+      "check_id": "illegal_proposal_cannot_bypass_gate",
+      "passed": true,
+      "detail": "GATE_CONTROLLER_PROPOSAL_INVALID"
+    },
+    {
+      "check_id": "view_and_report_share_qualification",
+      "passed": true,
+      "detail": "research_case_simulation"
+    }
+  ],
+  "all_passed": true
+}
