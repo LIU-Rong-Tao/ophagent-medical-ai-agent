@@ -22,16 +22,43 @@ from app.orchestration_contracts import CaseState
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_workstation_has_two_read_only_tasks_and_one_fault_scenario() -> None:
+def test_workstation_has_two_read_only_views_and_one_fault_scenario() -> None:
     assert set(NORMAL_SCENARIOS) == {
         "APTOS · 冻结 validation 资产",
-        "青光眼 · 冻结 validation 资产",
+        "APTOS 高风险 · 冻结 validation 资产",
     }
     assert FAULT_SCENARIO == "故障门禁 · 离线资产请求原图推理"
     assert all(
         "test" not in str(configuration).lower()
         for configuration in NORMAL_SCENARIOS.values()
     )
+
+
+def test_partial_persisted_payload_degrades_without_render_crash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    notices: list[str] = []
+    payload: dict[str, object] = {
+        "input": {"ok": True},
+        "registry": {"ok": True},
+    }
+    before = json.loads(json.dumps(payload))
+    monkeypatch.setattr(
+        review_module.st,
+        "markdown",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        review_module.st,
+        "info",
+        lambda message, *_args, **_kwargs: notices.append(str(message)),
+    )
+
+    review_module._render_audit_and_route("aptos_dr_5class", payload)
+
+    assert any("风险审计结果尚未生成" in message for message in notices)
+    assert any("路由证据尚未生成" in message for message in notices)
+    assert payload == before
 
 
 def test_model_hub_reuses_existing_clinical_workspace_entry() -> None:

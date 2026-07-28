@@ -844,15 +844,21 @@ def _render_images(case: ReviewCase) -> None:
 
 def _render_input_status(case: ReviewCase, payload: dict[str, Any]) -> None:
     st.markdown("#### 输入与任务检查")
-    response = payload["input"]
-    if response["ok"]:
+    response = dict(payload.get("input") or {})
+    if not response:
+        st.info("持久化输入检查结果尚未生成；请查看状态时间线与完整 Trace。")
+        return
+    if response.get("ok", False):
         data = response["data"]
         st.success(
             f"输入完整 · {data['image_count']} 张本地图像 · "
             f"{html.escape(str(data['task_name']))} · validation"
         )
     else:
-        st.error(f"{response['code']} · {response['message']}")
+        st.error(
+            f"{response.get('code', 'INPUT_RESULT_MISSING')} · "
+            f"{response.get('message', '输入检查未完成')}"
+        )
     with st.expander("结构化病例信息", expanded=False):
         rows = [
             {"字段": key, "内容": value}
@@ -863,9 +869,9 @@ def _render_input_status(case: ReviewCase, payload: dict[str, Any]) -> None:
 
 def _render_model_table(payload: dict[str, Any]) -> None:
     st.markdown("#### 可用模型与资格")
-    registry = _model_rows(payload["registry"])
+    registry = _model_rows(dict(payload.get("registry") or {}))
     if registry.empty:
-        st.warning("当前任务没有可展示模型。")
+        st.warning("当前任务没有可展示模型，或持久化模型资格结果尚未生成。")
         return
     st.dataframe(
         registry[
@@ -1020,10 +1026,12 @@ def _render_controlled_agent_trace(payload: dict[str, Any]) -> None:
 
 
 def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
-    audit = payload["audit"]
-    route = payload["route"]
+    audit = dict(payload.get("audit") or {})
+    route = dict(payload.get("route") or {})
     st.markdown("#### 模型输出错误风险审计")
-    if audit["ok"]:
+    if not audit:
+        st.info("持久化风险审计结果尚未生成；请查看状态时间线与完整 Trace。")
+    elif audit.get("ok", False):
         data = audit["data"]
         models = data["models"]
         mean_entropy = sum(float(row["entropy"]) for row in models) / len(models)
@@ -1038,10 +1046,15 @@ def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
             "该值是模型输出代理，不代表临床后果。"
         )
     else:
-        st.error(f"{audit['code']} · {audit['message']}")
+        st.error(
+            f"{audit.get('code', 'AUDIT_RESULT_MISSING')} · "
+            f"{audit.get('message', '风险审计未完成')}"
+        )
 
     st.markdown("#### Scout / Expert 研究模拟")
-    if route["ok"]:
+    if not route:
+        st.info("持久化路由证据尚未生成；请查看状态时间线与完整 Trace。")
+    elif route.get("ok", False):
         data = route["data"]
         predictions = list(payload.get("predictions", []))
         scout_label = (
@@ -1104,7 +1117,10 @@ def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
             f"结果来源：{result_source}"
         )
     else:
-        st.error(f"{route['code']} · {route['message']}")
+        st.error(
+            f"{route.get('code', 'ROUTE_RESULT_MISSING')} · "
+            f"{route.get('message', '路由证据未生成')}"
+        )
     _render_controlled_agent_trace(payload)
 
 
