@@ -478,11 +478,22 @@ def redact_structured_value(value: Any) -> Any:
         return redact_structured_value(value.item())
     if isinstance(value, dict):
         result: dict[str, Any] = {}
+        normalized_keys = {
+            str(key).strip().lower() for key in value
+        }
         for key, item in value.items():
             lowered = str(key).strip().lower()
-            if lowered in SENSITIVE_FIELD_NAMES or any(
-                part in lowered for part in SENSITIVE_FIELD_PARTS
-            ):
+            safe_proxy_name = (
+                lowered == "name"
+                and {"value", "definition"}.issubset(normalized_keys)
+            )
+            sensitive = (
+                lowered in SENSITIVE_FIELD_NAMES
+                or any(
+                    part in lowered for part in SENSITIVE_FIELD_PARTS
+                )
+            )
+            if sensitive and not safe_proxy_name:
                 continue
             result[str(key)] = redact_structured_value(item)
         return result

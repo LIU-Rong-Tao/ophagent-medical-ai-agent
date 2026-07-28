@@ -65,7 +65,7 @@ DEMO_SCENARIO_PATH = (
     / "controlled_agent_demo_scenarios_v2.json"
 )
 REVIEW_DECISIONS = ("接受模型输出", "修改输出", "标记不确定")
-DEMO_STATE_ID_VERSION = "ophagent.controlled_agent_demo_state.v2_1"
+DEMO_STATE_ID_VERSION = "ophagent.controlled_agent_demo_state.v2_2"
 
 
 @dataclass(frozen=True)

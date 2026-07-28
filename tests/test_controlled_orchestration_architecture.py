@@ -180,6 +180,11 @@ def test_redaction_preserves_contract_names_but_removes_identity_names() -> None
             "name": "sensitive",
             "patient_name": "sensitive",
             "姓名": "sensitive",
+            "task_proxy": {
+                "name": "public-risk-proxy",
+                "value": 0.75,
+                "definition": "research-only proxy",
+            },
         }
     )
 
@@ -187,6 +192,11 @@ def test_redaction_preserves_contract_names_but_removes_identity_names() -> None
         "tool_name": "model_registry.inspect",
         "model_name": "public-model",
         "task_name": "public-task",
+        "task_proxy": {
+            "name": "public-risk-proxy",
+            "value": 0.75,
+            "definition": "research-only proxy",
+        },
     }
 
 
