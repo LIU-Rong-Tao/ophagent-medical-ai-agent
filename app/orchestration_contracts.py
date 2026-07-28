@@ -12,6 +12,8 @@ from enum import Enum
 import re
 from typing import Any, Callable, Protocol, runtime_checkable
 
+import numpy as np
+
 
 ORCHESTRATION_SCHEMA_VERSION = "ophagent.controlled_orchestration.v2"
 TASK_SPEC_SCHEMA_VERSION = "ophagent.task_spec.v1"
@@ -456,6 +458,8 @@ def redact_free_text(value: str) -> str:
 def redact_structured_value(value: Any) -> Any:
     """Recursively remove identity fields and absolute/private paths."""
 
+    if isinstance(value, np.generic):
+        return redact_structured_value(value.item())
     if isinstance(value, dict):
         result: dict[str, Any] = {}
         for key, item in value.items():

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import time
 
+import numpy as np
 import pytest
 
 from app.model_hub_agent_v2 import (
@@ -142,6 +143,31 @@ def test_fake_model_adapter_does_not_change_agent_core() -> None:
 
     assert adapter.infer(object())["probabilities"] == [0.7, 0.3]
     assert adapter.capability.online_case_inference_ready is False
+
+
+def test_case_state_store_normalizes_numpy_scalars(tmp_path: Path) -> None:
+    store = CaseStateStore(tmp_path)
+    state, _ = ControlledAgentRuntimeV2(store).run(
+        _request(case_id="NUMPY-SCALAR-001"),
+        qualification=_qualification(),
+        tool_payload=_tools(),
+        controller=RuleController(),
+    )
+    state.runtime_payload["numpy_scalars"] = {
+        "flag": np.bool_(True),
+        "count": np.int64(2),
+        "score": np.float64(0.75),
+    }
+
+    store.save(state)
+    restored = store.load(state.case_id)
+
+    assert restored is not None
+    assert restored.runtime_payload["numpy_scalars"] == {
+        "flag": True,
+        "count": 2,
+        "score": 0.75,
+    }
 
 
 def test_rule_and_mock_local_llm_share_controller_interface(
