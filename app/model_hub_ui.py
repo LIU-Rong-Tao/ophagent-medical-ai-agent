@@ -36,6 +36,12 @@ HUB_WORKSPACES = {
         "title": "研究评测",
         "subtitle": "比较路由组合，或导入预测结果表开展模型输出错误风险审计。",
     },
+    "证据门控": {
+        "icon": ":material/fact_check:",
+        "group": "workspace",
+        "title": "证据门控与控制器验证",
+        "subtitle": "查看 v1.1 资格证据、分层规则消融、留一任务验证和受控控制器结果。",
+    },
     "病例回放": {
         "icon": ":material/clinical_notes:",
         "group": "workspace",
@@ -267,7 +273,7 @@ def inject_model_hub_css() -> None:
         .hub-overview-kpi{{background:#fff;border:1px solid var(--hub-line);border-radius:5px;padding:.85rem .95rem;min-height:98px}}
         .hub-overview-kpi span{{display:block;color:var(--hub-muted);font-size:.72rem;font-weight:700}}
         .hub-overview-kpi b{{display:block;color:var(--hub-ink);font-size:1.55rem;line-height:1.2;margin:.25rem 0;font-variant-numeric:tabular-nums}}
-        .hub-overview-kpi small{{display:block;color:#7c8797;font-size:.7rem;line-height:1.35}}
+        .hub-overview-kpi small{{display:block;color:#657286;font-size:.7rem;line-height:1.35}}
         .hub-section{{margin:1.25rem 0 .6rem}}
         .hub-section h3{{font-size:1rem;color:var(--hub-ink);margin:0 0 .2rem}}
         .hub-section p{{font-size:.76rem;color:var(--hub-muted);margin:0;line-height:1.5}}
@@ -279,7 +285,7 @@ def inject_model_hub_css() -> None:
         .hub-flow-step span{{display:block;color:var(--hub-muted);font-size:.72rem;line-height:1.45;margin-top:.2rem}}
         .hub-panel{{background:#fff;border:1px solid var(--hub-line);border-radius:5px;padding:1rem}}
         .hub-process{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:.25rem 0 1rem;background:#fff;border:1px solid var(--hub-line);border-radius:5px;overflow:hidden}}
-        .hub-process-item{{position:relative;padding:.65rem .75rem .65rem 2.2rem;color:#708094;font-size:.72rem;border-right:1px solid var(--hub-line)}}
+        .hub-process-item{{position:relative;padding:.65rem .75rem .65rem 2.2rem;color:#657286;font-size:.72rem;border-right:1px solid var(--hub-line)}}
         .hub-process-item:last-child{{border-right:0}}
         .hub-process-item b{{position:absolute;left:.65rem;top:.55rem;display:flex;align-items:center;justify-content:center;width:1.1rem;height:1.1rem;border-radius:50%;background:#e8edf3;color:#596779;font-size:.62rem}}
         .hub-process-item.active{{background:#edf8f6;color:#0b655f;font-weight:750}}
@@ -289,7 +295,7 @@ def inject_model_hub_css() -> None:
         .hub-audit-kpi{{background:#fff;border:1px solid var(--hub-line);border-top:3px solid #8ca0b5;border-radius:5px;padding:.72rem .78rem;min-height:88px}}
         .hub-audit-kpi span{{display:block;color:var(--hub-muted);font-size:.7rem;font-weight:700}}
         .hub-audit-kpi b{{display:block;color:var(--hub-ink);font-size:1.38rem;margin-top:.25rem;font-variant-numeric:tabular-nums}}
-        .hub-audit-kpi small{{display:block;color:#7c8797;font-size:.68rem;line-height:1.35;margin-top:.18rem}}
+        .hub-audit-kpi small{{display:block;color:#657286;font-size:.68rem;line-height:1.35;margin-top:.18rem}}
         .hub-audit-kpi.error{{border-top-color:var(--hub-amber)}}
         .hub-audit-kpi.error b{{color:#9a6700}}
         .hub-audit-kpi.severe{{border-top-color:var(--hub-red)}}
@@ -314,7 +320,7 @@ def inject_model_hub_css() -> None:
         .agent-decision-head{{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1rem 0 .55rem}}
         .agent-decision-head>div b{{display:block;color:var(--hub-ink);font-size:1rem}}
         .agent-decision-head>div span{{display:block;color:var(--hub-muted);font-size:.72rem;margin-top:.15rem}}
-        .agent-decision-strip{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--hub-line);border-radius:5px;overflow:hidden;background:#fff}}
+        .agent-decision-strip{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid var(--hub-line);border-radius:5px;overflow:hidden;background:#fff}}
         .agent-decision-step{{position:relative;min-height:112px;padding:.78rem .85rem;border-right:1px solid var(--hub-line);border-top:3px solid #94a3b8}}
         .agent-decision-step:last-child{{border-right:0}}
         .agent-decision-step span{{display:block;color:var(--hub-muted);font-size:.68rem;font-weight:750}}

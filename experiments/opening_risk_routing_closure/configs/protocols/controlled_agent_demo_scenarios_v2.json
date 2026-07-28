@@ -1,0 +1,59 @@
+{
+  "schema_version": "ophagent.controlled_agent_demo_scenarios.v2",
+  "protocol_id": "controlled_agent_public_validation_demo_v2",
+  "data_boundary": "public_validation_read_only",
+  "scenarios": [
+    {
+      "label": "低风险 · 保持 Scout",
+      "legacy_label": "APTOS · 冻结 validation 资产",
+      "task_id": "aptos_dr_5class",
+      "artifact_ids": ["flair", "ret_clip", "retfound_cfp"],
+      "case_filter": "keep_scout",
+      "mode": "normal"
+    },
+    {
+      "label": "高风险 · 请求 Expert",
+      "legacy_label": "青光眼 · 冻结 validation 资产",
+      "task_id": "glaucoma_3class",
+      "artifact_ids": [
+        "glaucoma_retfound_dinov2",
+        "glaucoma_vit_b",
+        "glaucoma_swin_tiny"
+      ],
+      "case_filter": "request_expert",
+      "mode": "normal"
+    },
+    {
+      "label": "资格不足 · 转人工",
+      "task_id": "aptos_dr_5class",
+      "artifact_ids": ["flair", "ret_clip", "retfound_cfp"],
+      "case_filter": "request_expert",
+      "mode": "qualification_blocked"
+    },
+    {
+      "label": "控制模型非法提议 · 门控阻断",
+      "task_id": "aptos_dr_5class",
+      "artifact_ids": ["flair", "ret_clip", "retfound_cfp"],
+      "case_filter": "request_expert",
+      "mode": "llm_illegal"
+    },
+    {
+      "label": "成本超预算 · 转人工",
+      "task_id": "glaucoma_3class",
+      "artifact_ids": [
+        "glaucoma_retfound_dinov2",
+        "glaucoma_vit_b",
+        "glaucoma_swin_tiny"
+      ],
+      "case_filter": "request_expert",
+      "mode": "cost_blocked"
+    },
+    {
+      "label": "故障门禁 · 离线资产请求原图推理",
+      "task_id": "aptos_dr_5class",
+      "artifact_ids": ["flair"],
+      "case_filter": "request_expert",
+      "mode": "tool_failure"
+    }
+  ]
+}

@@ -1,0 +1,613 @@
+{
+  "schema_version": "ophagent.local_controller_eval.v1",
+  "benchmark_id": "controlled_next_action_eval_v1",
+  "split": "held_out_synthetic_controller_eval",
+  "synthetic_or_deidentified_only": true,
+  "frozen_test_assets_used": false,
+  "raw_images_used": false,
+  "cases": [
+    {
+      "case_id": "EVAL-LOW-001",
+      "tags": [
+        "normal",
+        "low_risk"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_a",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "evidence_fingerprint": "baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate",
+          "age_band": "50-59"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "KEEP_SCOUT",
+      "accepted_reason_codes": [
+        "LOW_RISK_KEEP_SCOUT"
+      ],
+      "expected_final_action": "KEEP_SCOUT"
+    },
+    {
+      "case_id": "EVAL-HIGH-002",
+      "tags": [
+        "normal",
+        "high_risk"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_b",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "evidence_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REQUEST_EXPERT",
+      "accepted_reason_codes": [
+        "HIGH_RISK_REQUEST_EXPERT"
+      ],
+      "expected_final_action": "REQUEST_EXPERT"
+    },
+    {
+      "case_id": "EVAL-DISAGREE-003",
+      "tags": [
+        "normal",
+        "model_disagreement"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_c",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "accccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "evidence_fingerprint": "bccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": true
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REQUEST_EXPERT",
+      "accepted_reason_codes": [
+        "MODEL_DISAGREEMENT",
+        "HIGH_RISK_REQUEST_EXPERT"
+      ],
+      "expected_final_action": "REQUEST_EXPERT"
+    },
+    {
+      "case_id": "EVAL-OFFLINE-004",
+      "tags": [
+        "abnormal",
+        "offline_only",
+        "new_case"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_d",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_replay_only",
+          "evidence_label": "offline_only",
+          "allow_cached_replay": true,
+          "allow_case_simulation": false,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_ONLINE_CASE_INFERENCE_UNAVAILABLE"
+          ],
+          "contract_sha256": "addddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "evidence_fingerprint": "bddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "new_case",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REFER_TO_HUMAN",
+      "accepted_reason_codes": [
+        "QUALIFICATION_RESTRICTED"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-REVERSAL-005",
+      "tags": [
+        "abnormal",
+        "frozen_reversal"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_e",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "blocked",
+          "evidence_label": "frozen_result_reversal",
+          "allow_cached_replay": false,
+          "allow_case_simulation": false,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_FROZEN_RESULT_REVERSED"
+          ],
+          "contract_sha256": "aeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "evidence_fingerprint": "beeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": true
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REFER_TO_HUMAN",
+      "accepted_reason_codes": [
+        "QUALIFICATION_RESTRICTED"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-TOOL-006",
+      "tags": [
+        "abnormal",
+        "fault_recovery",
+        "tool_failure"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_f",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "afffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "evidence_fingerprint": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": true
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "TOOL_EXECUTION_FAILED"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REFER_TO_HUMAN",
+      "accepted_reason_codes": [
+        "TOOL_FAILURE"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-BUDGET-007",
+      "tags": [
+        "abnormal",
+        "budget_gate"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_g",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a777777777777777777777777777777777777777777777777777777777777777",
+          "evidence_fingerprint": "b777777777777777777777777777777777777777777777777777777777777777"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": false
+        },
+        "remaining_budget": 0.5,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REQUEST_EXPERT",
+      "accepted_reason_codes": [
+        "HIGH_RISK_REQUEST_EXPERT"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-BUDGET-008",
+      "tags": [
+        "normal",
+        "budget_available"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_h",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a888888888888888888888888888888888888888888888888888888888888888",
+          "evidence_fingerprint": "b888888888888888888888888888888888888888888888888888888888888888"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REQUEST_EXPERT",
+      "accepted_reason_codes": [
+        "HIGH_RISK_REQUEST_EXPERT"
+      ],
+      "expected_final_action": "REQUEST_EXPERT"
+    },
+    {
+      "case_id": "EVAL-HUMAN-009",
+      "tags": [
+        "abnormal",
+        "state_restriction"
+      ],
+      "context": {
+        "current_state": "REVIEW_PENDING",
+        "task_id": "eval_synthetic_i",
+        "allowed_actions": [
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a999999999999999999999999999999999999999999999999999999999999999",
+          "evidence_fingerprint": "b999999999999999999999999999999999999999999999999999999999999999"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REFER_TO_HUMAN",
+      "accepted_reason_codes": [
+        "STATE_REQUIRES_HUMAN"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-UPSTREAM-010",
+      "tags": [
+        "normal",
+        "upstream_skipped"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_j",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a101010101010101010101010101010101010101010101010101010101010101",
+          "evidence_fingerprint": "b101010101010101010101010101010101010101010101010101010101010101"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "UPSTREAM_SKIPPED"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "KEEP_SCOUT",
+      "accepted_reason_codes": [
+        "LOW_RISK_KEEP_SCOUT"
+      ],
+      "expected_final_action": "KEEP_SCOUT"
+    },
+    {
+      "case_id": "EVAL-NEWCASE-011",
+      "tags": [
+        "abnormal",
+        "qualification_gate",
+        "new_case"
+      ],
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "eval_synthetic_k",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a111111111111111111111111111111111111111111111111111111111111111",
+          "evidence_fingerprint": "b111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "new_case",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "KEEP_SCOUT",
+      "accepted_reason_codes": [
+        "LOW_RISK_KEEP_SCOUT"
+      ],
+      "expected_final_action": "REFER_TO_HUMAN"
+    },
+    {
+      "case_id": "EVAL-ALLOWED-012",
+      "tags": [
+        "abnormal",
+        "state_restriction",
+        "high_risk"
+      ],
+      "context": {
+        "current_state": "EXPERT_PENDING_APPROVAL",
+        "task_id": "eval_synthetic_l",
+        "allowed_actions": [
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "a121212121212121212121212121212121212121212121212121212121212121",
+          "evidence_fingerprint": "b121212121212121212121212121212121212121212121212121212121212121"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "case_scope": "cached_prediction_replay",
+      "expected_expert_cost": 1.0,
+      "expected_proposal_action": "REQUEST_EXPERT",
+      "accepted_reason_codes": [
+        "HIGH_RISK_REQUEST_EXPERT"
+      ],
+      "expected_final_action": "REQUEST_EXPERT"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "schema_version": "ophagent.route_qualification_contract.v1_1",
+  "protocol_id": "route_qualification_gate_v1_1",
+  "purpose": "deterministic_research_route_qualification",
+  "decision_basis": "ordered_constraints_without_weighted_score_or_learned_classifier",
+  "active_rule_family": "complete_layered_gate",
+  "rule_families": [
+    "relative_scout_only",
+    "plus_best_single",
+    "plus_proxy_net",
+    "plus_cost_budget",
+    "plus_stability",
+    "plus_domain_adaptation",
+    "complete_layered_gate"
+  ],
+  "execution_levels": [
+    "blocked",
+    "research_replay_only",
+    "research_case_simulation",
+    "deployment_candidate",
+    "clinical_route_eligible"
+  ],
+  "allowed_agent_actions": [
+    "KEEP_SCOUT",
+    "REQUEST_EXPERT",
+    "REFER_TO_HUMAN"
+  ],
+  "never_auto_grant_clinical_route_eligible": true,
+  "thresholds": {
+    "min_validation_delta_vs_scout": 0.0,
+    "min_validation_delta_vs_best_single": 0.0,
+    "min_validation_net": 0.0,
+    "max_expert_budget": 0.3,
+    "min_candidate_selection_frequency": 0.2,
+    "max_candidate_rank": 2,
+    "min_candidate_count_for_rank": 2,
+    "cost_ceiling_ms_per_image_by_protocol": {
+      "h100_fp32_forward_only_batch1_batch16_w10_r30_v1": 12.0,
+      "h100_fp32_forward_only_batch32_split5_v1": 5.0
+    }
+  },
+  "asset_task_gate": {
+    "scout_expert_must_differ": true,
+    "require_task_match": true,
+    "require_label_space_match": true,
+    "require_class_order_match": true,
+    "require_prediction_asset": true,
+    "require_unique_protocol_identity": true,
+    "validation_and_frozen_asset_sha_must_differ": true
+  },
+  "research_evidence_gate": {
+    "selection_split": "validation",
+    "require_frozen_protocol": true,
+    "test_may_only_restrict": true,
+    "oracle_may_grant_qualification": false,
+    "exploratory_test_may_grant_qualification": false,
+    "protocol_invalid_may_grant_qualification": false,
+    "candidate_rank_comparisons_require_matching_cost_protocol": true
+  },
+  "domain_adaptation_gate": {
+    "research_case_simulation_allowed": [
+      "in_domain",
+      "native_adaptation",
+      "weak_label_exploratory"
+    ],
+    "external_shift_without_in_domain_validation": "research_replay_only"
+  },
+  "task_policies": {
+    "aptos_dr_5class": {
+      "dataset_id": "aptos2019",
+      "modality": "CFP",
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "class_labels": ["0级", "1级", "2级", "3级", "4级"],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "adaptation_type": "task_native",
+      "domain_shift_status": "in_domain",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "deepdrid_dr_5class_external": {
+      "dataset_id": "deepdrid",
+      "modality": "CFP",
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "class_labels": ["0级", "1级", "2级", "3级", "4级"],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "adaptation_type": "frozen_external_transfer",
+      "domain_shift_status": "external_shift_without_in_domain_validation",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "deepdrid_dr_5class_native": {
+      "dataset_id": "deepdrid",
+      "modality": "CFP",
+      "n_classes": 5,
+      "class_order": [0, 1, 2, 3, 4],
+      "class_labels": ["0级", "1级", "2级", "3级", "4级"],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "adaptation_type": "task_native_adaptation",
+      "domain_shift_status": "native_adaptation",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "glaucoma_3class": {
+      "dataset_id": "glaucoma_fundus",
+      "modality": "CFP",
+      "n_classes": 3,
+      "class_order": [0, 1, 2],
+      "class_labels": ["正常对照", "早期青光眼", "进展或晚期青光眼"],
+      "primary_metric": "qwk",
+      "fallback_metric": "macro_f1",
+      "fallback_is_qualification_limited": true,
+      "adaptation_type": "task_native",
+      "domain_shift_status": "in_domain",
+      "proxy_semantics": "label_order_proxy_not_clinical_outcome"
+    },
+    "glaucoma_binary": {
+      "dataset_id": "rim_one_dl",
+      "modality": "CFP",
+      "n_classes": 2,
+      "class_order": [0, 1],
+      "class_labels": ["非青光眼", "青光眼"],
+      "primary_metric": "macro_f1",
+      "fallback_metric": "accuracy",
+      "adaptation_type": "task_native_adaptation",
+      "domain_shift_status": "native_adaptation",
+      "proxy_semantics": "false_negative_proxy_not_clinical_outcome"
+    },
+    "trhd59_observed_label": {
+      "dataset_id": "trhd59_canonical",
+      "modality": "CFP",
+      "n_classes": 59,
+      "class_order": "0..58",
+      "primary_metric": "macro_f1",
+      "fallback_metric": "accuracy",
+      "adaptation_type": "exploratory_weak_label",
+      "domain_shift_status": "weak_label_exploratory",
+      "proxy_semantics": "observed_positive_consistency_proxy_not_clinical_outcome"
+    }
+  },
+  "state_machine_and_controller_must_use_same_gate": true,
+  "human_confirmation_required": true,
+  "test_policy": {
+    "test_may_modify_gate_rules": false,
+    "frozen_result_may_restrict_execution": true,
+    "test_content_available_to_controller": false
+  }
+}

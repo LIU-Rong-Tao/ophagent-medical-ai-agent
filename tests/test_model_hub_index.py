@@ -10,6 +10,7 @@ from app.model_hub_index import (
     EXPERIMENT_LABELS,
     build_dataset_index,
     build_job_index,
+    build_model_capability_index,
     build_route_run_index,
     build_task_asset_index,
 )
@@ -149,3 +150,46 @@ def test_job_index_includes_each_runtime_namespace(tmp_path: Path) -> None:
 
     assert set(jobs["job_id"]) == {"smoke-1", "infer-1"}
     assert set(jobs["status"]) == {"succeeded", "running"}
+
+
+def test_model_capability_keeps_cost_protocols_distinct() -> None:
+    assets = pd.DataFrame(
+        [
+            {
+                "task_id": "task_a",
+                "artifact_id": "batch16",
+                "cost_scope": "H100 GPU forward-only batch16",
+                "cost_status": "measured",
+                "forward_cost_ms_per_image": 1.0,
+            },
+            {
+                "task_id": "task_a",
+                "artifact_id": "batch32",
+                "cost_scope": "H100 forward-only validation batch32",
+                "cost_status": "measured",
+                "forward_cost_ms_per_image": 1.0,
+            },
+            {
+                "task_id": "task_a",
+                "artifact_id": "ambiguous",
+                "cost_scope": "H100 forward-only",
+                "cost_status": "measured",
+                "forward_cost_ms_per_image": 1.0,
+            },
+        ]
+    )
+
+    capabilities = build_model_capability_index(
+        assets,
+        pd.DataFrame(),
+    ).set_index("artifact_id")
+
+    assert capabilities.loc["batch16", "cost_protocol_id"] == (
+        "h100_fp32_forward_only_batch1_batch16_w10_r30_v1"
+    )
+    assert capabilities.loc["batch32", "cost_protocol_id"] == (
+        "h100_fp32_forward_only_batch32_split5_v1"
+    )
+    assert capabilities.loc["ambiguous", "cost_protocol_id"] == (
+        "cost_protocol_unavailable"
+    )

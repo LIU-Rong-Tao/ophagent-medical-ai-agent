@@ -249,6 +249,14 @@ def test_cached_route_trace_is_research_only_and_never_reads_test(
         result.data["route_qualification"]["execution_level"]
         == "research_replay_only"
     )
+    assert result.data["protocol_requests_expert"] is True
+    assert result.data["expert_result_released"] is False
+    for forbidden in (
+        "expert_pred_label",
+        "final_pred_label",
+        "final_source",
+    ):
+        assert forbidden not in result.data
     assert "true_label" not in result.data
 
     blocked = ToolRuntime(context).run(

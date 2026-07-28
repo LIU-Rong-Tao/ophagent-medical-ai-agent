@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
 import html
 import json
 import os
@@ -13,12 +14,23 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.model_hub_agent import (
-    ControlledAgentRequest,
-    ControlledAgentRuntime,
+from app.model_hub_agent_v2 import (
+    AgentExpertResult,
+    AgentToolStepResult,
+    CaseStateStore,
+    ControlledAgentRuntimeV2,
+    ControlledCaseRequest,
+    LocalLLMController,
+    LocalLLMControllerConfig,
+    PermissionDenied,
+    RuleController,
+    StateTransitionError,
+    authorize,
+    state_view_model,
 )
 from app.model_hub_tools import (
     TASK_CONTRACTS,
+    TraceEvent,
     ToolContext,
     ToolRequest,
     ToolRuntime,
@@ -33,28 +45,26 @@ from app.route_qualification import (
     load_route_qualification_contract,
     route_qualification_decision_from_dict,
 )
+from app.orchestration_contracts import (
+    CaseState,
+    RouteQualification,
+    redact_free_text,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REVIEW_RUNTIME_ROOT = (
     PROJECT_ROOT / "experiments/model_hub/runtime/case_review_v1"
 )
-
-NORMAL_SCENARIOS = {
-    "APTOS · 冻结 validation 资产": {
-        "task_id": "aptos_dr_5class",
-        "artifact_ids": ["flair", "ret_clip", "retfound_cfp"],
-    },
-    "青光眼 · 冻结 validation 资产": {
-        "task_id": "glaucoma_3class",
-        "artifact_ids": [
-            "glaucoma_retfound_dinov2",
-            "glaucoma_vit_b",
-            "glaucoma_swin_tiny",
-        ],
-    },
-}
-FAULT_SCENARIO = "故障门禁 · 离线资产请求原图推理"
+CONTROLLED_RUNTIME_ROOT = (
+    PROJECT_ROOT / "experiments/model_hub/runtime/controlled_agent_v2"
+)
+DEMO_SCENARIO_PATH = (
+    PROJECT_ROOT
+    / "experiments/opening_risk_routing_closure/configs/protocols"
+    / "controlled_agent_demo_scenarios_v2.json"
+)
+REVIEW_DECISIONS = ("接受模型输出", "修改输出", "标记不确定")
 
 
 @dataclass(frozen=True)
@@ -79,6 +89,35 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> Path:
     )
     temporary.replace(path)
     return path
+
+
+@st.cache_data(show_spinner=False)
+def _load_workstation_scenarios(path_text: str) -> dict[str, dict[str, Any]]:
+    payload = json.loads(Path(path_text).read_text(encoding="utf-8"))
+    scenarios = payload.get("scenarios", [])
+    return {
+        str(row["label"]): dict(row)
+        for row in scenarios
+        if isinstance(row, dict) and row.get("label")
+    }
+
+
+_COMPATIBLE_SCENARIOS = _load_workstation_scenarios(
+    str(DEMO_SCENARIO_PATH)
+)
+NORMAL_SCENARIOS = {
+    str(row["legacy_label"]): row
+    for row in _COMPATIBLE_SCENARIOS.values()
+    if row.get("legacy_label")
+}
+FAULT_SCENARIO = next(
+    (
+        label
+        for label, row in _COMPATIBLE_SCENARIOS.items()
+        if row.get("mode") == "tool_failure"
+    ),
+    "故障门禁 · 离线资产请求原图推理",
+)
 
 
 def _read_review_state(session_id: str) -> dict[str, Any]:
@@ -172,6 +211,7 @@ def _load_case_rows(project_root_text: str, task_id: str) -> list[dict[str, Any]
                 "image_path": str(image_path),
                 "scout_disagreement": bool(row["scout_disagreement"]),
                 "routing_score": float(row["routing_score"]),
+                "expert_invoked": bool(row["is_reviewed_by_expert"]),
             }
         )
     return rows
@@ -179,7 +219,7 @@ def _load_case_rows(project_root_text: str, task_id: str) -> list[dict[str, Any]
 
 def build_review_cases(project_root: Path, task_id: str) -> list[ReviewCase]:
     rows = _load_case_rows(str(project_root), task_id)
-    prefix = "DR-V" if task_id == "aptos_dr_5class" else "GLA-V"
+    prefix = "CASE-" + hashlib.sha256(task_id.encode("utf-8")).hexdigest()[:4].upper()
     cases = []
     for index, row in enumerate(rows):
         image_paths = (Path(row["image_path"]),)
@@ -189,6 +229,7 @@ def build_review_cases(project_root: Path, task_id: str) -> list[ReviewCase]:
             "眼别": "未提供",
             "设备信息": "未提供",
             "模型分歧信号": "是" if row["scout_disagreement"] else "否",
+            "冻结策略请求 Expert": "是" if row["expert_invoked"] else "否",
         }
         cases.append(
             ReviewCase(
@@ -214,17 +255,21 @@ def build_review_cases(project_root: Path, task_id: str) -> list[ReviewCase]:
     return cases
 
 
-def _run_controlled_agent(
+def _qualification_for_pipeline(
     context: ToolContext,
     case: ReviewCase,
     *,
     tool_payload: dict[str, Any],
     case_scope: str,
-) -> dict[str, Any]:
+    mode: str,
+) -> RouteQualification:
     route = tool_payload.get("route", {})
     route_data = route.get("data", {}) if isinstance(route, dict) else {}
     qualification_payload = route_data.get("route_qualification")
-    if isinstance(qualification_payload, dict):
+    if (
+        mode != "qualification_blocked"
+        and isinstance(qualification_payload, dict)
+    ):
         qualification = route_qualification_decision_from_dict(
             qualification_payload
         )
@@ -244,72 +289,137 @@ def _run_controlled_agent(
                     route_data.get("expert_artifact_id", "")
                 ),
                 request_scope=case_scope,
-                prediction_assets_valid=False,
+                prediction_assets_valid=mode != "qualification_blocked",
+                unique_protocol_identity=mode != "qualification_blocked",
             ),
             contract=contract,
             contract_sha256=contract_sha,
         )
-    gate_evidence = route_data.get("gate_evidence", {})
-    expected_cost = gate_evidence.get("expected_cost_ms_per_image")
-    pairing_id = str(route_data.get("pairing_id", "unavailable"))
-    request = ControlledAgentRequest(
-        task_id=case.task_id,
-        case_alias=case.alias,
-        case_scope=case_scope,
-        scout_artifact_ids=tuple(
-            str(value) for value in route_data.get("scout_artifact_ids", [])
-        ),
-        expert_artifact_id=str(route_data.get("expert_artifact_id", "")),
-        protocol_requests_expert=bool(route_data.get("expert_invoked", False)),
-        expected_route_cost_ms_per_image=(
-            float(expected_cost) if expected_cost is not None else None
-        ),
-        idempotency_key=f"{case.alias}:{pairing_id}:{case_scope}",
+    return RouteQualification.from_decision(
+        qualification,
+        evidence={
+            "pairing_id": str(route_data.get("pairing_id", "unavailable")),
+            "gate_evidence": route_data.get("gate_evidence", {}),
+        },
     )
-    return ControlledAgentRuntime().decide(
-        request,
-        qualification=qualification,
-        tool_payload=tool_payload,
-    ).to_dict()
+
+
+def _controller_for_mode(mode: str):
+    if mode != "llm_illegal":
+        return RuleController()
+    return LocalLLMController(
+        LocalLLMControllerConfig(model_id="mock-local-llm-illegal"),
+        inference_callable=lambda _prompt, _config: {
+            "action": "CALL_UNAUTHORIZED_TOOL",
+            "reason_code": "FREE_PLAN",
+            "parameters": {"tool": "model_inference.run"},
+            "schema_version": "ophagent.controller_proposal.v1",
+        },
+    )
+
+
+def _case_state_id(
+    case: ReviewCase,
+    *,
+    scenario: str,
+    controller_type: str,
+) -> str:
+    scenario_hash = hashlib.sha256(
+        f"{scenario}:{controller_type}".encode("utf-8")
+    ).hexdigest()[:12]
+    return f"{case.alias}-{scenario_hash}"
+
+
+def _runtime_from_trace(
+    context: ToolContext,
+    trace_payload: dict[str, Any],
+) -> ToolRuntime:
+    runtime = ToolRuntime(
+        context,
+        trace_id=str(trace_payload.get("trace_id", "restored-trace")),
+    )
+    runtime.events = [
+        TraceEvent(**event)
+        for event in trace_payload.get("events", [])
+        if isinstance(event, dict)
+    ]
+    runtime.halted = any(event.status == "failed" for event in runtime.events)
+    return runtime
 
 
 def _run_read_only_pipeline(
     context: ToolContext,
     case: ReviewCase,
     artifact_ids: list[str],
+    *,
+    resume_state: CaseState | None = None,
 ) -> tuple[dict[str, Any], ToolRuntime]:
     runtime = ToolRuntime(context)
     common = {
         "task_id": case.task_id,
         "case_id": case.alias,
     }
-    input_response = runtime.run(
-        ToolRequest(
-            "case_input.validate",
-            payload={
-                "split": "validation",
-                "image_paths": [str(path) for path in case.image_paths],
-                "structured_info": case.structured_info,
-            },
-            **common,
-        )
+    completed_steps = set(
+        resume_state.completed_steps if resume_state is not None else ()
     )
-    registry_response = runtime.run(
-        ToolRequest("model_registry.inspect", payload={}, **common)
+    cached = dict(
+        resume_state.runtime_payload if resume_state is not None else {}
     )
-    route_response = runtime.run(
-        ToolRequest(
-            "routing_protocol.evaluate",
-            payload={
-                "split": "validation",
-                "source_case_key": case.source_case_key,
-            },
-            **common,
-        )
-    )
-    predictions = []
-    if input_response.ok and registry_response.ok and route_response.ok:
-        for artifact_id in artifact_ids:
+    if "model_qualification" in completed_steps:
+        if not cached.get("input") or not cached.get("registry"):
+            raise ValueError("PERSISTED_VALIDATION_PAYLOAD_MISSING")
+        input_payload = dict(cached["input"])
+        registry_payload = dict(cached["registry"])
+    else:
+        input_payload = runtime.run(
+            ToolRequest(
+                "case_input.validate",
+                payload={
+                    "split": "validation",
+                    "image_paths": [str(path) for path in case.image_paths],
+                    "structured_info": case.structured_info,
+                },
+                **common,
+            )
+        ).to_dict()
+        registry_payload = runtime.run(
+            ToolRequest("model_registry.inspect", payload={}, **common)
+        ).to_dict()
+
+    if "scout" in completed_steps:
+        if not cached.get("route") or not cached.get("predictions"):
+            raise ValueError("PERSISTED_SCOUT_PAYLOAD_MISSING")
+        route_payload = dict(cached["route"])
+        predictions = list(cached["predictions"])
+    else:
+        route_payload = runtime.run(
+            ToolRequest(
+                "routing_protocol.evaluate",
+                payload={
+                    "split": "validation",
+                    "source_case_key": case.source_case_key,
+                },
+                **common,
+            )
+        ).to_dict()
+        predictions = []
+    if (
+        "scout" not in completed_steps
+        and input_payload.get("ok")
+        and registry_payload.get("ok")
+        and route_payload.get("ok")
+    ):
+        route_scouts = [
+            str(value)
+            for value in route_payload.get("data", {}).get(
+                "scout_artifact_ids",
+                [],
+            )
+        ]
+        allowed_artifacts = set(artifact_ids)
+        for artifact_id in route_scouts:
+            if artifact_id not in allowed_artifacts:
+                raise ValueError("ROUTE_SCOUT_NOT_IN_SCENARIO_CAPABILITY")
             response = runtime.run(
                 ToolRequest(
                     "prediction_asset.validate",
@@ -332,18 +442,12 @@ def _run_read_only_pipeline(
         )
     )
     tool_payload = {
-        "input": input_response.to_dict(),
-        "registry": registry_response.to_dict(),
+        "input": input_payload,
+        "registry": registry_payload,
         "predictions": predictions,
         "audit": audit_response.to_dict(),
-        "route": route_response.to_dict(),
+        "route": route_payload,
     }
-    tool_payload["agent"] = _run_controlled_agent(
-        context,
-        case,
-        tool_payload=tool_payload,
-        case_scope="cached_prediction_replay",
-    )
     return (
         tool_payload,
         runtime,
@@ -393,16 +497,270 @@ def _run_fault_pipeline(
         "inference": inference_response.to_dict(),
         "downstream": downstream_response.to_dict(),
     }
-    tool_payload["agent"] = _run_controlled_agent(
-        context,
-        case,
-        tool_payload=tool_payload,
-        case_scope="new_case",
-    )
     return (
         tool_payload,
         runtime,
     )
+
+
+@dataclass(frozen=True)
+class _ReviewStepToolExecutor:
+    context: ToolContext
+    case: ReviewCase
+    artifact_ids: tuple[str, ...]
+    case_scope: str
+    mode: str
+
+    def execute_step(
+        self,
+        state: CaseState,
+        step: str,
+    ) -> AgentToolStepResult:
+        runtime = ToolRuntime(self.context)
+        common = {
+            "task_id": self.case.task_id,
+            "case_id": self.case.alias,
+        }
+        payload: dict[str, Any]
+        qualification: RouteQualification | None = None
+        if step == "input":
+            response = runtime.run(
+                ToolRequest(
+                    "case_input.validate",
+                    payload={
+                        "split": "validation",
+                        "image_paths": [
+                            str(path) for path in self.case.image_paths
+                        ],
+                        "structured_info": self.case.structured_info,
+                    },
+                    **common,
+                )
+            )
+            payload = {"input": response.to_dict()}
+        elif step == "registry":
+            response = runtime.run(
+                ToolRequest(
+                    "model_registry.inspect",
+                    payload={},
+                    **common,
+                )
+            )
+            payload = {"registry": response.to_dict()}
+        elif step == "route_metadata":
+            if self.mode == "tool_failure":
+                payload = {
+                    "route": {
+                        "ok": True,
+                        "code": "SKIPPED_NEW_CASE",
+                        "message": "新病例不读取冻结路由结果",
+                        "data": {
+                            "protocol_requests_expert": False,
+                            "expert_result_released": False,
+                        },
+                    }
+                }
+            else:
+                response = runtime.run(
+                    ToolRequest(
+                        "routing_protocol.evaluate",
+                        payload={
+                            "split": "validation",
+                            "source_case_key": (
+                                self.case.source_case_key
+                            ),
+                        },
+                        **common,
+                    )
+                )
+                payload = {"route": response.to_dict()}
+        elif step == "scout":
+            if self.mode == "tool_failure":
+                response = runtime.run(
+                    ToolRequest(
+                        "model_inference.run",
+                        payload={
+                            "artifact_id": self.artifact_ids[0],
+                            "image_paths": [
+                                str(self.case.image_paths[0])
+                            ],
+                        },
+                        **common,
+                    )
+                )
+                payload = {"inference": response.to_dict()}
+            else:
+                route_data = state.runtime_payload.get(
+                    "route",
+                    {},
+                ).get("data", {})
+                scout_ids = tuple(
+                    str(value)
+                    for value in route_data.get(
+                        "scout_artifact_ids",
+                        (),
+                    )
+                )
+                if not scout_ids:
+                    raise ValueError("ROUTE_SCOUT_IDENTITY_MISSING")
+                if not set(scout_ids).issubset(self.artifact_ids):
+                    raise ValueError(
+                        "ROUTE_SCOUT_NOT_IN_SCENARIO_CAPABILITY"
+                    )
+                predictions: list[dict[str, Any]] = []
+                failed_response: dict[str, Any] | None = None
+                for artifact_id in scout_ids:
+                    response = runtime.run(
+                        ToolRequest(
+                            "prediction_asset.validate",
+                            payload={
+                                "artifact_id": artifact_id,
+                                "split": "validation",
+                                "source_case_key": (
+                                    self.case.source_case_key
+                                ),
+                            },
+                            **common,
+                        )
+                    )
+                    if not response.ok:
+                        failed_response = response.to_dict()
+                        break
+                    predictions.append(response.data)
+                payload = (
+                    {"predictions": predictions}
+                    if failed_response is None
+                    else {
+                        "predictions": [],
+                        "inference": failed_response,
+                    }
+                )
+        elif step == "audit_and_qualification":
+            predictions = list(
+                state.runtime_payload.get("predictions", [])
+            )
+            response = runtime.run(
+                ToolRequest(
+                    "result_risk_audit.run",
+                    payload={"predictions": predictions},
+                    **common,
+                )
+            )
+            payload = {"audit": response.to_dict()}
+            if response.ok:
+                merged_payload = {
+                    **state.runtime_payload,
+                    **payload,
+                }
+                qualification = _qualification_for_pipeline(
+                    self.context,
+                    self.case,
+                    tool_payload=merged_payload,
+                    case_scope=self.case_scope,
+                    mode=self.mode,
+                )
+        else:
+            raise ValueError(f"UNKNOWN_AGENT_TOOL_STEP:{step}")
+        return AgentToolStepResult(
+            tool_payload=payload,
+            tool_trace=runtime.to_dict(),
+            qualification=qualification,
+        )
+
+
+@dataclass(frozen=True)
+class _ReviewExpertReplayExecutor:
+    context: ToolContext
+    case: ReviewCase
+
+    def __call__(self, state: CaseState) -> AgentExpertResult:
+        route_data = state.runtime_payload.get(
+            "route",
+            {},
+        ).get("data", {})
+        expert_artifact_id = str(
+            route_data.get("expert_artifact_id", "")
+        )
+        if not expert_artifact_id:
+            raise ValueError("EXPERT_ARTIFACT_ID_MISSING")
+        runtime = ToolRuntime(self.context)
+        response = runtime.run(
+            ToolRequest(
+                "prediction_asset.validate",
+                payload={
+                    "artifact_id": expert_artifact_id,
+                    "split": "validation",
+                    "source_case_key": self.case.source_case_key,
+                },
+                task_id=self.case.task_id,
+                case_id=self.case.alias,
+            )
+        )
+        return AgentExpertResult(
+            tool_payload={"expert": response.to_dict()},
+            tool_trace=runtime.to_dict(),
+        )
+
+
+def _execute_controlled_pipeline(
+    context: ToolContext,
+    case: ReviewCase,
+    *,
+    scenario: str,
+    artifact_ids: list[str],
+    mode: str,
+    actor_role: str,
+) -> tuple[dict[str, Any], ToolRuntime, CaseState, bool]:
+    controller = _controller_for_mode(mode)
+    case_scope = "new_case" if mode == "tool_failure" else "cached_prediction_replay"
+    _contract, contract_sha = load_route_qualification_contract(
+        context.project_root
+    )
+    expected_expert_cost = 2.0 if mode == "cost_blocked" else 0.2
+    remaining_budget = 0.5 if mode == "cost_blocked" else 1.0
+    case_id = _case_state_id(
+        case,
+        scenario=scenario,
+        controller_type=controller.controller_type,
+    )
+    request = ControlledCaseRequest(
+        case_id=case_id,
+        task_id=case.task_id,
+        idempotency_key=f"controlled-v2:{case_id}",
+        case_scope=case_scope,
+        case_metadata={
+            "modality": "CFP",
+            "image_count": len(case.image_paths),
+            "quality_flag": "public_validation_demo",
+        },
+        remaining_budget=remaining_budget,
+        expected_expert_cost=expected_expert_cost,
+        controller_type=controller.controller_type,
+        qualification_policy_version=contract_sha,
+        route_protocol_version="frozen-validation-route-v1",
+    )
+    agent_runtime = ControlledAgentRuntimeV2(
+        CaseStateStore(CONTROLLED_RUNTIME_ROOT / "cases")
+    )
+    case_state, replayed = agent_runtime.execute(
+        request,
+        controller=controller,
+        tool_executor=_ReviewStepToolExecutor(
+            context=context,
+            case=case,
+            artifact_ids=tuple(artifact_ids),
+            case_scope=case_scope,
+            mode=mode,
+        ),
+        actor_role=actor_role,
+    )
+    payload = dict(case_state.runtime_payload)
+    payload["agent"] = state_view_model(case_state)
+    runtime = _runtime_from_trace(
+        context,
+        case_state.tool_trace,
+    )
+    return payload, runtime, case_state, replayed
 
 
 def _model_rows(registry_payload: dict[str, Any]) -> pd.DataFrame:
@@ -577,10 +935,22 @@ def _render_controlled_agent_trace(payload: dict[str, Any]) -> None:
         "REQUEST_EXPERT": "请求 Expert",
         "REFER_TO_HUMAN": "转人工处理",
     }
-    level = str(agent.get("qualification_level", "blocked"))
-    evidence = str(agent.get("evidence_label", "unstable"))
-    risk_state = str(agent.get("risk_state", "not_evaluated"))
-    action = str(agent.get("action", "REFER_TO_HUMAN"))
+    level = str(qualification.get("execution_level", "blocked"))
+    evidence = str(qualification.get("evidence_label", "unstable"))
+    proposal = dict(agent.get("controller_proposal", {}))
+    gate = dict(agent.get("gate_decision", {}))
+    risk_state = str(proposal.get("reason_code", "not_evaluated"))
+    action = str(agent.get("final_action", "REFER_TO_HUMAN"))
+    risk_labels.update(
+        {
+            "LOW_RISK_KEEP_SCOUT": "低风险，建议保持 Scout",
+            "HIGH_RISK_REQUEST_EXPERT": "高风险，建议请求 Expert",
+            "MODEL_DISAGREEMENT": "模型分歧，建议请求 Expert",
+            "QUALIFICATION_RESTRICTED": "资格不足，建议转人工",
+            "TOOL_FAILURE": "工具失败，停止下游",
+            "INVALID_PROPOSAL": "控制器提议不合法",
+        }
+    )
     level_class = (
         "ok"
         if level in {"research_case_simulation", "deployment_candidate"}
@@ -604,11 +974,21 @@ def _render_controlled_agent_trace(payload: dict[str, Any]) -> None:
         (
             "02 · 风险判定",
             risk_labels.get(risk_state, risk_state),
-            "只使用模型输出与冻结协议信号",
+            f"控制器提议：{proposal.get('action', '未生成')}",
             "attention" if "expert" in risk_state else "neutral",
         ),
         (
-            "03 · 最终动作",
+            "03 · 门控裁决",
+            str(gate.get("code", "未裁决")),
+            (
+                "非法提议已拦截"
+                if gate.get("gate_intercepted")
+                else "提议通过确定性复核"
+            ),
+            "restricted" if gate.get("gate_intercepted") else "neutral",
+        ),
+        (
+            "04 · 最终动作",
             action_labels.get(action, action),
             "等待人工确认后才写入审阅结论",
             action_class,
@@ -623,9 +1003,9 @@ def _render_controlled_agent_trace(payload: dict[str, Any]) -> None:
     )
     st.markdown(
         '<div class="agent-decision-head">'
-        "<div><b>受控 Agent 决策</b>"
-        "<span>确定性规则基线，不由语言模型裁决资格</span></div>"
-        '<span class="hub-chip hub-chip-blue">三动作状态机</span></div>'
+        "<div><b>受控 Agent 决策 · V2</b>"
+        "<span>Controller 只提议；规则控制器仍是确定性规则基线</span></div>"
+        f'<span class="hub-chip hub-chip-blue">{html.escape(str(agent.get("controller_type", "未记录")))}</span></div>'
         f'<div class="agent-decision-strip">{content}</div>',
         unsafe_allow_html=True,
     )
@@ -657,27 +1037,50 @@ def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
     st.markdown("#### Scout / Expert 研究模拟")
     if route["ok"]:
         data = route["data"]
+        predictions = list(payload.get("predictions", []))
+        scout_label = (
+            grade_label(task_id, predictions[0]["pred_label"])
+            if predictions
+            else "未完成"
+        )
+        expert_response = dict(payload.get("expert", {}))
+        expert_released = bool(expert_response.get("ok", False))
+        protocol_requests_expert = bool(
+            data.get(
+                "protocol_requests_expert",
+                data.get("expert_invoked", False),
+            )
+        )
+        expert_label = (
+            grade_label(
+                task_id,
+                expert_response.get("data", {}).get("pred_label"),
+            )
+            if expert_released
+            else (
+                "等待人工批准"
+                if protocol_requests_expert
+                else "未调用"
+            )
+        )
+        adopted_label = expert_label if expert_released else scout_label
+        result_source = (
+            "批准后的冻结 Expert 回放"
+            if expert_released
+            else (
+                "等待 Expert 批准"
+                if protocol_requests_expert
+                else "冻结 Scout 回放"
+            )
+        )
         st.warning(
             "当前仅回放冻结 validation 概率，route_eligible=false；"
             "不是在线路由，也不提供诊断或分流建议。"
         )
         route_values = [
-            (
-                "Scout 输出",
-                grade_label(task_id, payload["predictions"][0]["pred_label"]),
-            ),
-            (
-                "Expert 输出",
-                (
-                    grade_label(task_id, data["expert_pred_label"])
-                    if data["expert_invoked"]
-                    else "未调用"
-                ),
-            ),
-            (
-                "系统采用输出",
-                grade_label(task_id, data["final_pred_label"]),
-            ),
+            ("Scout 输出", scout_label),
+            ("Expert 输出", expert_label),
+            ("系统采用输出", adopted_label),
             ("冻结预算", f"{float(data['requested_budget']):.0%}"),
         ]
         cards = "".join(
@@ -692,11 +1095,144 @@ def _render_audit_and_route(task_id: str, payload: dict[str, Any]) -> None:
         st.caption(
             f"策略：{data['routing_policy']} · "
             f"分歧：{'是' if data['scout_disagreement'] else '否'} · "
-            f"结果来源：{data['final_source']}"
+            f"结果来源：{result_source}"
         )
     else:
         st.error(f"{route['code']} · {route['message']}")
     _render_controlled_agent_trace(payload)
+
+
+def _render_state_timeline(case_state: CaseState, *, replayed: bool) -> None:
+    view = state_view_model(case_state)
+    st.markdown("#### 状态时间线")
+    status_columns = st.columns(4, gap="small")
+    status_columns[0].metric("当前状态", view["current_state_label"])
+    status_columns[1].metric("最终三动作", view["final_action"] or "待裁决")
+    status_columns[2].metric(
+        "恢复来源",
+        "持久状态恢复" if replayed else "本次执行",
+    )
+    status_columns[3].metric(
+        "Trace 完整度",
+        f"{len(view['timeline'])} 个状态事件",
+    )
+    timeline = pd.DataFrame(view["timeline"])
+    if not timeline.empty:
+        st.dataframe(
+            timeline.rename(
+                columns={
+                    "sequence": "序号",
+                    "state": "状态码",
+                    "label": "中文状态",
+                    "code": "返回码",
+                    "at": "时间",
+                }
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+    st.caption(
+        "页面刷新与服务重启均先读取 CaseStateStore；"
+        "已完成步骤不会重新调用工具。"
+    )
+    if replayed:
+        st.success(
+            "幂等恢复成功：复用持久状态，重复工具调用 0 次。"
+        )
+
+
+def _render_v2_controls(
+    case_state: CaseState,
+    *,
+    actor_role: str,
+    context: ToolContext,
+    case: ReviewCase,
+) -> None:
+    runtime = ControlledAgentRuntimeV2(
+        CaseStateStore(CONTROLLED_RUNTIME_ROOT / "cases")
+    )
+    st.markdown("#### 人工批准与权限")
+    if case_state.current_state == "EXPERT_PENDING_APPROVAL":
+        can_decide_expert = actor_role in {"reviewer", "admin"}
+        approve_column, reject_column = st.columns(2)
+        if approve_column.button(
+            "批准冻结 Expert 回放",
+            type="primary",
+            disabled=not can_decide_expert,
+            width="stretch",
+            key=f"expert-approve::{case_state.case_id}",
+        ):
+            try:
+                runtime.decide_expert(
+                    case_state.case_id,
+                    approved=True,
+                    actor_role=actor_role,
+                    expert_executor=_ReviewExpertReplayExecutor(
+                        context=context,
+                        case=case,
+                    ),
+                )
+            except PermissionDenied as exc:
+                st.error(f"权限阻塞：{exc}")
+            else:
+                st.rerun()
+        if reject_column.button(
+            "拒绝 Expert，转人工",
+            disabled=not can_decide_expert,
+            width="stretch",
+            key=f"expert-reject::{case_state.case_id}",
+        ):
+            try:
+                runtime.decide_expert(
+                    case_state.case_id,
+                    approved=False,
+                    actor_role=actor_role,
+                )
+            except PermissionDenied as exc:
+                st.error(f"权限阻塞：{exc}")
+            else:
+                st.rerun()
+        st.caption(
+            "批准只释放已经存在的合规冻结 Expert 结果；"
+            "本页不会触发新训练或重新推理。"
+        )
+        if not can_decide_expert:
+            st.info("所需角色：reviewer 或 admin。当前角色不可批准或拒绝 Expert。")
+    elif case_state.current_state == "FAILED":
+        can_retry = actor_role in {"operator", "admin"}
+        if st.button(
+            "重试允许的失败步骤",
+            disabled=not can_retry,
+            width="stretch",
+            key=f"retry::{case_state.case_id}",
+        ):
+            try:
+                runtime.retry_failed(
+                    case_state.case_id,
+                    actor_role=actor_role,
+                )
+            except (PermissionDenied, StateTransitionError) as exc:
+                st.error(f"重试阻塞：{exc}")
+            else:
+                st.rerun()
+        if not can_retry:
+            st.info("所需角色：operator 或 admin。当前角色不可重试失败步骤。")
+    elif case_state.current_state == "REVIEW_PENDING":
+        st.info("Agent 已停止在人工确认点；保存审阅结论后可关闭病例。")
+    else:
+        st.caption(f"当前状态无需 Expert 审批：{case_state.current_state}")
+
+    if st.button(
+        "验证协议修改权限（不执行修改）",
+        width="stretch",
+        key=f"permission-check::{case_state.case_id}",
+    ):
+        try:
+            authorize(actor_role, "protocol.modify")
+        except PermissionDenied as exc:
+            st.warning(f"权限阻塞成功：{exc}")
+        else:
+            st.error("权限配置异常：协议修改不应由病例角色直接执行。")
 
 
 def _review_report(
@@ -704,7 +1240,7 @@ def _review_report(
     case: ReviewCase,
     scenario: str,
     payload: dict[str, Any],
-    runtime: ToolRuntime,
+    trace_payload: dict[str, Any],
     decision: dict[str, Any],
 ) -> dict[str, Any]:
     predictions = [
@@ -720,7 +1256,7 @@ def _review_report(
     ]
     return {
         "schema_version": "ophagent.offline_case_review_report.v1",
-        "created_at": _utc_now(),
+        "created_at": str(decision["saved_at"]),
         "case_alias": case.alias,
         "scenario": scenario,
         "task_id": case.task_id,
@@ -731,7 +1267,7 @@ def _review_report(
         "routing_simulation": payload.get("route", {}).get("data", {}),
         "controlled_agent": payload.get("agent", {}),
         "human_review": decision,
-        "trace": runtime.to_dict(),
+        "trace": trace_payload,
         "boundaries": {
             "clinical_diagnosis": False,
             "online_routing": False,
@@ -742,6 +1278,115 @@ def _review_report(
     }
 
 
+def _review_artifact_paths(
+    session_id: str,
+    case_alias: str,
+) -> tuple[Path, Path]:
+    session_root = REVIEW_RUNTIME_ROOT / session_id
+    return (
+        session_root / "reports" / f"{case_alias}.json",
+        session_root / "traces" / f"{case_alias}.json",
+    )
+
+
+def _closed_review_records(
+    case_state: CaseState,
+    stored: dict[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if case_state.current_state != "CLOSED":
+        raise StateTransitionError("REVIEW_ARTIFACT_RECOVERY_REQUIRES_CLOSED")
+    decision = str(case_state.human_decision)
+    if decision not in REVIEW_DECISIONS:
+        raise StateTransitionError("CLOSED_REVIEW_DECISION_INVALID")
+    stored = dict(stored or {})
+    stored_decision = str(stored.get("decision", ""))
+    if stored_decision and stored_decision != decision:
+        raise StateTransitionError("CLOSED_REVIEW_DECISION_MISMATCH")
+    saved_at = str(
+        stored.get("saved_at")
+        or case_state.updated_at
+        or case_state.created_at
+    )
+    if not saved_at:
+        raise StateTransitionError("CLOSED_REVIEW_TIMESTAMP_MISSING")
+    isolated = {
+        "decision": decision,
+        "modified_output": redact_free_text(
+            str(stored.get("modified_output", ""))
+        ),
+        "note": redact_free_text(str(stored.get("note", ""))),
+        "review_queue": bool(stored.get("review_queue", False)),
+        "saved_at": saved_at,
+    }
+    downloadable = {
+        "decision": decision,
+        "review_queue": isolated["review_queue"],
+        "saved_at": saved_at,
+        "modified_output_recorded_in_isolated_store": bool(
+            isolated["modified_output"]
+        ),
+        "note_recorded_in_isolated_store": bool(isolated["note"]),
+        "free_text_in_downloadable_report": False,
+    }
+    return isolated, downloadable
+
+
+def _persist_closed_review_artifacts(
+    *,
+    case: ReviewCase,
+    scenario: str,
+    session_id: str,
+    case_state: CaseState,
+    actor_role: str,
+    review_state: dict[str, Any],
+) -> dict[str, Any]:
+    """Write only missing evidence from a durable CLOSED CaseState."""
+
+    authorize(actor_role, "review.confirm")
+    stored = review_state.get("cases", {}).get(case.alias)
+    isolated, downloadable = _closed_review_records(case_state, stored)
+    report_path, trace_path = _review_artifact_paths(
+        session_id,
+        case.alias,
+    )
+    if report_path.is_file() and trace_path.is_file():
+        return {
+            "report_path": report_path,
+            "trace_path": trace_path,
+            "recovered": False,
+        }
+    trace_payload = dict(case_state.tool_trace)
+    if not trace_payload:
+        raise StateTransitionError("CLOSED_TOOL_TRACE_MISSING")
+    persisted = _read_review_state(session_id).get("cases", {}).get(case.alias)
+    if persisted != isolated:
+        review_state.setdefault("cases", {})[case.alias] = isolated
+        _save_review_state(session_id, review_state)
+    report_payload = {
+        **case_state.runtime_payload,
+        "agent": state_view_model(case_state),
+    }
+    report = _review_report(
+        case=case,
+        scenario=scenario,
+        payload=report_payload,
+        trace_payload=trace_payload,
+        decision=downloadable,
+    )
+    recovered = False
+    if not report_path.is_file():
+        _atomic_json(report_path, report)
+        recovered = True
+    if not trace_path.is_file():
+        _atomic_json(trace_path, trace_payload)
+        recovered = True
+    return {
+        "report_path": report_path,
+        "trace_path": trace_path,
+        "recovered": recovered,
+    }
+
+
 def _render_review_actions(
     *,
     case: ReviewCase,
@@ -749,38 +1394,80 @@ def _render_review_actions(
     scenario: str,
     selected_index: int,
     state: dict[str, Any],
-    payload: dict[str, Any],
-    runtime: ToolRuntime,
     session_id: str,
+    case_state: CaseState,
+    actor_role: str,
 ) -> None:
     st.markdown("#### 人工审阅")
+    review_ready = case_state.current_state == "REVIEW_PENDING"
+    review_closed = case_state.current_state == "CLOSED"
+    can_confirm_review = actor_role in {"reviewer", "admin"}
+    review_controls_enabled = review_ready and can_confirm_review
+    report_path, trace_path = _review_artifact_paths(
+        session_id,
+        case.alias,
+    )
+    if review_closed:
+        st.success("人工确认已持久化，病例保持 CLOSED。")
+        st.caption(
+            f"已确认结论：{case_state.human_decision}。"
+            "自由文本仅保留在隔离审阅状态中，"
+            "本页不会回显，也不会写入下载报告或 Trace。"
+        )
+    elif not review_ready:
+        st.info(
+            "仅“等待人工确认（REVIEW_PENDING）”状态可提交正式审阅；"
+            "请先完成 Expert 批准或允许的失败恢复。"
+        )
+    elif not can_confirm_review:
+        st.info("所需角色：reviewer 或 admin。当前角色的审阅控件已禁用。")
     previous = state.get("cases", {}).get(case.alias, {})
-    options = ["接受模型输出", "修改输出", "标记不确定"]
     default = str(previous.get("decision", "标记不确定"))
-    if default not in options:
+    if default not in REVIEW_DECISIONS:
         default = "标记不确定"
-    decision = st.segmented_control(
-        "审阅结论",
-        options,
-        default=default,
-        key=f"review_decision::{case.alias}",
-    )
-    modified_output = st.text_input(
-        "人工修改内容（选择“修改输出”时填写）",
-        value=str(previous.get("modified_output", "")),
-        key=f"review_modified::{case.alias}",
-    )
-    uncertain_reason = st.text_area(
-        "审阅备注",
-        value=str(previous.get("note", "")),
-        placeholder="可记录图像质量、模型分歧或需补充的信息；不要填写患者身份信息。",
-        key=f"review_note::{case.alias}",
-    )
-    add_to_queue = st.checkbox(
-        "加入复核队列",
-        value=bool(previous.get("review_queue", False)),
-        key=f"review_queue::{case.alias}",
-    )
+    decision: str | None = case_state.human_decision or default
+    modified_output = ""
+    uncertain_reason = ""
+    add_to_queue = bool(previous.get("review_queue", False))
+    if not review_closed:
+        decision = st.segmented_control(
+            "审阅结论",
+            REVIEW_DECISIONS,
+            default=default,
+            disabled=not review_controls_enabled,
+            key=f"review_decision::{case.alias}::{actor_role}",
+        )
+        modified_output = st.text_input(
+            "人工修改内容（选择“修改输出”时填写）",
+            value=(
+                str(previous.get("modified_output", ""))
+                if review_controls_enabled
+                else ""
+            ),
+            disabled=not review_controls_enabled,
+            key=f"review_modified::{case.alias}::{actor_role}",
+        )
+        uncertain_reason = st.text_area(
+            "审阅备注",
+            value=(
+                str(previous.get("note", ""))
+                if review_controls_enabled
+                else ""
+            ),
+            placeholder="可记录图像质量、模型分歧或需补充的信息；不要填写患者身份信息。",
+            disabled=not review_controls_enabled,
+            key=f"review_note::{case.alias}::{actor_role}",
+        )
+        add_to_queue = st.checkbox(
+            "加入复核队列",
+            value=(
+                bool(previous.get("review_queue", False))
+                if review_controls_enabled
+                else False
+            ),
+            disabled=not review_controls_enabled,
+            key=f"review_queue::{case.alias}::{actor_role}",
+        )
     button_columns = st.columns([1, 1.35, 1])
     if button_columns[0].button(
         "上一例",
@@ -792,45 +1479,118 @@ def _render_review_actions(
     save_current = button_columns[1].button(
         "保存并进入下一例",
         type="primary",
+        disabled=not review_controls_enabled,
         width="stretch",
     )
-    if button_columns[2].button("仅保存", width="stretch"):
+    if button_columns[2].button(
+        "仅保存",
+        disabled=not review_controls_enabled,
+        width="stretch",
+    ):
         save_current = True
         move_next = False
     else:
         move_next = True
     if save_current:
+        if case_state.current_state != "REVIEW_PENDING":
+            st.warning("状态阻塞：当前病例尚未进入 REVIEW_PENDING，未写入任何资产。")
+            return
+        try:
+            authorize(actor_role, "review.confirm")
+        except PermissionDenied as exc:
+            st.warning(
+                f"权限阻塞：{exc}。未写入审阅状态、报告或 Trace。"
+            )
+            return
         case_decision = {
             "decision": decision or "标记不确定",
-            "modified_output": modified_output.strip(),
-            "note": uncertain_reason.strip(),
+            "modified_output": redact_free_text(
+                modified_output.strip()
+            ),
+            "note": redact_free_text(uncertain_reason.strip()),
             "review_queue": bool(add_to_queue),
-            "saved_at": _utc_now(),
+            "saved_at": "",
         }
+        try:
+            closed_state = ControlledAgentRuntimeV2(
+                CaseStateStore(CONTROLLED_RUNTIME_ROOT / "cases")
+            ).confirm_review(
+                case_state.case_id,
+                decision=str(case_decision["decision"]),
+                actor_role=actor_role,
+            )
+        except (PermissionDenied, StateTransitionError):
+            st.warning("人工确认被权限或状态门禁阻塞，未关闭病例或写入报告。")
+            return
+        case_decision["saved_at"] = (
+            closed_state.updated_at or closed_state.created_at
+        )
         state.setdefault("cases", {})[case.alias] = case_decision
-        _save_review_state(session_id, state)
-        report = _review_report(
-            case=case,
-            scenario=scenario,
-            payload=payload,
-            runtime=runtime,
-            decision=case_decision,
-        )
-        report_path = _atomic_json(
-            REVIEW_RUNTIME_ROOT / session_id / "reports" / f"{case.alias}.json",
-            report,
-        )
-        runtime.save(
-            REVIEW_RUNTIME_ROOT / session_id / "traces" / f"{case.alias}.json"
-        )
+        try:
+            artifacts = _persist_closed_review_artifacts(
+                case=case,
+                scenario=scenario,
+                session_id=session_id,
+                case_state=closed_state,
+                actor_role=actor_role,
+                review_state=state,
+            )
+        except (OSError, TypeError, ValueError, StateTransitionError):
+            st.error(
+                "人工确认已持久化，病例保持 CLOSED；报告或 Trace sidecar "
+                "写入失败。刷新后使用恢复按钮重试，不会重复确认。"
+            )
+            return
+        report_path = Path(artifacts["report_path"])
         st.session_state[f"review_saved::{case.alias}"] = str(report_path)
         if move_next and selected_index < len(cases) - 1:
             st.session_state["review_case_index"] = selected_index + 1
             st.rerun()
         st.success("审阅状态、结构化报告和工具轨迹已保存。")
-    report_path_text = st.session_state.get(f"review_saved::{case.alias}")
-    if report_path_text and Path(str(report_path_text)).is_file():
-        report_path = Path(str(report_path_text))
+
+    if review_closed and (not report_path.is_file() or not trace_path.is_file()):
+        st.warning(
+            "CLOSED 证据不完整："
+            f"结构化报告{'完整' if report_path.is_file() else '缺失'}；"
+            f"Trace sidecar {'完整' if trace_path.is_file() else '缺失'}。"
+        )
+        if not can_confirm_review:
+            st.info("所需角色：reviewer 或 admin。当前角色不可执行恢复写入。")
+        if st.button(
+            "从 CLOSED 状态恢复缺失报告 / Trace（不重复确认）",
+            disabled=not can_confirm_review,
+            width="stretch",
+            key=f"recover-review-artifacts::{case.alias}",
+        ):
+            try:
+                artifacts = _persist_closed_review_artifacts(
+                    case=case,
+                    scenario=scenario,
+                    session_id=session_id,
+                    case_state=case_state,
+                    actor_role=actor_role,
+                    review_state=state,
+                )
+            except PermissionDenied:
+                st.warning("权限阻塞：仅 reviewer 或 admin 可恢复审阅证据。")
+            except (OSError, TypeError, ValueError, StateTransitionError):
+                st.error(
+                    "恢复写入仍未完成；病例保持 CLOSED，"
+                    "未重复人工确认，也未改变状态。"
+                )
+            else:
+                report_path = Path(artifacts["report_path"])
+                st.session_state[f"review_saved::{case.alias}"] = str(
+                    report_path
+                )
+                st.success(
+                    "已从 CLOSED 统一状态幂等恢复缺失证据；"
+                    "未重复人工确认，病例状态未改变。"
+                )
+    elif review_closed:
+        st.success("CLOSED 结构化报告与 Trace sidecar 均完整。")
+
+    if report_path.is_file():
         st.download_button(
             "下载结构化报告",
             data=report_path.read_bytes(),
@@ -894,7 +1654,12 @@ def _render_trace(runtime: ToolRuntime, payload: dict[str, Any]) -> None:
 def _render_fault(payload: dict[str, Any], runtime: ToolRuntime) -> None:
     st.markdown("#### 结构化故障门禁")
     failure = payload["inference"]
-    downstream = payload["downstream"]
+    downstream = payload.get(
+        "downstream",
+        {
+            "code": "NOT_DISPATCHED_AFTER_UPSTREAM_FAILURE",
+        },
+    )
     st.error(
         f"{failure['code']} · {failure['message']}\n\n"
         f"当前资格：{failure.get('qualification') or failure['data'].get('qualification', '未记录')}；"
@@ -902,7 +1667,7 @@ def _render_fault(payload: dict[str, Any], runtime: ToolRuntime) -> None:
     )
     st.info(
         f"后续风险审计状态：{downstream['code']}。"
-        "上游失败后没有继续执行越权调用。"
+        "上游失败后没有继续执行越权调用，重复工具调用 0 次。"
     )
     _render_controlled_agent_trace(payload)
     _render_trace(runtime, payload)
@@ -922,17 +1687,48 @@ def render_offline_case_review_workstation() -> None:
         '<span class="hub-chip hub-chip-amber">研究用途</span></div></div>',
         unsafe_allow_html=True,
     )
-    scenario = st.selectbox(
-        "审阅场景",
-        [*NORMAL_SCENARIOS, FAULT_SCENARIO],
-        help="APTOS 与青光眼场景只读取冻结 validation 概率；故障场景验证资格门禁。",
+    workstation_scenarios = _load_workstation_scenarios(
+        str(DEMO_SCENARIO_PATH)
     )
-    if scenario == FAULT_SCENARIO:
-        scenario_config = NORMAL_SCENARIOS["APTOS · 冻结 validation 资产"]
-    else:
-        scenario_config = NORMAL_SCENARIOS[scenario]
+    control_column, role_column = st.columns([1.45, 0.55], gap="small")
+    with control_column:
+        scenario = st.selectbox(
+            "脱敏验收场景",
+            list(workstation_scenarios),
+            help=(
+                "正常场景只读冻结 validation 概率；"
+                "异常场景验证资格、成本、Schema 与工具失败门禁。"
+            ),
+        )
+    role_labels = {
+        "operator": "operator · 病例操作员",
+        "reviewer": "reviewer · 人工复核员",
+        "admin": "admin · 管理员",
+    }
+    with role_column:
+        actor_role = st.selectbox(
+            "脱敏 Demo 角色模拟（非身份认证）",
+            list(role_labels),
+            format_func=lambda value: role_labels[value],
+            index=0,
+        )
+        st.caption("正式部署时角色必须来自可信会话或院内反向代理。")
+    scenario_config = workstation_scenarios[scenario]
     task_id = str(scenario_config["task_id"])
     cases = build_review_cases(PROJECT_ROOT, task_id)
+    case_filter = str(scenario_config.get("case_filter", ""))
+    if case_filter == "keep_scout":
+        cases = [
+            item
+            for item in cases
+            if item.structured_info.get("冻结策略请求 Expert") == "否"
+        ]
+    elif case_filter == "request_expert":
+        cases = [
+            item
+            for item in cases
+            if item.structured_info.get("冻结策略请求 Expert") == "是"
+        ]
     if not cases:
         st.error("当前任务没有可用的公开 validation 图像与冻结 route trace。")
         return
@@ -957,25 +1753,21 @@ def render_offline_case_review_workstation() -> None:
         f" <span class='hub-chip hub-chip-blue'>{html.escape(TASK_CONTRACTS[task_id]['task_name'])}</span>",
         unsafe_allow_html=True,
     )
-    pipeline_key = (
-        f"review_pipeline::route-gate-v1::{scenario}::"
-        f"{case.alias}::{case.source_case_key}"
-    )
-    if pipeline_key not in st.session_state:
-        if scenario == FAULT_SCENARIO:
-            payload, runtime = _run_fault_pipeline(
-                context,
-                case,
-                artifact_id="flair",
-            )
-        else:
-            payload, runtime = _run_read_only_pipeline(
-                context,
-                case,
-                list(scenario_config["artifact_ids"]),
-            )
-        st.session_state[pipeline_key] = (payload, runtime)
-    payload, runtime = st.session_state[pipeline_key]
+    try:
+        payload, runtime, case_state, replayed = _execute_controlled_pipeline(
+            context,
+            case,
+            scenario=scenario,
+            artifact_ids=list(scenario_config["artifact_ids"]),
+            mode=str(scenario_config["mode"]),
+            actor_role=actor_role,
+        )
+    except PermissionDenied as exc:
+        st.error(
+            f"权限阻塞：{exc}。新病例须由 operator 或 admin 提交；"
+            "reviewer 可恢复已有病例并执行人工批准。"
+        )
+        return
 
     image_column, context_column = st.columns([0.62, 0.38], gap="large")
     with image_column:
@@ -991,28 +1783,42 @@ def render_offline_case_review_workstation() -> None:
             "离线资产不会被当作新病例原图模型。"
         )
 
-    if scenario == FAULT_SCENARIO:
+    if str(scenario_config["mode"]) == "tool_failure":
         _render_fault(payload, runtime)
+        _render_state_timeline(case_state, replayed=replayed)
+        _render_v2_controls(
+            case_state,
+            actor_role=actor_role,
+            context=context,
+            case=case,
+        )
         return
 
     result_tab, route_tab, review_tab, trace_tab = st.tabs(
-        ["模型结果", "路由与错误风险", "人工审阅", "资产与调用轨迹"]
+        ["模型结果", "门控与状态机", "人工审阅", "完整 Trace"]
     )
     with result_tab:
         _render_predictions(task_id, payload)
         _render_model_table(payload)
     with route_tab:
         _render_audit_and_route(task_id, payload)
+        _render_state_timeline(case_state, replayed=replayed)
     with review_tab:
+        _render_v2_controls(
+            case_state,
+            actor_role=actor_role,
+            context=context,
+            case=case,
+        )
         _render_review_actions(
             case=case,
             cases=cases,
             scenario=scenario,
             selected_index=selected_index,
             state=state,
-            payload=payload,
-            runtime=runtime,
             session_id=session_id,
+            case_state=case_state,
+            actor_role=actor_role,
         )
     with trace_tab:
         st.markdown("#### 工具能力")

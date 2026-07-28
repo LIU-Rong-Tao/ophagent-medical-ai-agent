@@ -7,6 +7,7 @@ from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 from typing import Any
 
@@ -19,8 +20,16 @@ CONTRACT_RELATIVE_PATH = (
     "experiments/opening_risk_routing_closure/configs/protocols/"
     "route_qualification_contract_v1.json"
 )
+V1_1_CONTRACT_RELATIVE_PATH = (
+    "experiments/opening_risk_routing_closure/configs/protocols/"
+    "route_qualification_contract_v1_1.json"
+)
 OUTPUT_RELATIVE_DIR = (
     "experiments/opening_risk_routing_closure/outputs/route_qualification_gate_v1"
+)
+V1_1_OUTPUT_RELATIVE_DIR = (
+    "experiments/opening_risk_routing_closure/outputs/"
+    "route_qualification_benchmark_v1_1"
 )
 
 EXECUTION_LEVELS = (
@@ -44,11 +53,26 @@ GATE_MESSAGES = {
     "RQ_LABEL_SPACE_MISMATCH": "标签空间与任务契约不一致",
     "RQ_CLASS_ORDER_MISMATCH": "类别顺序与任务契约不一致",
     "RQ_PREDICTION_ASSET_INVALID": "Prediction Asset 缺失或未通过结构检查",
+    "RQ_MODEL_IDENTITY_MISSING": "Scout 或 Expert 模型身份缺失",
+    "RQ_ASSET_SHA_MISSING": "Validation 或冻结结果缺少合法 SHA256 身份",
     "RQ_PROTOCOL_NOT_FROZEN": "路由协议未冻结或结果状态不完整",
     "RQ_SELECTION_NOT_VALIDATION": "候选不是仅由 Validation 选择",
+    "RQ_TEST_USED_FOR_SELECTION": "封存 Test 参与了候选选择",
     "RQ_VALIDATION_EVIDENCE_MISSING": "缺少可还原的 Validation 路由证据",
     "RQ_PRIMARY_METRIC_UNAVAILABLE": "任务主指标缺失，仅能使用登记的次指标作限制性分析",
     "RQ_STABILITY_EVIDENCE_MISSING": "缺少 bootstrap 或稳定性证据",
+    "RQ_BEST_SINGLE_CONSTRAINT": "未满足相对 Validation 最佳单模型约束",
+    "RQ_PROXY_NET_CONSTRAINT": "introduced、corrected 与 net 约束未通过",
+    "RQ_COST_PROTOCOL_MISMATCH": "参与模型的成本协议不可直接比较",
+    "RQ_COST_BUDGET_EXCEEDED": "预计调用成本超过同协议成本上限",
+    "RQ_EXPERT_BUDGET_EXCEEDED": "Expert 调用比例超过冻结预算上限",
+    "RQ_STABILITY_CONSTRAINT": "bootstrap 或候选排名稳定性约束未通过",
+    "RQ_DOMAIN_SHIFT_RESTRICTED": "域偏移状态不允许研究病例模拟",
+    "RQ_TASK_ADAPTER_INCOMPATIBLE": "任务适配未通过 TaskAdapter 契约",
+    "RQ_PROTOCOL_IDENTITY_MISSING": "缺少唯一冻结协议身份",
+    "RQ_VALIDATION_FROZEN_IDENTITY_COLLISION": (
+        "Validation 与冻结结果使用同一资产身份，存在选择证据泄漏"
+    ),
     "RQ_VALIDATION_INEFFECTIVE": "Validation 未显示相对 Scout 的主指标增量",
     "RQ_PROXY_RISK_TRADEOFF": "路由引入了标签依赖代理事件",
     "RQ_FROZEN_REVERSAL": "冻结结果相对 Validation 发生主指标或代理净收益反转",
@@ -63,6 +87,10 @@ HARD_BLOCK_CODES = {
     "RQ_LABEL_SPACE_MISMATCH",
     "RQ_CLASS_ORDER_MISMATCH",
     "RQ_PREDICTION_ASSET_INVALID",
+    "RQ_MODEL_IDENTITY_MISSING",
+    "RQ_ASSET_SHA_MISSING",
+    "RQ_PROTOCOL_IDENTITY_MISSING",
+    "RQ_VALIDATION_FROZEN_IDENTITY_COLLISION",
 }
 
 
@@ -81,6 +109,7 @@ class RouteQualificationRequest:
     all_models_online_case_ready: bool = False
     protocol_frozen: bool = False
     selection_split: str = ""
+    test_used_for_selection: bool = False
     validation_main_metric_delta: float | None = None
     validation_delta_vs_best_single: float | None = None
     validation_corrected: float | None = None
@@ -96,6 +125,27 @@ class RouteQualificationRequest:
     expected_cost_ms_per_image: float | None = None
     protocol_sha256: str = ""
     input_asset_fingerprint: str = ""
+    dataset_id: str = ""
+    scout_adapter_types: tuple[str, ...] = ()
+    expert_adapter_type: str = ""
+    cost_protocol_id: str = ""
+    cost_protocol_comparable: bool = False
+    expert_budget: float | None = None
+    candidate_rank: int | None = None
+    candidate_count: int | None = None
+    candidate_selection_frequency: float | None = None
+    candidate_rank_stability_verified: bool = False
+    domain_shift_status: str = "unknown"
+    adaptation_type: str = "unknown"
+    task_adapter_compatible: bool = False
+    unique_protocol_identity: bool = False
+    validation_result_sha256: str = ""
+    frozen_result_sha256: str = ""
+    risk_proxy_semantics: str = ""
+    risk_evidence_available: bool = True
+    historical_replay_eligible: bool = True
+    offline_batch_eligible: bool = False
+    single_case_original_ready: bool = False
 
 
 @dataclass(frozen=True)
@@ -184,12 +234,17 @@ def _git_commit(project_root: Path) -> str:
 def load_route_qualification_contract(
     project_root: Path,
 ) -> tuple[dict[str, Any], str]:
-    path = project_root / CONTRACT_RELATIVE_PATH
+    v1_1_path = project_root / V1_1_CONTRACT_RELATIVE_PATH
+    path = (
+        v1_1_path
+        if v1_1_path.is_file()
+        else project_root / CONTRACT_RELATIVE_PATH
+    )
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload, file_sha256(path)
 
 
-def evaluate_route_qualification(
+def _evaluate_route_qualification_v1(
     request: RouteQualificationRequest,
     *,
     contract: dict[str, Any],
@@ -240,6 +295,8 @@ def evaluate_route_qualification(
         codes.append("RQ_PROTOCOL_NOT_FROZEN")
     if request.selection_split not in {"validation", "val"}:
         codes.append("RQ_SELECTION_NOT_VALIDATION")
+    if request.test_used_for_selection:
+        codes.append("RQ_TEST_USED_FOR_SELECTION")
     if not request.primary_metric_available:
         codes.append("RQ_PRIMARY_METRIC_UNAVAILABLE")
     if request.stability_ci_lower is None:
@@ -290,6 +347,7 @@ def evaluate_route_qualification(
         not hard_blocked
         and request.protocol_frozen
         and request.selection_split in {"validation", "val"}
+        and not request.test_used_for_selection
         and evidence_label in {"beneficial", "risk_tradeoff"}
     )
     deployment_ready = (
@@ -346,6 +404,423 @@ def evaluate_route_qualification(
         evidence_fingerprint=_sha256_bytes(
             _stable_json(fingerprint_payload).encode("utf-8")
         ),
+    )
+
+
+V1_1_RULE_FAMILIES = (
+    "relative_scout_only",
+    "plus_best_single",
+    "plus_proxy_net",
+    "plus_cost_budget",
+    "plus_stability",
+    "plus_domain_adaptation",
+    "complete_layered_gate",
+)
+
+
+def _v1_1_contract(contract: dict[str, Any]) -> bool:
+    return (
+        str(contract.get("schema_version", "")).endswith(".v1_1")
+        or str(contract.get("protocol_id", "")).endswith("_v1_1")
+    )
+
+
+def _threshold(
+    contract: dict[str, Any],
+    name: str,
+    default: float,
+) -> float:
+    try:
+        return float(contract.get("thresholds", {}).get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _evaluate_route_qualification_v1_1(
+    request: RouteQualificationRequest,
+    *,
+    contract: dict[str, Any],
+    contract_sha256: str | None,
+    rule_family: str | None,
+) -> RouteQualificationDecision:
+    """Apply the predeclared v1.1 rule family without a weighted score."""
+
+    selected_family = rule_family or str(
+        contract.get("active_rule_family", "complete_layered_gate")
+    )
+    if selected_family not in V1_1_RULE_FAMILIES:
+        raise ValueError(f"unknown v1.1 rule family: {selected_family}")
+    active_layer_count = V1_1_RULE_FAMILIES.index(selected_family) + 1
+    codes: list[str] = []
+    trace: list[dict[str, Any]] = []
+    scouts = tuple(value for value in request.scout_artifact_ids if value)
+    expert = request.expert_artifact_id.strip()
+    validation_sha_valid = bool(
+        re.fullmatch(r"[0-9a-fA-F]{64}", request.validation_result_sha256)
+    )
+    frozen_sha_valid = bool(
+        re.fullmatch(r"[0-9a-fA-F]{64}", request.frozen_result_sha256)
+    )
+
+    asset_checks = (
+        (
+            "model_identities_present",
+            bool(scouts and expert),
+            "RQ_MODEL_IDENTITY_MISSING",
+        ),
+        (
+            "scout_expert_distinct",
+            bool(scouts and expert and expert not in scouts),
+            "RQ_SAME_SCOUT_EXPERT",
+        ),
+        ("task_matches", request.task_matches, "RQ_TASK_MISMATCH"),
+        (
+            "label_space_matches",
+            request.label_space_matches,
+            "RQ_LABEL_SPACE_MISMATCH",
+        ),
+        (
+            "class_order_matches",
+            request.class_order_matches,
+            "RQ_CLASS_ORDER_MISMATCH",
+        ),
+        (
+            "prediction_assets_valid",
+            request.prediction_assets_valid,
+            "RQ_PREDICTION_ASSET_INVALID",
+        ),
+        (
+            "unique_protocol_identity",
+            request.unique_protocol_identity,
+            "RQ_PROTOCOL_IDENTITY_MISSING",
+        ),
+        (
+            "validation_frozen_asset_sha_present",
+            validation_sha_valid and frozen_sha_valid,
+            "RQ_ASSET_SHA_MISSING",
+        ),
+        (
+            "validation_frozen_assets_distinct",
+            bool(
+                validation_sha_valid
+                and frozen_sha_valid
+                and request.validation_result_sha256.lower()
+                != request.frozen_result_sha256.lower()
+            ),
+            "RQ_VALIDATION_FROZEN_IDENTITY_COLLISION",
+        ),
+    )
+    for check, passed, code in asset_checks:
+        trace.append(
+            {
+                "layer": "asset_task",
+                "check": check,
+                "passed": bool(passed),
+            }
+        )
+        if not passed:
+            codes.append(code)
+
+    validation_delta = request.validation_main_metric_delta
+    best_single_delta = request.validation_delta_vs_best_single
+    corrected = request.validation_corrected
+    introduced = request.validation_introduced
+    net = request.validation_net
+    if validation_delta is None:
+        evidence_label = "unstable"
+        codes.append("RQ_VALIDATION_EVIDENCE_MISSING")
+    elif validation_delta <= 0:
+        evidence_label = "ineffective"
+        codes.append("RQ_VALIDATION_INEFFECTIVE")
+    elif (
+        (introduced is not None and introduced > 0)
+        or (net is not None and net < 0)
+    ):
+        evidence_label = "risk_tradeoff"
+    else:
+        evidence_label = "beneficial"
+
+    if not request.protocol_frozen:
+        codes.append("RQ_PROTOCOL_NOT_FROZEN")
+    if request.selection_split not in {"validation", "val"}:
+        codes.append("RQ_SELECTION_NOT_VALIDATION")
+    if request.test_used_for_selection:
+        codes.append("RQ_TEST_USED_FOR_SELECTION")
+    if not request.primary_metric_available:
+        codes.append("RQ_PRIMARY_METRIC_UNAVAILABLE")
+
+    min_scout_delta = _threshold(
+        contract,
+        "min_validation_delta_vs_scout",
+        0.0,
+    )
+    layer_1 = (
+        validation_delta is not None
+        and validation_delta > min_scout_delta
+    )
+    min_best_delta = _threshold(
+        contract,
+        "min_validation_delta_vs_best_single",
+        0.0,
+    )
+    layer_2 = (
+        best_single_delta is not None
+        and best_single_delta >= min_best_delta
+    )
+    min_net = _threshold(contract, "min_validation_net", 0.0)
+    layer_3 = bool(
+        request.risk_evidence_available
+        and corrected is not None
+        and introduced is not None
+        and net is not None
+        and introduced <= corrected
+        and net >= min_net
+    )
+    cost_ceilings = dict(
+        contract.get("thresholds", {}).get(
+            "cost_ceiling_ms_per_image_by_protocol",
+            {},
+        )
+    )
+    cost_ceiling = _finite(cost_ceilings.get(request.cost_protocol_id))
+    max_expert_budget = _threshold(contract, "max_expert_budget", 0.30)
+    effective_budget = (
+        request.expert_budget
+        if request.expert_budget is not None
+        else request.requested_budget
+    )
+    layer_4 = bool(
+        request.cost_protocol_complete
+        and request.cost_protocol_comparable
+        and request.cost_protocol_id
+        and cost_ceiling is not None
+        and request.expected_cost_ms_per_image is not None
+        and request.expected_cost_ms_per_image <= cost_ceiling
+        and effective_budget is not None
+        and effective_budget <= max_expert_budget
+    )
+    min_selection_frequency = _threshold(
+        contract,
+        "min_candidate_selection_frequency",
+        0.20,
+    )
+    max_candidate_rank = int(
+        _threshold(contract, "max_candidate_rank", 2)
+    )
+    min_rank_candidates = int(
+        _threshold(contract, "min_candidate_count_for_rank", 2)
+    )
+    bootstrap_stable = bool(
+        request.stability_ci_lower is not None
+        and request.stability_ci_lower > 0
+    )
+    frequency_stable = bool(
+        request.candidate_selection_frequency is not None
+        and request.candidate_selection_frequency
+        >= min_selection_frequency
+    )
+    rank_stable = bool(
+        request.candidate_rank_stability_verified
+        and request.candidate_rank is not None
+        and request.candidate_count is not None
+        and request.candidate_count >= min_rank_candidates
+        and request.candidate_rank <= max_candidate_rank
+        and best_single_delta is not None
+        and best_single_delta > 0
+    )
+    layer_5 = bootstrap_stable or frequency_stable or rank_stable
+    if not layer_5:
+        codes.append("RQ_STABILITY_EVIDENCE_MISSING")
+    allowed_domain_states = set(
+        str(value)
+        for value in contract.get("domain_adaptation_gate", {}).get(
+            "research_case_simulation_allowed",
+            (
+                "in_domain",
+                "native_adaptation",
+                "weak_label_exploratory",
+            ),
+        )
+    )
+    layer_6 = bool(
+        request.domain_shift_status in allowed_domain_states
+        and request.task_adapter_compatible
+    )
+
+    layer_results = (
+        ("relative_scout", layer_1, "RQ_VALIDATION_INEFFECTIVE"),
+        ("best_single", layer_2, "RQ_BEST_SINGLE_CONSTRAINT"),
+        ("proxy_net", layer_3, "RQ_PROXY_NET_CONSTRAINT"),
+        ("cost_budget", layer_4, "RQ_COST_PROTOCOL_MISMATCH"),
+        ("stability", layer_5, "RQ_STABILITY_CONSTRAINT"),
+        ("domain_adaptation", layer_6, "RQ_DOMAIN_SHIFT_RESTRICTED"),
+    )
+    for index, (name, passed, code) in enumerate(layer_results, start=1):
+        active = index <= min(active_layer_count, len(layer_results))
+        trace.append(
+            {
+                "layer": f"rule_{index}",
+                "check": name,
+                "active": active,
+                "passed": bool(passed),
+                "rule_family": selected_family,
+            }
+        )
+        if active and not passed:
+            codes.append(code)
+    if active_layer_count >= 4:
+        if not request.cost_protocol_complete:
+            codes.append("RQ_COST_EVIDENCE_INCOMPLETE")
+        if (
+            effective_budget is None
+            or effective_budget > max_expert_budget
+        ):
+            codes.append("RQ_EXPERT_BUDGET_EXCEEDED")
+        if (
+            cost_ceiling is None
+            or request.expected_cost_ms_per_image is None
+            or request.expected_cost_ms_per_image > cost_ceiling
+        ):
+            codes.append("RQ_COST_BUDGET_EXCEEDED")
+    if active_layer_count >= 6:
+        if not request.task_adapter_compatible:
+            codes.append("RQ_TASK_ADAPTER_INCOMPATIBLE")
+
+    frozen_metric_reversal = bool(
+        validation_delta is not None
+        and validation_delta > 0
+        and request.frozen_main_metric_delta is not None
+        and request.frozen_main_metric_delta <= 0
+    )
+    frozen_proxy_reversal = bool(
+        net is not None
+        and net >= 0
+        and request.frozen_net is not None
+        and request.frozen_net < 0
+    )
+    frozen_overlay_passed = not (
+        frozen_metric_reversal or frozen_proxy_reversal
+    )
+    trace.append(
+        {
+            "layer": "rule_7",
+            "check": "post_freeze_safety_overlay",
+            "active": active_layer_count >= 7,
+            "passed": frozen_overlay_passed,
+            "rule_family": selected_family,
+        }
+    )
+    if active_layer_count >= 7 and not frozen_overlay_passed:
+        evidence_label = "unstable"
+        codes.append("RQ_FROZEN_REVERSAL")
+
+    required_layers = [
+        passed
+        for index, (_, passed, _) in enumerate(layer_results, start=1)
+        if index <= min(active_layer_count, len(layer_results))
+    ]
+    hard_blocked = any(code in HARD_BLOCK_CODES for code in codes)
+    base_research_ready = bool(
+        not hard_blocked
+        and request.protocol_frozen
+        and request.unique_protocol_identity
+        and request.selection_split in {"validation", "val"}
+        and not request.test_used_for_selection
+        and validation_delta is not None
+        and request.primary_metric_available
+        and "RQ_FROZEN_REVERSAL" not in codes
+    )
+    research_ready = base_research_ready and all(required_layers)
+    deployment_ready = bool(
+        selected_family == "complete_layered_gate"
+        and research_ready
+        and evidence_label == "beneficial"
+        and (introduced or 0.0) == 0
+        and request.all_models_online_case_ready
+        and request.single_case_original_ready
+        and request.primary_metric_available
+    )
+    if not request.all_models_online_case_ready:
+        codes.append("RQ_ONLINE_ENTRY_UNAVAILABLE")
+    codes.append("RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED")
+    codes = list(dict.fromkeys(codes))
+
+    if hard_blocked:
+        execution_level = "blocked"
+    elif request.request_scope == "new_case" and deployment_ready:
+        execution_level = "deployment_candidate"
+    elif (
+        research_ready
+        and request.request_scope != "new_case"
+        and request.historical_replay_eligible
+    ):
+        execution_level = "research_case_simulation"
+    else:
+        execution_level = "research_replay_only"
+    trace.append(
+        {
+            "layer": "execution",
+            "check": "allowed_execution_level",
+            "passed": execution_level != "blocked",
+            "execution_level": execution_level,
+            "rule_family": selected_family,
+            "frozen_metric_reversal": frozen_metric_reversal,
+            "frozen_proxy_reversal": frozen_proxy_reversal,
+            "clinical_route_eligible": False,
+        }
+    )
+    fingerprint_payload = {
+        "request": asdict(request),
+        "contract_id": contract.get("protocol_id"),
+        "rule_family": selected_family,
+    }
+    contract_hash = contract_sha256 or _sha256_bytes(
+        _stable_json(contract).encode("utf-8")
+    )
+    return RouteQualificationDecision(
+        execution_level=execution_level,
+        evidence_label=evidence_label,
+        allow_cached_replay=bool(
+            not hard_blocked and request.historical_replay_eligible
+        ),
+        allow_case_simulation=execution_level in {
+            "research_case_simulation",
+            "deployment_candidate",
+        },
+        allow_new_case_route=execution_level == "deployment_candidate",
+        clinical_route_eligible=False,
+        human_confirmation_required=True,
+        error_codes=tuple(codes or ["RQ_OK"]),
+        gate_trace=tuple(trace),
+        contract_sha256=contract_hash,
+        evidence_fingerprint=_sha256_bytes(
+            _stable_json(fingerprint_payload).encode("utf-8")
+        ),
+    )
+
+
+def evaluate_route_qualification(
+    request: RouteQualificationRequest,
+    *,
+    contract: dict[str, Any],
+    contract_sha256: str | None = None,
+    rule_family: str | None = None,
+) -> RouteQualificationDecision:
+    """Single gate entry used by benchmarks, state machine, tools, and UI."""
+
+    if _v1_1_contract(contract):
+        return _evaluate_route_qualification_v1_1(
+            request,
+            contract=contract,
+            contract_sha256=contract_sha256,
+            rule_family=rule_family,
+        )
+    if rule_family is not None:
+        raise ValueError("rule_family is available only for v1.1 contracts")
+    return _evaluate_route_qualification_v1(
+        request,
+        contract=contract,
+        contract_sha256=contract_sha256,
     )
 
 
@@ -535,7 +1010,9 @@ def build_route_qualification_matrix(project_root: Path) -> pd.DataFrame:
 
     from app.model_hub_index import build_model_hub_index
 
-    contract, contract_sha = load_route_qualification_contract(project_root)
+    legacy_contract_path = project_root / CONTRACT_RELATIVE_PATH
+    contract = json.loads(legacy_contract_path.read_text(encoding="utf-8"))
+    contract_sha = file_sha256(legacy_contract_path)
     task_policies = dict(contract["task_policies"])
     index = build_model_hub_index(project_root)
     route_runs = index["route_runs"]
@@ -784,7 +1261,13 @@ def route_qualification_request_from_row(
         label_space_matches=True,
         class_order_matches=True,
         prediction_assets_valid=_as_bool(
-            row.get("allow_cached_replay", False)
+            row.get(
+                "prediction_assets_valid",
+                row.get(
+                    "prediction_asset_complete",
+                    row.get("allow_cached_replay", False),
+                ),
+            )
         ),
         cost_protocol_complete=_as_bool(
             row.get("cost_protocol_complete", False)
@@ -792,14 +1275,12 @@ def route_qualification_request_from_row(
         all_models_online_case_ready=_as_bool(
             row.get("all_models_online_case_ready", False)
         ),
-        protocol_frozen=bool(
-            str(row.get("protocol_sha256", "") or "").strip()
-            not in {"", "nan", "None"}
-        ),
-        selection_split=(
-            "validation"
-            if _finite(row.get("validation_main_metric")) is not None
-            else ""
+        protocol_frozen=_as_bool(row.get("protocol_frozen", False)),
+        selection_split=str(
+            row.get("selection_split", "")
+        ).strip().lower(),
+        test_used_for_selection=_as_bool(
+            row.get("test_used_for_selection", False)
         ),
         validation_main_metric_delta=_finite(
             row.get("validation_delta_vs_scout")
@@ -824,7 +1305,71 @@ def route_qualification_request_from_row(
         ),
         protocol_sha256=str(row.get("protocol_sha256", "")),
         input_asset_fingerprint=str(row.get("input_asset_fingerprint", "")),
+        dataset_id=str(row.get("dataset_id", "")),
+        scout_adapter_types=tuple(
+            value
+            for value in str(row.get("scout_adapter_types", "")).split("|")
+            if value and value not in {"nan", "None"}
+        ),
+        expert_adapter_type=str(row.get("expert_adapter_type", "")),
+        cost_protocol_id=str(row.get("cost_protocol_id", "")),
+        cost_protocol_comparable=_as_bool(
+            row.get("cost_protocol_comparable", False)
+        ),
+        expert_budget=_finite(row.get("expert_budget")),
+        candidate_rank=(
+            int(value)
+            if (value := _finite(row.get("candidate_rank"))) is not None
+            else None
+        ),
+        candidate_count=(
+            int(value)
+            if (value := _finite(row.get("candidate_count"))) is not None
+            else None
+        ),
+        candidate_selection_frequency=_finite(
+            row.get("candidate_selection_frequency")
+        ),
+        candidate_rank_stability_verified=_as_bool(
+            row.get("candidate_rank_stability_verified", False)
+        ),
+        domain_shift_status=str(row.get("domain_shift_status", "unknown")),
+        adaptation_type=str(row.get("adaptation_type", "unknown")),
+        task_adapter_compatible=_as_bool(
+            row.get("task_adapter_compatible", False)
+        ),
+        unique_protocol_identity=_as_bool(
+            row.get("unique_protocol_identity", False)
+        ),
+        validation_result_sha256=str(
+            row.get("validation_result_sha256", "")
+        ),
+        frozen_result_sha256=str(row.get("frozen_result_sha256", "")),
+        risk_proxy_semantics=str(row.get("risk_proxy_semantics", "")),
+        risk_evidence_available=_as_bool(
+            row.get("risk_evidence_available", True)
+        ),
+        historical_replay_eligible=_as_bool(
+            row.get("historical_replay_eligible", True)
+        ),
+        offline_batch_eligible=_as_bool(
+            row.get("offline_batch_eligible", False)
+        ),
+        single_case_original_ready=_as_bool(
+            row.get("single_case_original_ready", False)
+        ),
     )
+
+
+def _active_matrix_path(project_root: Path) -> Path:
+    v1_1 = (
+        project_root
+        / V1_1_OUTPUT_RELATIVE_DIR
+        / "route_qualification_evidence_matrix.csv"
+    )
+    if v1_1.is_file():
+        return v1_1
+    return project_root / OUTPUT_RELATIVE_DIR / "route_qualification_matrix.csv"
 
 
 def find_route_qualification(
@@ -837,7 +1382,7 @@ def find_route_qualification(
     requested_budget: float,
     request_scope: str = "cached_prediction_replay",
 ) -> RouteQualificationDecision | None:
-    path = project_root / OUTPUT_RELATIVE_DIR / "route_qualification_matrix.csv"
+    path = _active_matrix_path(project_root)
     if not path.is_file():
         return None
     frame = pd.read_csv(path)
@@ -914,7 +1459,7 @@ def find_route_qualification_record(
 ) -> tuple[RouteQualificationDecision, dict[str, Any]] | None:
     """Return the registered decision and its non-sensitive evidence record."""
 
-    path = project_root / OUTPUT_RELATIVE_DIR / "route_qualification_matrix.csv"
+    path = _active_matrix_path(project_root)
     if not path.is_file():
         return None
     frame = pd.read_csv(path)
@@ -947,6 +1492,9 @@ def find_route_qualification_record(
         "expert_artifact_id",
         "routing_policy",
         "requested_budget",
+        "selection_split",
+        "protocol_frozen",
+        "test_used_for_selection",
         "primary_metric",
         "metric_used",
         "validation_delta_vs_scout",
@@ -964,6 +1512,27 @@ def find_route_qualification_record(
         "protocol_sha256",
         "input_asset_fingerprint",
         "qualification_contract_sha256",
+        "dataset_id",
+        "scout_adapter_types",
+        "expert_adapter_type",
+        "cost_protocol_id",
+        "cost_protocol_comparable",
+        "expert_budget",
+        "candidate_rank",
+        "candidate_count",
+        "candidate_selection_frequency",
+        "candidate_rank_stability_verified",
+        "domain_shift_status",
+        "adaptation_type",
+        "task_adapter_compatible",
+        "unique_protocol_identity",
+        "validation_result_sha256",
+        "frozen_result_sha256",
+        "risk_proxy_semantics",
+        "risk_evidence_available",
+        "historical_replay_eligible",
+        "offline_batch_eligible",
+        "single_case_original_ready",
     ]
     evidence = {
         column: (

@@ -18,6 +18,9 @@ from app.model_hub_clinical import render_clinical_workspace  # noqa: E402
 from app.model_hub_data import load_model_hub_outputs  # noqa: E402
 from app.model_hub_engineering import render_engineering_workspace  # noqa: E402
 from app.model_hub_index import build_model_hub_index  # noqa: E402
+from app.model_hub_qualification import (  # noqa: E402
+    render_qualification_workspace,
+)
 from app.model_hub_ui import (  # noqa: E402
     boundary_notice,
     inject_model_hub_css,
@@ -172,7 +175,10 @@ def main() -> None:
     inject_app_css()
     inject_model_hub_css()
     workspace = sidebar_navigation()
-    context = "离线审阅 · V1.1" if workspace == "病例回放" else "模型工程 · V1.1"
+    context = {
+        "病例回放": "受控病例编排 · V2",
+        "证据门控": "资格与控制器验收 · V1.1 / V2",
+    }.get(workspace, "模型工程 · V1.1")
     page_header(workspace, context=context)
     output_dir = model_hub_output_dir()
     data = load_model_hub_outputs(output_dir, model_hub_root=output_dir.parent)
@@ -189,6 +195,8 @@ def main() -> None:
         _render_overview(data)
     elif workspace in {"模型资产", "任务模型", "研究评测", "任务运行记录"}:
         render_engineering_workspace(data, view=workspace)
+    elif workspace == "证据门控":
+        render_qualification_workspace()
     else:
         render_clinical_workspace(data)
 

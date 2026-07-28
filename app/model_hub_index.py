@@ -50,6 +50,24 @@ DATASET_IDS = {
     "trhd59_observed_label": "trhd59_canonical",
 }
 
+TASK_ADAPTATION_TYPES = {
+    "aptos_dr_5class": "task_native",
+    "deepdrid_dr_5class_external": "frozen_external_transfer",
+    "deepdrid_dr_5class_native": "task_native_adaptation",
+    "glaucoma_3class": "task_native",
+    "glaucoma_binary": "task_native_adaptation",
+    "trhd59_observed_label": "exploratory_weak_label",
+}
+
+TASK_RISK_CLASS_IDS = {
+    "aptos_dr_5class": [3, 4],
+    "deepdrid_dr_5class_external": [3, 4],
+    "deepdrid_dr_5class_native": [3, 4],
+    "glaucoma_3class": [1, 2],
+    "glaucoma_binary": [1],
+    "trhd59_observed_label": [],
+}
+
 JOB_GROUP_LABELS = {
     "asset_smoke_jobs": "模型资产 Smoke",
     "global_scan_jobs": "旧版全局候选扫描",
@@ -605,6 +623,11 @@ def build_model_hub_index(project_root: Path) -> dict[str, pd.DataFrame]:
         route_runs,
         online_endpoints,
     )
+    task_profiles = build_task_profile_index(project_root)
+    model_capabilities = build_model_capability_index(
+        task_assets,
+        online_endpoints,
+    )
     return {
         "checkpoints": checkpoints,
         "task_assets": task_assets,
@@ -613,4 +636,135 @@ def build_model_hub_index(project_root: Path) -> dict[str, pd.DataFrame]:
         "jobs": jobs,
         "datasets": datasets,
         "online_endpoints": online_endpoints,
+        "task_profiles": task_profiles,
+        "model_capabilities": model_capabilities,
     }
+
+
+def build_task_profile_index(project_root: Path) -> pd.DataFrame:
+    """Project versioned Task Profiles from the qualification contract."""
+
+    contract_dir = (
+        project_root
+        / "experiments/opening_risk_routing_closure/configs/protocols"
+    )
+    contract_path = contract_dir / "route_qualification_contract_v1_1.json"
+    if not contract_path.is_file():
+        contract_path = contract_dir / "route_qualification_contract_v1.json"
+    contract = _safe_json(contract_path)
+    policies = contract.get("task_policies", {})
+    rows: list[dict[str, Any]] = []
+    for task_id, policy_value in policies.items():
+        policy = dict(policy_value)
+        class_order = policy.get("class_order", [])
+        if isinstance(class_order, str) and ".." in class_order:
+            start, end = class_order.split("..", maxsplit=1)
+            class_order = list(range(int(start), int(end) + 1))
+        labels = policy.get("class_labels")
+        if not isinstance(labels, list):
+            labels = [str(value) for value in class_order]
+        rows.append(
+            {
+                "task_id": task_id,
+                "dataset_id": DATASET_IDS.get(task_id, task_id),
+                "modality": str(policy.get("modality", "CFP")),
+                "label_space": json.dumps(labels, ensure_ascii=False),
+                "primary_metric": str(policy.get("primary_metric", "")),
+                "risk_semantics": str(policy.get("proxy_semantics", "")),
+                "risk_positive_class_ids": json.dumps(
+                    TASK_RISK_CLASS_IDS.get(task_id, []),
+                    ensure_ascii=False,
+                ),
+                "report_label": TASK_LABELS.get(task_id, task_id),
+                "adaptation_type": TASK_ADAPTATION_TYPES.get(
+                    task_id,
+                    "task_adapter_required",
+                ),
+                "task_spec_version": "ophagent.task_spec.v1",
+                "source_contract": _relative(project_root, contract_path),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _cost_protocol_id(row: pd.Series) -> str:
+    registered = str(row.get("cost_protocol_id", "") or "").strip()
+    if registered not in {"", "nan", "None"}:
+        return registered
+    scope = str(row.get("cost_scope", "")).lower()
+    status = str(row.get("cost_status", "")).lower()
+    if status == "measured" and "h100" in scope and "forward" in scope:
+        if "batch32" in scope:
+            return "h100_fp32_forward_only_batch32_split5_v1"
+        if "batch16" in scope:
+            return "h100_fp32_forward_only_batch1_batch16_w10_r30_v1"
+    return "cost_protocol_unavailable"
+
+
+def build_model_capability_index(
+    task_assets: pd.DataFrame,
+    online_endpoints: pd.DataFrame,
+) -> pd.DataFrame:
+    """Project model capabilities without granting route qualification."""
+
+    if task_assets.empty:
+        return pd.DataFrame()
+    online_pairs = set()
+    if (
+        not online_endpoints.empty
+        and {"task_id", "artifact_id"}.issubset(online_endpoints.columns)
+    ):
+        online_pairs = set(
+            zip(
+                online_endpoints["task_id"].astype(str),
+                online_endpoints["artifact_id"].astype(str),
+                strict=False,
+            )
+        )
+    rows: list[dict[str, Any]] = []
+    for _, row in task_assets.iterrows():
+        task_id = str(row.get("task_id", ""))
+        artifact_id = str(row.get("artifact_id", ""))
+        prediction_available = any(
+            str(row.get(column, "") or "").strip()
+            not in {"", "nan", "None"}
+            for column in (
+                "validation_prediction_path",
+                "test_prediction_path",
+            )
+        )
+        reproducible = bool(row.get("current_run_reproducible", False))
+        adapter_type = str(row.get("adapter_type", ""))
+        batch_ready = reproducible and adapter_type in {
+            "timm_classifier",
+            "retfound_classifier",
+            "preti_classifier",
+        }
+        online_ready = (task_id, artifact_id) in online_pairs or bool(
+            row.get("online_case_inference_ready", False)
+        )
+        cost = pd.to_numeric(
+            pd.Series([row.get("forward_cost_ms_per_image")]),
+            errors="coerce",
+        ).iloc[0]
+        rows.append(
+            {
+                "task_id": task_id,
+                "artifact_id": artifact_id,
+                "adapter_type": adapter_type,
+                "prediction_asset_available": prediction_available,
+                "offline_batch_inference_ready": batch_ready,
+                "online_case_inference_ready": online_ready,
+                "cost_protocol_id": _cost_protocol_id(row),
+                "cost_ms_per_image": (
+                    float(cost) if pd.notna(cost) else None
+                ),
+                "qualification_status": str(
+                    row.get("qualification_status", "")
+                ),
+                "model_capability_version": (
+                    "ophagent.model_capability.v1"
+                ),
+            }
+        )
+    return pd.DataFrame(rows)

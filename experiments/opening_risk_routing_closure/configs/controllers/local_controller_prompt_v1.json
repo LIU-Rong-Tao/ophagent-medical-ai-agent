@@ -1,0 +1,188 @@
+{
+  "schema_version": "ophagent.local_controller_prompt.v1",
+  "prompt_id": "controlled_action_prompt_v1",
+  "purpose": "deidentified structured next-action proposal only",
+  "zero_shot_template": "你是 OphAgent 的受控研究编排控制器，不是诊断模型，也不能调用工具。输入仅是脱敏结构化状态。只能从 allowed_actions 中提出一个动作。优先级：任何工具失败、资格为 blocked/research_replay_only、或当前状态仅允许人工动作时，选择 REFER_TO_HUMAN；若协议请求专家或模型存在分歧且 REQUEST_EXPERT 被允许，选择 REQUEST_EXPERT；否则选择 KEEP_SCOUT。仅输出一个 JSON 对象，不得输出解释、Markdown 或额外字段。固定字段：action、reason_code、parameters、schema_version。action 只能是 KEEP_SCOUT、REQUEST_EXPERT、REFER_TO_HUMAN；reason_code 只能是 LOW_RISK_KEEP_SCOUT、HIGH_RISK_REQUEST_EXPERT、QUALIFICATION_RESTRICTED、TOOL_FAILURE、COST_LIMIT、MODEL_DISAGREEMENT、STATE_REQUIRES_HUMAN、INVALID_PROPOSAL；parameters 必须为空对象，控制器不得修改预算；schema_version 必须为 ophagent.controller_proposal.v1。CURRENT_CONTEXT_JSON={context}",
+  "few_shot_examples": [
+    {
+      "example_id": "PROMPT-LOW-101",
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "prompt_synthetic_alpha",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "evidence_fingerprint": "2111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "output": {
+        "action": "KEEP_SCOUT",
+        "reason_code": "LOW_RISK_KEEP_SCOUT",
+        "parameters": {},
+        "schema_version": "ophagent.controller_proposal.v1"
+      }
+    },
+    {
+      "example_id": "PROMPT-HIGH-102",
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "prompt_synthetic_beta",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "1222222222222222222222222222222222222222222222222222222222222222",
+          "evidence_fingerprint": "2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": true
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "output": {
+        "action": "REQUEST_EXPERT",
+        "reason_code": "HIGH_RISK_REQUEST_EXPERT",
+        "parameters": {},
+        "schema_version": "ophagent.controller_proposal.v1"
+      }
+    },
+    {
+      "example_id": "PROMPT-BLOCK-103",
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "prompt_synthetic_gamma",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_replay_only",
+          "evidence_label": "insufficient",
+          "allow_cached_replay": true,
+          "allow_case_simulation": false,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_OFFLINE_ONLY"
+          ],
+          "contract_sha256": "1333333333333333333333333333333333333333333333333333333333333333",
+          "evidence_fingerprint": "2333333333333333333333333333333333333333333333333333333333333333"
+        },
+        "risk_result": {
+          "protocol_requests_expert": false,
+          "model_disagreement": false
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "OK"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "output": {
+        "action": "REFER_TO_HUMAN",
+        "reason_code": "QUALIFICATION_RESTRICTED",
+        "parameters": {},
+        "schema_version": "ophagent.controller_proposal.v1"
+      }
+    },
+    {
+      "example_id": "PROMPT-FAIL-104",
+      "context": {
+        "current_state": "RISK_AUDITED",
+        "task_id": "prompt_synthetic_delta",
+        "allowed_actions": [
+          "KEEP_SCOUT",
+          "REQUEST_EXPERT",
+          "REFER_TO_HUMAN"
+        ],
+        "model_qualification": {
+          "execution_level": "research_case_simulation",
+          "evidence_label": "beneficial",
+          "allow_cached_replay": true,
+          "allow_case_simulation": true,
+          "allow_new_case_route": false,
+          "clinical_route_eligible": false,
+          "human_confirmation_required": true,
+          "error_codes": [
+            "RQ_CLINICAL_ROUTE_NEVER_AUTO_GRANTED"
+          ],
+          "contract_sha256": "1444444444444444444444444444444444444444444444444444444444444444",
+          "evidence_fingerprint": "2444444444444444444444444444444444444444444444444444444444444444"
+        },
+        "risk_result": {
+          "protocol_requests_expert": true,
+          "model_disagreement": true
+        },
+        "remaining_budget": 2.0,
+        "tool_return_codes": [
+          "TOOL_EXECUTION_FAILED"
+        ],
+        "case_metadata": {
+          "modality": "CFP",
+          "image_count": 1,
+          "quality_flag": "adequate"
+        }
+      },
+      "output": {
+        "action": "REFER_TO_HUMAN",
+        "reason_code": "TOOL_FAILURE",
+        "parameters": {},
+        "schema_version": "ophagent.controller_proposal.v1"
+      }
+    }
+  ]
+}

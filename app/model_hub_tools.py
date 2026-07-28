@@ -26,6 +26,7 @@ from app.checkpoints import (
 )
 from app.inference import run_single_image_inference
 from app.model_hub_index import build_task_asset_index
+from app.model_hub_task_adapters import TASK_CONTRACTS, task_adapter_for
 from app.route_qualification import (
     RouteQualificationRequest,
     evaluate_route_qualification,
@@ -63,68 +64,6 @@ ERROR_MESSAGES = {
     "UPSTREAM_FAILED": "上游工具失败，后续调用已停止",
     "TOOL_EXECUTION_FAILED": "工具执行失败",
 }
-
-TASK_CONTRACTS = {
-    "aptos_dr_5class": {
-        "task_name": "APTOS DR 五级分级",
-        "class_order": [0, 1, 2, 3, 4],
-        "class_labels": ["0级", "1级", "2级", "3级", "4级"],
-        "modality": "CFP",
-        "risk_proxy": "DR 等级概率分布代理",
-        "asset_registry": (
-            "experiments/opening_risk_routing_closure/configs/protocols/"
-            "aptos_h100_prediction_assets.csv"
-        ),
-        "route_trace": (
-            "experiments/opening_risk_routing_closure/outputs/"
-            "model_hub_validation_expanded_pool/case_routing_trace.csv"
-        ),
-        "route_protocol": (
-            "experiments/opening_risk_routing_closure/configs/protocols/"
-            "aptos_h100_ten_model_frozen_test_protocol.json"
-        ),
-        "route_pairing_id": (
-            "aptos_dr_5class__flair__ret_clip__to__retfound_cfp"
-        ),
-        "route_policy": "disagreement_then_uncertainty",
-        "route_budget": 0.20,
-        "manifest": (
-            "experiments/opening_risk_routing_closure/replays/preti/"
-            "seed42_20260722/preflight/val_manifest.csv"
-        ),
-        "data_root": "/training_data/lizekun/data/RETFound/Data_split/APTOS2019",
-    },
-    "glaucoma_3class": {
-        "task_name": "青光眼三分类",
-        "class_order": [0, 1, 2],
-        "class_labels": ["正常对照", "早期青光眼", "进展/晚期青光眼"],
-        "modality": "CFP",
-        "risk_proxy": "青光眼等级概率分布代理",
-        "asset_registry": (
-            "experiments/model_hub/tasks/glaucoma_3class/configs/"
-            "glaucoma_h100_prediction_assets.csv"
-        ),
-        "route_trace": (
-            "experiments/model_hub/tasks/glaucoma_3class/outputs/"
-            "validation_pool/case_routing_trace.csv"
-        ),
-        "route_protocol": (
-            "experiments/model_hub/tasks/glaucoma_3class/outputs/"
-            "validation_pool/run_config.yaml"
-        ),
-        "route_pairing_id": (
-            "glaucoma_3class__glaucoma_retfound_dinov2__"
-            "glaucoma_vit_b__to__glaucoma_swin_tiny"
-        ),
-        "route_policy": "disagreement_then_uncertainty",
-        "route_budget": 0.20,
-        "manifest": "",
-        "data_root": (
-            "/training_data/lizekun/data/RETFound/Data_split/Glaucoma_fundus"
-        ),
-    },
-}
-
 
 class ToolError(RuntimeError):
     """带稳定错误码的工具错误。"""
@@ -740,19 +679,9 @@ def _result_risk_audit_run(
     labels = predictions_array.argmax(axis=1)
     disagreement = len(set(labels.tolist())) > 1
     mean_probabilities = predictions_array.mean(axis=0)
-    proxy: dict[str, Any]
-    if request.task_id == "aptos_dr_5class":
-        proxy = {
-            "name": "DR 重症等级概率质量代理",
-            "value": float(mean_probabilities[3] + mean_probabilities[4]),
-            "definition": "各模型 P(3级)+P(4级) 的平均值",
-        }
-    else:
-        proxy = {
-            "name": "青光眼非正常等级概率质量代理",
-            "value": float(mean_probabilities[1:].sum()),
-            "definition": "各模型非正常类别概率质量的平均值",
-        }
+    proxy = task_adapter_for(request.task_id).risk_summary(
+        tuple(float(value) for value in mean_probabilities)
+    )
     return (
         {
             "models": frame[
@@ -793,9 +722,6 @@ def _read_route_trace(
         "scout_disagreement",
         "routing_score",
         "is_reviewed_by_expert",
-        "expert_pred_label",
-        "final_pred_label",
-        "final_source",
     ]
     frame = pd.read_csv(path_text, usecols=columns, low_memory=False)
     return frame.loc[
@@ -904,14 +830,10 @@ def _routing_protocol_evaluate(
             "expert_artifact_id": str(row["expert_artifact_id"]),
             "scout_disagreement": bool(row["scout_disagreement"]),
             "routing_score": float(row["routing_score"]),
-            "expert_invoked": bool(row["is_reviewed_by_expert"]),
-            "expert_pred_label": (
-                int(row["expert_pred_label"])
-                if pd.notna(row["expert_pred_label"])
-                else None
+            "protocol_requests_expert": bool(
+                row["is_reviewed_by_expert"]
             ),
-            "final_pred_label": int(row["final_pred_label"]),
-            "final_source": str(row["final_source"]),
+            "expert_result_released": False,
             "protocol_sha256": compute_file_sha256(protocol_path),
             "trace_asset_sha256": compute_file_sha256(trace_path),
             "git_commit": _git_commit(context.project_root),

@@ -1,0 +1,152 @@
+{
+  "schema_version": "ophagent.route_qualification_evidence_sources.v1_1",
+  "source_policy": "explicit_paths_only_no_role_inference_from_path_substrings",
+  "tasks": {
+    "aptos_dr_5class": {
+      "selection_source_task_id": "aptos_dr_5class",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/opening_risk_routing_closure/outputs/model_hub_validation_expanded_pool/pairing_results.csv",
+      "validation_result_sha256": "14c3d3330c06764261277d117815b76c447d9f0f672e9357195dae62ddc4f1c9",
+      "validation_protocol_id": "aptos_h100_ten_model_expansion_validation_v1",
+      "validation_protocol_sha256": "c4daf0a08fddca98acd631514eadd9d12207dd03aa6b4070f8d8adf2d17f95f8",
+      "frozen_result_path": "experiments/opening_risk_routing_closure/outputs/model_hub_test_locked_ten_model/pairing_results.csv",
+      "frozen_result_sha256": "3cd44e97ac813cbd08b3abed810576d71d0b6bc56da2c84fc1884182ef839954",
+      "frozen_protocol_id": "aptos_h100_ten_model_locked_retrospective_test_v1",
+      "frozen_protocol_sha256": "06383bac431c223247436a4a5b0560ea5c9d3d9f7088679f9d4b78ecd3606fa1",
+      "domain_shift_status": "in_domain",
+      "target_validation_missing": false,
+      "cost_protocol_id": "h100_fp32_forward_only_batch1_batch16_w10_r30_v1",
+      "cost_protocol_match": true
+    },
+    "deepdrid_dr_5class_external": {
+      "selection_source_task_id": "aptos_dr_5class",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/opening_risk_routing_closure/outputs/model_hub_validation/pairing_results.csv",
+      "validation_result_sha256": "23aa4142d8595a1bdc035a00eb4a8811bdadbf4de2b9bfe8c847d4405f3e1c7d",
+      "validation_protocol_id": "aptos_h100_six_model_replay_pool_v1",
+      "validation_protocol_sha256": "d1f9c317dfaadbd70d159e91a1b031d6766d2601fdc03439bf9789a182540dba",
+      "frozen_result_path": "experiments/model_hub/runs/external_transfer/deepdrid_v1.1/model_hub_results/pairing_results.csv",
+      "frozen_result_sha256": "a326cf6b69abbcd80e6a6d2c00e2eeb8b9a8e1a0d8d4983defceecee95b58ceb",
+      "frozen_protocol_id": "deepdrid_v1_1_frozen_aptos_transfer_v1",
+      "frozen_protocol_sha256": "3b49229042f017359fe17312f0b5e2d8d9b08e949085916fd30bea590cda369c",
+      "domain_shift_status": "external_shift_without_in_domain_validation",
+      "target_validation_missing": true,
+      "cost_protocol_id": "h100_fp32_forward_only_batch1_batch16_w10_r30_v1",
+      "cost_protocol_match": true
+    },
+    "deepdrid_dr_5class_native": {
+      "selection_source_task_id": "deepdrid_dr_5class_native",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/model_hub_validation/pairing_results.csv",
+      "validation_result_sha256": "1274f4d8b4c30e58cb1833a00a68662da4b166754bb7cbafe63b9c5725bed5f6",
+      "validation_protocol_id": "deepdrid_v1.1_native_probe_validation_scan_v1",
+      "validation_protocol_sha256": "57ad270d458667048bf45cd81c0d2403a75e5d998fe5c128945a4f264f189cbc",
+      "frozen_result_path": "experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/model_hub_frozen_official_validation/pairing_results.csv",
+      "frozen_result_sha256": "c48be5c769032a22cdd389a34f8d25b9be9350285f2ae0c9c8426cfb50a02d80",
+      "frozen_protocol_id": "deepdrid_v1.1_native_probe_frozen_official_validation_v1",
+      "frozen_protocol_sha256": "a36b605f1afa0f41682b35f3ee6306ad0405f6919468b41dc6f057fbe9d60af1",
+      "domain_shift_status": "native_adaptation",
+      "target_validation_missing": false,
+      "cost_protocol_id": "h100_fp32_forward_only_batch1_batch16_w10_r30_v1",
+      "cost_protocol_match": true
+    },
+    "glaucoma_3class": {
+      "selection_source_task_id": "glaucoma_3class",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/model_hub/tasks/glaucoma_3class/outputs/validation_pool/pairing_results.csv",
+      "validation_result_sha256": "6ff5554cd1ac50779873e518d79d502921bb1a28907442c59e5fce4e935cd2d6",
+      "validation_protocol_id": "glaucoma_h100_five_model_validation_pool_v1",
+      "validation_protocol_sha256": "e90549a3821a808e47cb51a13dc31fbe4dc3eeba09d077786cc1842ce2353dbc",
+      "frozen_result_path": "experiments/model_hub/tasks/glaucoma_3class/outputs/test_locked/pairing_results.csv",
+      "frozen_result_sha256": "0fdf445b7c3536fbd4ee40c66a439c6d364ba9b1941ae9e1502c95aa8bd6941e",
+      "frozen_protocol_id": "glaucoma_h100_locked_retrospective_test_v1",
+      "frozen_protocol_sha256": "8e146791f6b83fa58053aca6db17f5139f1d36be0d8db97e1b6c50feeb8bfebf",
+      "domain_shift_status": "in_domain",
+      "target_validation_missing": false,
+      "cost_protocol_id": "h100_fp32_forward_only_batch1_batch16_w10_r30_v1",
+      "cost_protocol_match": true,
+      "cost_post_hoc_derived": true
+    },
+    "glaucoma_binary": {
+      "selection_source_task_id": "glaucoma_binary",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/model_hub/tasks/glaucoma_binary/outputs/validation_pool/pairing_results.csv",
+      "validation_result_sha256": "3bc1ea9004e763ed51538c50885f28e976463b017b51f5c83bb539bbfe4bc824",
+      "validation_protocol_id": "rim_one_dl_glaucoma_binary_validation_pool_v1",
+      "validation_protocol_sha256": "cb18a8feb2138d25eb895990aaec25050dd9bee6939a87e37d2eb19a405fa3fc",
+      "frozen_result_path": "experiments/model_hub/tasks/glaucoma_binary/outputs/test_locked/pairing_results.csv",
+      "frozen_result_sha256": "0e78a83935f6076a99c5670a037bbf019890b47f61f18bfa3d9f9d81463b6e00",
+      "frozen_protocol_id": "rim_one_dl_glaucoma_binary_locked_test_v1",
+      "frozen_protocol_sha256": "3c1f6e04aa5027191cb1f86c1195022225c8d2f04249f2fa867e6913a5cdc5b5",
+      "domain_shift_status": "native_adaptation",
+      "target_validation_missing": false,
+      "route_cost_protocols": {
+        "rim_one_locked_multi": {
+          "cost_protocol_id": "mixed_incomparable_rim_one_v1",
+          "cost_protocol_match": false
+        },
+        "rim_one_locked_single": {
+          "cost_protocol_id": "h100_fp32_forward_only_batch32_split5_v1",
+          "cost_protocol_match": true
+        }
+      }
+    },
+    "trhd59_observed_label": {
+      "selection_source_task_id": "trhd59_observed_label",
+      "selection_split": "validation",
+      "protocol_frozen": true,
+      "test_used_for_selection": false,
+      "validation_result_path": "experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_hub_validation/pairing_results.csv",
+      "validation_result_sha256": "21d7b446d1a8c382dbf078a881ffe691950e23741845a308c0863babc50283d9",
+      "validation_protocol_id": "trhd59_observed_label_validation_routing_v1",
+      "validation_protocol_sha256": "307913965f578fb4c6659dd797ab83de6762223c1da3cf19c67e1de383228db0",
+      "frozen_result_path": "experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_hub_locked_test/pairing_results.csv",
+      "frozen_result_sha256": "7d6ec48605d4592a17e6ce5c416ac4fa40480d3bb75325ff40a6ecacc7a3fb59",
+      "frozen_protocol_id": "trhd59_observed_label_locked_test_v1",
+      "frozen_protocol_sha256": "18cd1099c02d887fc24f8869cb899f8231a7f3225f6fdc374b5a9fe6a52afb94",
+      "frozen_risk_summary_path": "experiments/opening_risk_routing_closure/outputs/trhd59_observed_label_v2/model_hub_locked_test/observed_positive_test_summary.csv",
+      "frozen_risk_summary_sha256": "8d86140c99198f4608cd6a4b27b7526d58ab791ee64c049edaf50e188e701686",
+      "frozen_risk_cohort_n": 1507,
+      "frozen_metric_cohort_n": 1478,
+      "frozen_risk_values": {
+        "trhd59_low_budget_single": {
+          "corrected": 19,
+          "introduced": 9,
+          "net": 10
+        },
+        "trhd59_multi_primary": {
+          "corrected": 36,
+          "introduced": 18,
+          "net": 18
+        },
+        "trhd59_observed_risk_constrained": {
+          "corrected": 18,
+          "introduced": 14,
+          "net": 4
+        }
+      },
+      "validation_risk_values": {
+        "trhd59_observed_risk_constrained": {
+          "corrected": 0,
+          "introduced": 0,
+          "net": 0,
+          "source": "frozen_protocol_registered_validation_increments"
+        }
+      },
+      "domain_shift_status": "weak_label_exploratory",
+      "target_validation_missing": false,
+      "cost_protocol_id": "h100_fp32_forward_only_batch1_batch16_w10_r30_v1",
+      "cost_protocol_match": true
+    }
+  }
+}
