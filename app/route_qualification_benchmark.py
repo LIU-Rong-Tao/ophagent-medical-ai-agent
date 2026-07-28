@@ -47,6 +47,14 @@ def _stable_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
 
 
+def _json_scalar(value: Any) -> Any:
+    if pd.isna(value):
+        return None
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def _sha256_json(value: Any) -> str:
     return hashlib.sha256(_stable_json(value).encode("utf-8")).hexdigest()
 
@@ -1462,11 +1470,7 @@ def write_route_qualification_benchmark_artifacts(
         "task_count": int(matrix["task_id"].nunique()),
         "v1": v1_summary,
         "v1_1_leave_one_task_out": {
-            key: (
-                None
-                if pd.isna(v1_1_all.get(key))
-                else v1_1_all.get(key)
-            )
+            key: _json_scalar(v1_1_all.get(key))
             for key in (
                 "beneficial_route_retention_rate",
                 "false_grant_rate",
@@ -1482,11 +1486,7 @@ def write_route_qualification_benchmark_artifacts(
             )
         },
         "v1_1_post_freeze_safety_overlay": {
-            key: (
-                None
-                if pd.isna(post_freeze_overlay.get(key))
-                else post_freeze_overlay.get(key)
-            )
+            key: _json_scalar(post_freeze_overlay.get(key))
             for key in (
                 "beneficial_route_retention_rate",
                 "false_grant_rate",
