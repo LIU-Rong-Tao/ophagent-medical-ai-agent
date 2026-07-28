@@ -23,7 +23,6 @@ CONTROLLER_PROPOSAL_SCHEMA_VERSION = "ophagent.controller_proposal.v1"
 
 SENSITIVE_FIELD_PARTS = {
     "patient",
-    "name",
     "hospital",
     "admission",
     "raw_case",
@@ -38,6 +37,23 @@ SENSITIVE_FIELD_PARTS = {
     "birth",
     "dob",
     "address",
+}
+SENSITIVE_FIELD_NAMES = {
+    "name",
+    "full_name",
+    "first_name",
+    "last_name",
+    "given_name",
+    "surname",
+    "姓名",
+    "患者姓名",
+    "住院号",
+    "病历号",
+    "身份证号",
+    "出生日期",
+    "联系电话",
+    "电话",
+    "地址",
 }
 
 
@@ -463,8 +479,10 @@ def redact_structured_value(value: Any) -> Any:
     if isinstance(value, dict):
         result: dict[str, Any] = {}
         for key, item in value.items():
-            lowered = str(key).lower()
-            if any(part in lowered for part in SENSITIVE_FIELD_PARTS):
+            lowered = str(key).strip().lower()
+            if lowered in SENSITIVE_FIELD_NAMES or any(
+                part in lowered for part in SENSITIVE_FIELD_PARTS
+            ):
                 continue
             result[str(key)] = redact_structured_value(item)
         return result

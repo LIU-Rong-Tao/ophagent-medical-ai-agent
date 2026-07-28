@@ -65,6 +65,7 @@ DEMO_SCENARIO_PATH = (
     / "controlled_agent_demo_scenarios_v2.json"
 )
 REVIEW_DECISIONS = ("接受模型输出", "修改输出", "标记不确定")
+DEMO_STATE_ID_VERSION = "ophagent.controlled_agent_demo_state.v2_1"
 
 
 @dataclass(frozen=True)
@@ -325,7 +326,9 @@ def _case_state_id(
     controller_type: str,
 ) -> str:
     scenario_hash = hashlib.sha256(
-        f"{scenario}:{controller_type}".encode("utf-8")
+        (
+            f"{DEMO_STATE_ID_VERSION}:{scenario}:{controller_type}"
+        ).encode("utf-8")
     ).hexdigest()[:12]
     return f"{case.alias}-{scenario_hash}"
 
@@ -338,11 +341,14 @@ def _runtime_from_trace(
         context,
         trace_id=str(trace_payload.get("trace_id", "restored-trace")),
     )
-    runtime.events = [
-        TraceEvent(**event)
-        for event in trace_payload.get("events", [])
-        if isinstance(event, dict)
-    ]
+    fields = set(TraceEvent.__dataclass_fields__)
+    runtime.events = []
+    for event in trace_payload.get("events", []):
+        if not isinstance(event, dict) or not fields.issubset(event):
+            continue
+        runtime.events.append(
+            TraceEvent(**{field: event[field] for field in fields})
+        )
     runtime.halted = any(event.status == "failed" for event in runtime.events)
     return runtime
 

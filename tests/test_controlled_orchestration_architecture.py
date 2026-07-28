@@ -31,6 +31,7 @@ from app.orchestration_contracts import (
     RouteQualification,
     TaskSpec,
     redact_free_text,
+    redact_structured_value,
 )
 from app.route_qualification import (
     RouteQualificationRequest,
@@ -167,6 +168,25 @@ def test_case_state_store_normalizes_numpy_scalars(tmp_path: Path) -> None:
         "flag": True,
         "count": 2,
         "score": 0.75,
+    }
+
+
+def test_redaction_preserves_contract_names_but_removes_identity_names() -> None:
+    redacted = redact_structured_value(
+        {
+            "tool_name": "model_registry.inspect",
+            "model_name": "public-model",
+            "task_name": "public-task",
+            "name": "sensitive",
+            "patient_name": "sensitive",
+            "姓名": "sensitive",
+        }
+    )
+
+    assert redacted == {
+        "tool_name": "model_registry.inspect",
+        "model_name": "public-model",
+        "task_name": "public-task",
     }
 
 

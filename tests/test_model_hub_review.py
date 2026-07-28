@@ -15,6 +15,7 @@ from app.model_hub_review import (
     ReviewCase,
     _persist_closed_review_artifacts,
 )
+from app.model_hub_tools import ToolContext
 from app.orchestration_contracts import CaseState
 
 
@@ -319,6 +320,34 @@ def test_closed_artifact_recovery_rejects_operator_before_writes(
 
     assert not runtime_root.exists()
     assert case_state.to_dict() == before
+
+
+def test_legacy_trace_missing_tool_name_degrades_without_crashing(
+    tmp_path: Path,
+) -> None:
+    context = ToolContext(
+        project_root=tmp_path,
+        asset_registry=pd.DataFrame(),
+        online_artifacts={},
+    )
+
+    runtime = review_module._runtime_from_trace(
+        context,
+        {
+            "trace_id": "legacy-redacted-trace",
+            "events": [
+                {
+                    "sequence": 1,
+                    "status": "succeeded",
+                    "code": "OK",
+                }
+            ],
+        },
+    )
+
+    assert runtime.trace_id == "legacy-redacted-trace"
+    assert runtime.events == []
+    assert runtime.halted is False
 
 
 def test_overview_tolerates_legacy_models_without_online_flag() -> None:
