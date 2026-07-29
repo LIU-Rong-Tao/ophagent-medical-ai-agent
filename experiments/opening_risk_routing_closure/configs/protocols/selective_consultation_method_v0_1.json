@@ -1,0 +1,189 @@
+{
+  "schema_version": "ophagent.selective_consultation_method_protocol.v0_1",
+  "protocol_id": "preconsultation_selective_consultation_v0_1",
+  "purpose": "retrospective_preconsultation_help_or_harm_method_feasibility",
+  "input_benchmark": {
+    "protocol_id": "help_or_harm_case_benchmark_v0_1",
+    "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+    "decision_required": [
+      "GO",
+      "CONDITIONAL_GO"
+    ],
+    "frozen_assets_modified": false
+  },
+  "analysis_scope": {
+    "primary_task_id": "deepdrid_dr_5class_native",
+    "primary_route_id": "deepdrid_dr_5class_native::keepfit_cfp__to__flair",
+    "primary_reason": "Existing frozen native v1.1 reference route; avoids selecting the primary route from retrospective results.",
+    "primary_grouping": "patient_grouped",
+    "sensitivity_task_id": "aptos_dr_5class",
+    "sensitivity_grouping": "exact_sha256_group_after_confirmed_duplicate_exclusion",
+    "aptos_patient_level_claim_allowed": false,
+    "external_transfer_excluded": true,
+    "external_transfer_exclusion_reason": "No in-domain development split exists; fitting or threshold selection on frozen external evaluation would violate the Test policy.",
+    "all_other_native_routes_role": "development_prequalified_route_heterogeneity_only",
+    "retrospective_only": true,
+    "independent_confirmation_required": true
+  },
+  "safety_boundary": {
+    "SafetyEligibilityGate": {
+      "replaceable": false,
+      "authoritative_implementation": "app.route_qualification.evaluate_route_qualification"
+    },
+    "consultation_method_authority": "case_ranking_only",
+    "may_grant_route_eligibility": false,
+    "may_change_budget": false,
+    "may_execute_expert": false
+  },
+  "feature_contract": {
+    "model_features": [
+      "scout_entropy",
+      "scout_margin",
+      "scout_severe_probability_mass",
+      "expert_history_corrected_rate",
+      "expert_history_introduced_rate",
+      "scout_reference_js_divergence"
+    ],
+    "forbidden": [
+      "current_case_expert_probability",
+      "current_case_expert_prediction",
+      "expert_embedding",
+      "test_derived_feature",
+      "test_derived_threshold",
+      "raw_dataset_id_as_predictor",
+      "uncosted_additional_scout_inference",
+      "patient_identity",
+      "private_path"
+    ],
+    "current_case_image_used_by_method": false,
+    "extra_model_inference_performed": false
+  },
+  "model_contract": {
+    "outcomes": [
+      "corrected",
+      "introduced"
+    ],
+    "model_family": "separate_L2_logistic_regression",
+    "standardization": true,
+    "regularization_C": 1.0,
+    "class_weight": null,
+    "hyperparameter_search": false,
+    "minimum_route_events_per_outcome": 10,
+    "development_outer_folds": 5,
+    "development_inner_profile_folds": 4,
+    "fold_unit": "resampling_group_id",
+    "deepdrid_fold_unit_semantics": "patient",
+    "aptos_fold_unit_semantics": "exact_image_analysis_unit",
+    "retrospective_fit_allowed": false,
+    "ophthalmic_model_training_allowed": false
+  },
+  "policy_contract": {
+    "method_policy": "dual_logistic_harm_screened_help",
+    "sequence": [
+      "rank_by_low_predicted_introduced_risk",
+      "retain_safe_pool",
+      "rank_safe_pool_by_predicted_corrected_probability",
+      "select_exact_budget"
+    ],
+    "safe_pool_multiplier": 2.0,
+    "posthoc_weighted_composite_score": false,
+    "ablations": [
+      "help_only_logistic",
+      "harm_only_logistic"
+    ],
+    "comparators": [
+      "entropy",
+      "margin",
+      "consultation_policy_baseline_v1_1",
+      "scout_only",
+      "always_expert",
+      "oracle"
+    ],
+    "same_budget_grid": [
+      0.05,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "risk_budget_curve": {
+      "minimum_budget": 0.0,
+      "maximum_operating_budget": 0.3,
+      "step": 0.01,
+      "reference_endpoint": 1.0
+    },
+    "introduced_risk_definition": "introduced_selected / expert_calls",
+    "locked_risk_caps": [
+      0.05,
+      0.1,
+      0.15,
+      0.2
+    ],
+    "risk_cap_budget_selection": "development_OOF_only_maximize_corrected_then_net_then_minimize_calls",
+    "evaluation_risk_cap_may_be_reestimated": false
+  },
+  "comparison_contract": {
+    "strongest_baseline_selection": "development_OOF_only_lexicographic_net_corrected_negative_introduced",
+    "strongest_baseline_candidates": [
+      "entropy",
+      "margin",
+      "frozen_v1_1_at_its_registered_budget_only"
+    ],
+    "test_may_select_baseline": false,
+    "test_may_select_route": false,
+    "test_may_select_threshold_or_budget": false,
+    "same_budget_requires_equal_call_count": true,
+    "oracle_role": "unattainable_retrospective_upper_bound",
+    "conditional_discrimination": {
+      "corrected": "Scout-wrong cases only",
+      "introduced": "Scout-correct cases only"
+    }
+  },
+  "uncertainty_contract": {
+    "formal_routes_only": true,
+    "bootstrap_replicates": 1000,
+    "confidence_level": 0.95,
+    "deepdrid_resampling_unit": "patient",
+    "aptos_resampling_unit": "exact_image_analysis_unit",
+    "paired_policy_difference": true
+  },
+  "decision_contract": {
+    "allowed": [
+      "METHOD_GO",
+      "HARM_ONLY_GO",
+      "ROUTE_SPECIFIC_GO",
+      "NO_IMPROVEMENT"
+    ],
+    "operating_budgets": [
+      0.1,
+      0.2,
+      0.3
+    ],
+    "route_dominance": "corrected_not_lower_and_introduced_not_higher_and_net_strictly_higher_than_development_locked_baseline",
+    "minimum_dominant_operating_budgets": 2,
+    "must_include_budget": 0.3,
+    "METHOD_GO": [
+      "Primary DeepDRiD route satisfies route dominance retrospectively.",
+      "Paired patient-bootstrap lower 95% bound for net gain is non-negative at budget 0.3."
+    ],
+    "HARM_ONLY_GO": [
+      "METHOD_GO is not satisfied.",
+      "Primary harm-only policy strictly reduces introduced at at least two operating budgets including 0.3.",
+      "At those budgets net is not lower and corrected retention is at least 80% of the locked baseline.",
+      "Conditional introduced AUROC is at least 0.60 in both development OOF and retrospective evaluation."
+    ],
+    "ROUTE_SPECIFIC_GO": [
+      "METHOD_GO and HARM_ONLY_GO are not satisfied.",
+      "At least three development-prequalified native DeepDRiD routes reproduce route dominance retrospectively.",
+      "Reproduced routes include at least two distinct Scouts and two distinct Experts."
+    ],
+    "NO_IMPROVEMENT": "None of the preceding criteria are satisfied.",
+    "boundary": "A GO label advances research only and is not clinical, deployment, or route-eligibility evidence."
+  },
+  "required_outputs": [
+    "core_results.csv",
+    "risk_budget_curve.csv",
+    "failure_case_audit.csv",
+    "research_report.md",
+    "artifact_manifest.json"
+  ]
+}
