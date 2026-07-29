@@ -17,8 +17,14 @@ import numpy as np
 import pandas as pd
 import sklearn
 
-from app.help_or_harm_benchmark import ConsultationPolicyBaselineV1_1
-from app.selective_consultation import (
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.help_or_harm_benchmark import (  # noqa: E402
+    ConsultationPolicyBaselineV1_1,
+)
+from app.selective_consultation import (  # noqa: E402
     LEARNED_POLICY_NAMES,
     METHOD_FEATURE_COLUMNS,
     fit_full_development_and_predict,
