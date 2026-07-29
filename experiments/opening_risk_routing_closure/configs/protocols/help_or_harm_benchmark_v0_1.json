@@ -1,0 +1,205 @@
+{
+  "schema_version": "ophagent.help_or_harm_benchmark_protocol.v0_1",
+  "protocol_id": "help_or_harm_case_benchmark_v0_1",
+  "purpose": "retrospective_case_level_help_or_harm_feasibility",
+  "decision_contract": {
+    "allowed": [
+      "GO",
+      "CONDITIONAL_GO",
+      "NO_GO"
+    ],
+    "current_decision": "CONDITIONAL_GO",
+    "conditions": [
+      "APTOS is an image-level retrospective cohort because patient and eye identifiers are unavailable.",
+      "APTOS duplicate findings apply to the frozen model's 256x256 derived input tree; raw high-resolution source provenance is unavailable.",
+      "APTOS cross-split exact duplicates are flagged and excluded from the leakage-controlled primary cohort without changing the frozen source split.",
+      "Perceptual-hash near-duplicate matches remain unconfirmed candidates and are used only for sensitivity analysis.",
+      "DeepDRiD frozen official validation and APTOS frozen Test were previously observed and cannot serve as independent confirmation.",
+      "A future independently held, patient-grouped confirmation cohort is required before method or deployment claims."
+    ]
+  },
+  "architecture": {
+    "SafetyEligibilityGate": {
+      "authoritative_implementation": "app.route_qualification.evaluate_route_qualification",
+      "replaceable": false,
+      "scope": [
+        "task",
+        "modality",
+        "label_space",
+        "asset_identity",
+        "privacy",
+        "permission",
+        "runtime_safety"
+      ]
+    },
+    "ConsultationPolicyBaselineV1_1": {
+      "implementation": "app.help_or_harm_benchmark.ConsultationPolicyBaselineV1_1",
+      "replaceable": true,
+      "authority": "case_ranking_only",
+      "may_grant_eligibility": false
+    }
+  },
+  "analysis_unit": {
+    "unit": "single_CFP_image",
+    "outcome": "ordered_5_class_DR_grade_match",
+    "deepdrid_grouping": "patient_grouped_folds_and_resampling",
+    "aptos_grouping": "exact_image_cluster_then_case_id",
+    "patient_level_claim_allowed_for_aptos": false
+  },
+  "label_contract": {
+    "class_order": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "corrected": "scout_pred != y_true and expert_pred == y_true",
+    "introduced": "scout_pred == y_true and expert_pred != y_true",
+    "both_correct": "scout_pred == y_true and expert_pred == y_true",
+    "both_wrong": "scout_pred != y_true and expert_pred != y_true",
+    "dangerous_undergrading_proxy": "y_true >= 3 and pred < 3",
+    "dangerous_introduced": "scout is not a dangerous undergrade and expert is a dangerous undergrade",
+    "boundary": "Label-defined model-error proxies, not clinical harm, diagnosis, treatment outcome, or patient safety endpoint."
+  },
+  "legal_feature_contract": {
+    "allowed": [
+      "scout_prob_0",
+      "scout_prob_1",
+      "scout_prob_2",
+      "scout_prob_3",
+      "scout_prob_4",
+      "scout_confidence",
+      "scout_entropy",
+      "scout_margin",
+      "scout_severe_probability_mass",
+      "expert_history_corrected_rate",
+      "expert_history_introduced_rate",
+      "expert_history_net",
+      "expert_history_support",
+      "scout_reference_js_divergence"
+    ],
+    "conditionally_allowed_not_available_v0_1": [
+      "registered_image_quality_signal_with_measured_cost"
+    ],
+    "forbidden": [
+      "current_case_expert_probability",
+      "current_case_expert_prediction",
+      "expert_embedding",
+      "test_derived_threshold",
+      "test_derived_feature",
+      "raw_dataset_id_as_predictor",
+      "uncosted_additional_scout_inference",
+      "human_image_quality_annotation",
+      "patient_identity",
+      "private_path"
+    ]
+  },
+  "expert_history_profile": {
+    "development_folds": 5,
+    "fold_assignment": "patient_group_when_available_else_exact_sha256_group_deterministic",
+    "development_case_feature_source": "other_development_folds_only",
+    "retrospective_evaluation_feature_source": "full_development_only",
+    "external_transfer_profile_source": "APTOS_development_same_checkpoint_and_preprocessing_pair",
+    "strata": [
+      "scout_predicted_grade",
+      "scout_confidence_quartile"
+    ],
+    "smoothing_alpha": 0.5
+  },
+  "leakage_contract": {
+    "exact_duplicate_identity": "sha256_of_image_bytes",
+    "near_duplicate_candidate": "phash_hamming<=4_and_dhash_hamming<=6_and_ahash_hamming<=6",
+    "near_duplicate_status": "unconfirmed_candidate",
+    "primary_exclusion": [
+      "cross_split_exact_duplicate",
+      "exact_duplicate_label_conflict"
+    ],
+    "near_duplicate_use": "sensitivity_only",
+    "source_splits_modified": false
+  },
+  "cost_contract": {
+    "protocol_id": "h100_gpu_forward_only_batch16_component_v0_1",
+    "scope": "registered Scout plus selected Expert GPU forward-only component cost",
+    "budgets": [
+      0.05,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "incomplete_component_cost_may_be_ranked": false,
+    "costs_may_be_compared_across_designs": false
+  },
+  "baselines": [
+    "random",
+    "entropy",
+    "margin",
+    "consultation_policy_v1_1"
+  ],
+  "signal_evaluation": {
+    "primary_corrected_cohort": "scout_wrong_only",
+    "primary_introduced_cohort": "scout_correct_only",
+    "secondary_descriptive_cohort": "all_cases",
+    "reason": "Avoid treating generic Scout-error detection as evidence that Expert benefit or harm is identifiable."
+  },
+  "test_policy": {
+    "test_may_define_features": false,
+    "test_may_define_thresholds": false,
+    "test_may_select_routes": false,
+    "test_is_retrospective_only": true,
+    "frozen_assets_modified": false
+  },
+  "designs": [
+    {
+      "task_id": "aptos_dr_5class",
+      "dataset_id": "APTOS2019",
+      "evaluation_design": "aptos_task_adaptation",
+      "registry_uri": "repo://experiments/opening_risk_routing_closure/configs/protocols/aptos_h100_prediction_assets.csv",
+      "identity_manifest_uri": "ophagent_asset://experiments/model_hub/runs/training/aptos_dr_5class/aptos2019-flair-resnet50-official-lp-project-v1/flair-aptos-20260721T000026Z/dataset_manifest.json",
+      "image_root_key": "aptos_data_root",
+      "splits": {
+        "development": "validation_prediction_path",
+        "retrospective_frozen": "test_prediction_path"
+      },
+      "profile_source_task_id": "aptos_dr_5class",
+      "profile_source_design": "aptos_task_adaptation"
+    },
+    {
+      "task_id": "deepdrid_dr_5class_native",
+      "dataset_id": "DeepDRiD_v1.1",
+      "evaluation_design": "deepdrid_native_adaptation",
+      "registry_uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/model_hub_config/prediction_assets.csv",
+      "identity_manifest_uri": "dataset_asset://deepdrid_admission_manifest.csv",
+      "splits": {
+        "development": "validation_prediction_path",
+        "retrospective_frozen": "test_prediction_path"
+      },
+      "profile_source_task_id": "deepdrid_dr_5class_native",
+      "profile_source_design": "deepdrid_native_adaptation"
+    },
+    {
+      "task_id": "deepdrid_dr_5class_external",
+      "dataset_id": "DeepDRiD_v1.1",
+      "evaluation_design": "cross_dataset_frozen_transfer",
+      "registry_uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/model_hub_config/prediction_assets.csv",
+      "identity_manifest_uri": "dataset_asset://deepdrid_admission_manifest.csv",
+      "splits": {
+        "retrospective_external": "test_prediction_path"
+      },
+      "profile_source_task_id": "aptos_dr_5class",
+      "profile_source_design": "aptos_task_adaptation",
+      "require_same_checkpoint_for_profile_transfer": true
+    }
+  ],
+  "independent_confirmation_gap": {
+    "required": true,
+    "requirements": [
+      "not previously exposed to model, route, feature, threshold, or prompt selection",
+      "patient-grouped identifiers with eye and examination linkage",
+      "same five-grade DR label contract or a predeclared mapping",
+      "Scout and Expert probabilities generated under frozen adapters and measured costs",
+      "prospectively frozen Help-or-Harm features, policy, thresholds, and analysis plan",
+      "sufficient corrected and introduced events for route-level confidence intervals"
+    ]
+  }
+}
