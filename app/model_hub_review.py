@@ -9,7 +9,7 @@ import html
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pandas as pd
 import streamlit as st
@@ -290,8 +290,14 @@ def _qualification_for_pipeline(
                     route_data.get("expert_artifact_id", "")
                 ),
                 request_scope=case_scope,
-                prediction_assets_valid=mode != "qualification_blocked",
-                unique_protocol_identity=mode != "qualification_blocked",
+                prediction_assets_valid=mode not in {
+                    "live",
+                    "qualification_blocked",
+                },
+                unique_protocol_identity=mode not in {
+                    "live",
+                    "qualification_blocked",
+                },
             ),
             contract=contract,
             contract_sha256=contract_sha,
@@ -301,6 +307,8 @@ def _qualification_for_pipeline(
         evidence={
             "pairing_id": str(route_data.get("pairing_id", "unavailable")),
             "gate_evidence": route_data.get("gate_evidence", {}),
+            "live_scout_only": mode == "live",
+            "rule_baseline_only": mode == "live",
         },
     )
 
@@ -516,12 +524,24 @@ class _ReviewStepToolExecutor:
     artifact_ids: tuple[str, ...]
     case_scope: str
     mode: str
+    progress_callback: Callable[[str, str], None] | None = None
+
+    def _notify_progress(self, step: str, status: str) -> None:
+        if self.progress_callback is None:
+            return
+        try:
+            self.progress_callback(step, status)
+        except Exception:
+            # Progress rendering is presentation-only and must never change
+            # the deterministic tool/runtime result.
+            return
 
     def execute_step(
         self,
         state: CaseState,
         step: str,
     ) -> AgentToolStepResult:
+        self._notify_progress(step, "running")
         runtime = ToolRuntime(self.context)
         common = {
             "task_id": self.case.task_id,
@@ -534,7 +554,11 @@ class _ReviewStepToolExecutor:
                 ToolRequest(
                     "case_input.validate",
                     payload={
-                        "split": "validation",
+                        "split": (
+                            "new_case"
+                            if self.case_scope == "new_case"
+                            else "validation"
+                        ),
                         "image_paths": [
                             str(path) for path in self.case.image_paths
                         ],
@@ -554,15 +578,20 @@ class _ReviewStepToolExecutor:
             )
             payload = {"registry": response.to_dict()}
         elif step == "route_metadata":
-            if self.mode == "tool_failure":
+            if self.mode in {"live", "tool_failure"}:
                 payload = {
                     "route": {
                         "ok": True,
                         "code": "SKIPPED_NEW_CASE",
-                        "message": "新病例不读取冻结路由结果",
+                        "message": (
+                            "新病例只运行真实 Scout，不读取冻结路由结果"
+                        ),
                         "data": {
+                            "scout_artifact_ids": list(self.artifact_ids),
+                            "expert_artifact_id": "",
                             "protocol_requests_expert": False,
                             "expert_result_released": False,
+                            "baseline_label": "现有规则基线",
                         },
                     }
                 }
@@ -581,7 +610,7 @@ class _ReviewStepToolExecutor:
                 )
                 payload = {"route": response.to_dict()}
         elif step == "scout":
-            if self.mode == "tool_failure":
+            if self.mode in {"live", "tool_failure"}:
                 response = runtime.run(
                     ToolRequest(
                         "model_inference.run",
@@ -645,6 +674,15 @@ class _ReviewStepToolExecutor:
             predictions = list(
                 state.runtime_payload.get("predictions", [])
             )
+            if not predictions:
+                inference_response = dict(
+                    state.runtime_payload.get("inference", {})
+                )
+                inference_data = dict(
+                    inference_response.get("data", {})
+                )
+                if inference_response.get("ok", False) and inference_data:
+                    predictions = [inference_data]
             response = runtime.run(
                 ToolRequest(
                     "result_risk_audit.run",
@@ -667,11 +705,29 @@ class _ReviewStepToolExecutor:
                 )
         else:
             raise ValueError(f"UNKNOWN_AGENT_TOOL_STEP:{step}")
-        return AgentToolStepResult(
+        result = AgentToolStepResult(
             tool_payload=payload,
             tool_trace=runtime.to_dict(),
             qualification=qualification,
         )
+        if step == "scout" and "predictions" in payload:
+            completed = bool(payload["predictions"])
+        else:
+            response_key = {
+                "input": "input",
+                "registry": "registry",
+                "route_metadata": "route",
+                "scout": "inference",
+                "audit_and_qualification": "audit",
+            }[step]
+            completed = bool(
+                dict(payload.get(response_key, {})).get("ok", False)
+            )
+        self._notify_progress(
+            step,
+            "completed" if completed else "failed",
+        )
+        return result
 
 
 @dataclass(frozen=True)
@@ -716,9 +772,14 @@ def _execute_controlled_pipeline(
     artifact_ids: list[str],
     mode: str,
     actor_role: str,
+    progress_callback: Callable[[str, str], None] | None = None,
 ) -> tuple[dict[str, Any], ToolRuntime, CaseState, bool]:
     controller = _controller_for_mode(mode)
-    case_scope = "new_case" if mode == "tool_failure" else "cached_prediction_replay"
+    case_scope = (
+        "new_case"
+        if mode in {"live", "tool_failure"}
+        else "cached_prediction_replay"
+    )
     _contract, contract_sha = load_route_qualification_contract(
         context.project_root
     )
@@ -737,13 +798,21 @@ def _execute_controlled_pipeline(
         case_metadata={
             "modality": "CFP",
             "image_count": len(case.image_paths),
-            "quality_flag": "public_validation_demo",
+            "quality_flag": (
+                "new_case_uploaded"
+                if mode == "live"
+                else "public_validation_demo"
+            ),
         },
         remaining_budget=remaining_budget,
         expected_expert_cost=expected_expert_cost,
         controller_type=controller.controller_type,
         qualification_policy_version=contract_sha,
-        route_protocol_version="frozen-validation-route-v1",
+        route_protocol_version=(
+            "live-scout-current-rule-baseline-v1"
+            if mode == "live"
+            else "frozen-validation-route-v1"
+        ),
     )
     agent_runtime = ControlledAgentRuntimeV2(
         CaseStateStore(CONTROLLED_RUNTIME_ROOT / "cases")
@@ -757,6 +826,7 @@ def _execute_controlled_pipeline(
             artifact_ids=tuple(artifact_ids),
             case_scope=case_scope,
             mode=mode,
+            progress_callback=progress_callback,
         ),
         actor_role=actor_role,
     )

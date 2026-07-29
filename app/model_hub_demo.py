@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # The repository-root bootstrap above must run before these imports.
+from app.model_hub_assist import render_one_click_assist  # noqa: E402
 from app.model_hub_clinical import render_clinical_workspace  # noqa: E402
 from app.model_hub_data import load_model_hub_outputs  # noqa: E402
 from app.model_hub_engineering import render_engineering_workspace  # noqa: E402
@@ -171,15 +172,23 @@ def _render_overview(data: dict[str, object]) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="OphAgent 模型中转台", layout="wide", initial_sidebar_state="auto")
+    st.set_page_config(
+        page_title="OphAgent 辅助分析",
+        layout="wide",
+        initial_sidebar_state="auto",
+    )
     inject_app_css()
     inject_model_hub_css()
     workspace = sidebar_navigation()
     context = {
+        "辅助分析": "医生端 · 一次点击",
         "病例回放": "受控病例编排 · V2",
         "证据门控": "资格与控制器验收 · V1.1 / V2",
     }.get(workspace, "模型工程 · V1.1")
     page_header(workspace, context=context)
+    if workspace == "辅助分析":
+        render_one_click_assist()
+        return
     output_dir = model_hub_output_dir()
     data = load_model_hub_outputs(output_dir, model_hub_root=output_dir.parent)
     data["hub_index"] = build_model_hub_index(PROJECT_ROOT)
