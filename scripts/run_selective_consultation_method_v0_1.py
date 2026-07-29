@@ -201,7 +201,10 @@ def verify_benchmark_inputs(
         if observed != outputs[name]:
             raise ValueError(f"Frozen benchmark asset SHA256 changed: {name}")
     return {
-        "manifest_path": manifest_path,
+        "manifest_uri": (
+            "repo://experiments/opening_risk_routing_closure/outputs/"
+            "help_or_harm_benchmark_v0_1/artifact_manifest.json"
+        ),
         "manifest_sha256": file_sha256(manifest_path),
         "case_table_sha256": outputs["case_level_benchmark.csv.gz"],
         "route_inventory_sha256": outputs["candidate_route_inventory.csv"],
