@@ -11,7 +11,9 @@ import pytest
 import app.model_hub_assist as assist
 from app.model_hub_assist import (
     AssistRun,
+    assist_scenario_scope,
     assist_result_view_model,
+    normalize_assist_session,
     persist_uploaded_cfp,
     progress_view_model,
     record_research_feedback,
@@ -20,6 +22,7 @@ from app.model_hub_assist import (
     run_live_assist,
     select_live_scout_artifact,
 )
+from app.model_hub_task_adapters import task_adapter_for
 from app.model_hub_review import ReviewCase
 from app.model_hub_agent_v2 import StateTransitionError
 from app.model_hub_tools import (
@@ -108,6 +111,28 @@ def test_uploaded_cfp_rejects_invalid_input(tmp_path: Path) -> None:
         persist_uploaded_cfp(b"not-an-image", upload_root=tmp_path)
 
 
+def test_browser_session_isolates_feedback_state_and_remains_idempotent() -> None:
+    first = assist_scenario_scope(
+        assist.SOURCE_FROZEN,
+        "browser-a",
+        scenario_label="高风险 · 请求 Expert",
+    )
+    repeated = assist_scenario_scope(
+        assist.SOURCE_FROZEN,
+        "browser-a",
+        scenario_label="高风险 · 请求 Expert",
+    )
+    second = assist_scenario_scope(
+        assist.SOURCE_FROZEN,
+        "browser-b",
+        scenario_label="高风险 · 请求 Expert",
+    )
+
+    assert first == repeated
+    assert first != second
+    assert len(normalize_assist_session("invalid token")) == 16
+
+
 def test_live_scout_is_chosen_from_unified_capability_index() -> None:
     context = _tool_context(
         [
@@ -160,6 +185,43 @@ def test_live_result_states_real_scout_and_rule_baseline_boundary() -> None:
     assert view["case_handling"] == "转人工复核"
     assert "现有规则基线" in view["reason"]
     assert "Expert 路由" in view["reason"]
+    clinical = view["clinical_context"]
+    assert clinical["result_heading"] == "糖尿病视网膜病变影像分级提示"
+    assert clinical["current_evidence"] == "彩色眼底照片（CFP） · 1 张"
+    assert any(
+        item["label"] == "黄斑 OCT" and item["status"] == "missing"
+        for item in clinical["fields"]
+    )
+    markup = assist._result_html(view)
+    assert "临床资料完整性" in markup
+    assert "最佳矫正视力" in markup
+    assert "黄斑 OCT" in markup
+    assert "缺失项不会由模型猜测" in markup
+    assert "LIVE_INFERENCE" in markup
+
+
+def test_task_adapter_injects_glaucoma_context_without_fabricating_values() -> None:
+    profile = task_adapter_for("glaucoma_3class").clinical_assist
+
+    missing = profile.view({}, image_count=1)
+    by_label = {item["label"]: item for item in missing["fields"]}
+    assert by_label["眼压（含测量时间）"]["value"] == "未提供"
+    assert (
+        by_label["杯盘比 / 视盘结构"]["status"]
+        == "not_assessed"
+    )
+    assert by_label["OCT RNFL / GCC"]["value"] == "未提供"
+    assert by_label["标准自动视野"]["value"] == "未提供"
+
+    supplied = profile.view(
+        {"IOP": "右眼 18 mmHg", "cdr": "0.7"},
+        image_count=1,
+    )
+    supplied_by_label = {
+        item["label"]: item for item in supplied["fields"]
+    }
+    assert supplied_by_label["眼压（含测量时间）"]["status"] == "provided"
+    assert supplied_by_label["杯盘比 / 视盘结构"]["value"] == "0.7"
 
 
 @pytest.mark.parametrize(

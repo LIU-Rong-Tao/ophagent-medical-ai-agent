@@ -14,6 +14,7 @@ from io import BytesIO
 import os
 from pathlib import Path
 import re
+import secrets
 from typing import Any, Callable
 
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -41,6 +42,7 @@ from app.model_hub_tools import (
     ToolRuntime,
     build_default_tool_context,
 )
+from app.model_hub_task_adapters import task_adapter_for
 from app.model_hub_ui import grade_label
 from app.orchestration_contracts import CaseState
 
@@ -86,6 +88,7 @@ PROGRESS_LABELS = (
     "现有规则基线评估",
     "生成辅助结果",
 )
+SESSION_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{8,64}")
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,37 @@ def _scenario_key(label: str) -> str:
     return hashlib.sha256(
         f"{ASSIST_SCHEMA_VERSION}:{label}".encode("utf-8")
     ).hexdigest()[:16]
+
+
+def normalize_assist_session(value: str = "") -> str:
+    """Return a non-sensitive browser namespace for durable case state."""
+
+    token = str(value).strip()
+    if SESSION_TOKEN_PATTERN.fullmatch(token):
+        return token
+    return secrets.token_hex(8)
+
+
+def assist_scenario_scope(
+    source_mode: str,
+    session_id: str,
+    *,
+    scenario_label: str = "",
+) -> str:
+    """Build the idempotency scope without sharing feedback across browsers."""
+
+    if source_mode not in {SOURCE_LIVE, SOURCE_FROZEN}:
+        raise ValueError("ASSIST_SOURCE_MODE_INVALID")
+    if not SESSION_TOKEN_PATTERN.fullmatch(str(session_id)):
+        raise ValueError("ASSIST_SESSION_INVALID")
+    parts = [
+        ASSIST_SCHEMA_VERSION,
+        "live" if source_mode == SOURCE_LIVE else "frozen",
+        str(session_id),
+    ]
+    if scenario_label:
+        parts.append(scenario_label)
+    return ":".join(parts)
 
 
 def persist_uploaded_cfp(
@@ -301,6 +335,7 @@ def run_live_assist(
     context: ToolContext,
     stored: StoredCFP,
     *,
+    session_id: str = "direct-call",
     progress_callback: Callable[[str, str], None] | None = None,
 ) -> AssistRun:
     case = _live_case(stored)
@@ -308,7 +343,7 @@ def run_live_assist(
     _payload, _runtime, state, replayed = _execute_controlled_pipeline(
         context,
         case,
-        scenario=f"{ASSIST_SCHEMA_VERSION}:live",
+        scenario=assist_scenario_scope(SOURCE_LIVE, session_id),
         artifact_ids=[artifact_id],
         mode="live",
         actor_role="operator",
@@ -340,13 +375,16 @@ def run_frozen_assist(
     context: ToolContext,
     option: FrozenCaseOption,
     *,
+    session_id: str = "direct-call",
     progress_callback: Callable[[str, str], None] | None = None,
 ) -> AssistRun:
     _payload, _runtime, state, replayed = _execute_controlled_pipeline(
         context,
         option.case,
-        scenario=(
-            f"{ASSIST_SCHEMA_VERSION}:frozen:{option.scenario_label}"
+        scenario=assist_scenario_scope(
+            SOURCE_FROZEN,
+            session_id,
+            scenario_label=option.scenario_label,
         ),
         artifact_ids=[
             str(value) for value in option.scenario["artifact_ids"]
@@ -518,6 +556,12 @@ def assist_result_view_model(run: AssistRun) -> dict[str, Any]:
         if adopted
         else "未生成"
     )
+    clinical_context = task_adapter_for(
+        run.case.task_id
+    ).clinical_assist.view(
+        run.case.structured_info,
+        image_count=len(run.case.image_paths),
+    )
     action = state.final_action or "REFER_TO_HUMAN"
     if run.source_mode == SOURCE_LIVE:
         reason = (
@@ -558,6 +602,7 @@ def assist_result_view_model(run: AssistRun) -> dict[str, Any]:
         "reason": reason,
         "execution_label": "状态恢复" if run.replayed else "新执行",
         "feedback": feedback,
+        "clinical_context": clinical_context,
     }
 
 
@@ -596,20 +641,61 @@ def _result_html(view: dict[str, Any]) -> str:
         if view["frozen_second_opinion_used"]
         else "否"
     )
+    clinical = dict(view["clinical_context"])
+    evidence_items = [
+        {
+            "label": "当前影像证据",
+            "value": str(clinical["current_evidence"]),
+            "status": "provided",
+            "status_label": "已提供",
+            "note": str(clinical["quality_boundary"]),
+        },
+        *list(clinical["fields"]),
+    ]
+    evidence_html = "".join(
+        '<div class="d1-clinical-item '
+        f'{html.escape(str(item["status"]))}">'
+        '<div class="d1-clinical-item-head">'
+        f'<b>{html.escape(str(item["label"]))}</b>'
+        f'<span>{html.escape(str(item["status_label"]))}</span></div>'
+        f'<p>{html.escape(str(item["value"]))}</p>'
+        f'<small>{html.escape(str(item["note"]))}</small></div>'
+        for item in evidence_items
+    )
+    result_prefix = (
+        "CFP 模型提示"
+        if view["source_mode"] == SOURCE_LIVE
+        else "冻结回放结果"
+    )
     return (
         '<section class="d1-result-card">'
         '<div class="d1-result-head"><div>'
-        '<span class="d1-result-kicker">辅助分析完成</span>'
-        f'<h2>{html.escape(view["auxiliary_result"])}</h2></div>'
+        f'<span class="d1-result-kicker">'
+        f'{html.escape(str(clinical["result_heading"]))}</span>'
+        f'<h2>{html.escape(result_prefix)}：'
+        f'{html.escape(view["auxiliary_result"])}</h2>'
+        '<p class="d1-result-subtitle">本结果需结合临床资料与人工阅片复核。</p>'
+        "</div>"
         '<div class="d1-result-badges">'
         f'<span class="d1-source-badge {source_class}">{source_badge}</span>'
         f'<span class="d1-run-badge">{html.escape(view["execution_label"])}</span>'
         '</div></div>'
+        '<div class="d1-clinical-summary">'
+        '<div><small>本例处理</small>'
+        f'<b>{html.escape(view["case_handling"])}</b>'
+        f'<p>{html.escape(str(clinical["review_prompt"]))}</p></div>'
+        '<div><small>当前证据边界</small>'
+        f'<p>{html.escape(str(clinical["model_scope"]))}</p></div>'
+        '</div>'
+        '<div class="d1-clinical-block">'
+        '<div class="d1-clinical-title"><b>临床资料完整性</b>'
+        "<span>只显示实际收到的资料；缺失项不会由模型猜测。</span></div>"
+        f'<div class="d1-clinical-grid">{evidence_html}</div></div>'
+        '<details class="d1-provenance"><summary>'
+        "查看本次结果来源与系统处理说明</summary>"
         '<div class="d1-result-grid">'
         '<div><small>辅助结果</small>'
         f'<b>{html.escape(view["auxiliary_result"])}</b></div>'
-        '<div><small>本例处理</small>'
-        f'<b>{html.escape(view["case_handling"])}</b></div>'
         '<div><small>Scout 是否真实运行</small>'
         f'<b>{html.escape(scout_text)}</b></div>'
         '<div><small>是否使用冻结第二意见</small>'
@@ -618,9 +704,9 @@ def _result_html(view: dict[str, Any]) -> str:
         f'<b>{html.escape(view["adopted_source"])}</b></div>'
         '<div><small>执行来源</small>'
         f'<b>{html.escape(view["source_label"])}</b></div>'
-        '</div>'
-        '<div class="d1-reason"><small>简洁原因</small>'
-        f'<p>{html.escape(view["reason"])}</p></div>'
+        '<div><small>规则基线说明</small>'
+        f'<b>{html.escape(view["reason"])}</b></div>'
+        "</div></details>"
         '<div class="d1-safety-note">'
         "本结果仅用于研究型辅助分析，不是最终临床诊断；"
         "现有规则基线不预测本病例使用 Expert 后将获益或受害。"
@@ -662,7 +748,10 @@ def _render_feedback(run: AssistRun, view: dict[str, Any]) -> None:
             st.toast("研究反馈已保存", icon="✅")
             st.rerun()
     if selected:
-        st.success(f"研究反馈已保存：{selected}。不会触发任何在线更新。")
+        st.success(
+            f"本次会话的研究反馈已保存：{selected}。"
+            "不会触发任何在线更新。"
+        )
 
 
 def _render_run(
@@ -691,6 +780,10 @@ def _render_run(
 def render_one_click_assist() -> None:
     query_source = str(st.query_params.get("assist_source", ""))
     query_token = str(st.query_params.get("assist_case", ""))
+    query_session = str(st.query_params.get("assist_session", ""))
+    session_id = normalize_assist_session(query_session)
+    if session_id != query_session:
+        st.query_params["assist_session"] = session_id
     default_mode = (
         "上传 CFP"
         if query_source != SOURCE_FROZEN
@@ -823,6 +916,7 @@ def render_one_click_assist() -> None:
                     run = run_live_assist(
                         context,
                         stored,
+                        session_id=session_id,
                         progress_callback=update_progress,
                     )
             elif selected_option is not None:
@@ -832,6 +926,7 @@ def render_one_click_assist() -> None:
                     run = run_frozen_assist(
                         context,
                         selected_option,
+                        session_id=session_id,
                         progress_callback=update_progress,
                     )
         except (RuntimeError, ValueError) as exc:
@@ -842,7 +937,11 @@ def render_one_click_assist() -> None:
             st.warning("上一例上传图像缓存不可用，请重新上传后开始分析。")
         else:
             try:
-                run = run_live_assist(_cached_tool_context(), stored)
+                run = run_live_assist(
+                    _cached_tool_context(),
+                    stored,
+                    session_id=session_id,
+                )
             except (RuntimeError, ValueError) as exc:
                 st.error(f"状态恢复失败：{exc}")
     elif query_source == SOURCE_FROZEN:
@@ -854,6 +953,7 @@ def render_one_click_assist() -> None:
                 run = run_frozen_assist(
                     _cached_tool_context(),
                     restored_option,
+                    session_id=session_id,
                 )
             except (RuntimeError, ValueError) as exc:
                 st.error(f"状态恢复失败：{exc}")
