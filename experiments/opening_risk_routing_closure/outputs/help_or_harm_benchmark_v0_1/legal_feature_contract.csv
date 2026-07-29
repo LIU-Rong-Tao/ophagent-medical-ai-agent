@@ -1,0 +1,20 @@
+feature,status,definition,current_case_expert_output_used,test_label_or_threshold_used,additional_scout_inference_used,identity_or_private_path_used
+scout_prob_0,allowed_v0_1,Scout probability for grade 0,False,False,False,False
+scout_prob_1,allowed_v0_1,Scout probability for grade 1,False,False,False,False
+scout_prob_2,allowed_v0_1,Scout probability for grade 2,False,False,False,False
+scout_prob_3,allowed_v0_1,Scout probability for grade 3,False,False,False,False
+scout_prob_4,allowed_v0_1,Scout probability for grade 4,False,False,False,False
+scout_confidence,allowed_v0_1,maximum Scout probability,False,False,False,False
+scout_entropy,allowed_v0_1,normalized Shannon entropy of Scout probabilities,False,False,False,False
+scout_margin,allowed_v0_1,top-1 minus top-2 Scout probability,False,False,False,False
+scout_severe_probability_mass,allowed_v0_1,Scout probability mass for grades 3 and 4,False,False,False,False
+expert_history_corrected_rate,allowed_v0_1,smoothed corrected rate from other development folds,False,False,False,False
+expert_history_introduced_rate,allowed_v0_1,smoothed introduced rate from other development folds,False,False,False,False
+expert_history_net,allowed_v0_1,development-only history corrected rate minus introduced rate,False,False,False,False
+expert_history_support,allowed_v0_1,matching development-history stratum support,False,False,False,False
+scout_reference_js_divergence,allowed_v0_1,unlabeled JS divergence from other-fold/full-development Scout reference,False,False,False,False
+registered_image_quality_signal,not_available_v0_1,Allowed only after a registered algorithm and measured cost exist,False,False,False,False
+current_case_expert_output_or_embedding,forbidden,Post-consultation leakage,True,False,False,False
+raw_dataset_id,forbidden_as_default_predictor,Metadata retained for stratification only,False,False,False,False
+test_derived_feature_or_threshold,forbidden,Frozen retrospective outcomes cannot define a method,False,True,False,False
+uncosted_additional_scout,forbidden,No hidden multi-Scout inference in a pair benchmark,False,False,True,False

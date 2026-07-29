@@ -1,0 +1,271 @@
+{
+  "schema_version": "ophagent.help_or_harm_benchmark_summary.v0_1",
+  "protocol_id": "help_or_harm_case_benchmark_v0_1",
+  "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+  "source_commit_sha": "66e0ca67887e95162170dd7a7048722b738b2b03",
+  "decision": "CONDITIONAL_GO",
+  "decision_reason": "病例概率资产可一一对齐，DeepDRiD 具备患者分组开发证据；但 APTOS 冻结模型使用的 256×256 派生输入存在跨 split 字节级重复且缺少患者/眼别标识，全部冻结 Test 也仅能回顾性使用。",
+  "candidate_routes": 210,
+  "candidate_routes_by_task": {
+    "aptos_dr_5class": 90,
+    "deepdrid_dr_5class_native": 90,
+    "deepdrid_dr_5class_external": 30
+  },
+  "route_split_rows": 390,
+  "case_route_rows": 214410,
+  "prediction_assets": 46,
+  "prediction_assets_complete": true,
+  "route_alignment_error_rows": 0,
+  "all_aligned_case_counts": [
+    {
+      "task_id": "aptos_dr_5class",
+      "benchmark_split": "development",
+      "rows": 46260
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "benchmark_split": "retrospective_frozen",
+      "rows": 99000
+    },
+    {
+      "task_id": "deepdrid_dr_5class_external",
+      "benchmark_split": "retrospective_external",
+      "rows": 12000
+    },
+    {
+      "task_id": "deepdrid_dr_5class_native",
+      "benchmark_split": "development",
+      "rows": 21150
+    },
+    {
+      "task_id": "deepdrid_dr_5class_native",
+      "benchmark_split": "retrospective_frozen",
+      "rows": 36000
+    }
+  ],
+  "primary_case_counts": [
+    {
+      "task_id": "aptos_dr_5class",
+      "benchmark_split": "development",
+      "rows": 43650
+    },
+    {
+      "task_id": "aptos_dr_5class",
+      "benchmark_split": "retrospective_frozen",
+      "rows": 93240
+    },
+    {
+      "task_id": "deepdrid_dr_5class_external",
+      "benchmark_split": "retrospective_external",
+      "rows": 12000
+    },
+    {
+      "task_id": "deepdrid_dr_5class_native",
+      "benchmark_split": "development",
+      "rows": 21150
+    },
+    {
+      "task_id": "deepdrid_dr_5class_native",
+      "benchmark_split": "retrospective_frozen",
+      "rows": 36000
+    }
+  ],
+  "image_leakage": [
+    {
+      "dataset_id": "APTOS2019",
+      "images": 3662,
+      "unique_case_ids": 3662,
+      "duplicate_case_ids": 0,
+      "exact_duplicate_groups": 123,
+      "exact_duplicate_rows": 251,
+      "cross_split_exact_groups": 74,
+      "cross_split_exact_rows": 153,
+      "label_conflict_exact_groups": 30,
+      "cross_split_label_conflict_exact_groups": 15,
+      "patient_id_coverage": 0.0,
+      "eye_id_coverage": 0.0,
+      "exam_id_coverage": 0.0,
+      "patient_cross_split_groups": 0,
+      "near_duplicate_candidate_pairs": 486,
+      "near_duplicate_status": "unconfirmed_candidate",
+      "near_duplicate_primary_exclusion": false,
+      "primary_identity_eligible_images": 3445,
+      "analysis_unit": "single_CFP_image",
+      "resampling_group": "exact_image_sha256_then_case_id"
+    },
+    {
+      "dataset_id": "DeepDRiD_v1.1",
+      "images": 1589,
+      "unique_case_ids": 1589,
+      "duplicate_case_ids": 0,
+      "exact_duplicate_groups": 0,
+      "exact_duplicate_rows": 0,
+      "cross_split_exact_groups": 0,
+      "cross_split_exact_rows": 0,
+      "label_conflict_exact_groups": 0,
+      "cross_split_label_conflict_exact_groups": 0,
+      "patient_id_coverage": 1.0,
+      "eye_id_coverage": 1.0,
+      "exam_id_coverage": 1.0,
+      "patient_cross_split_groups": 0,
+      "near_duplicate_candidate_pairs": 24,
+      "near_duplicate_status": "unconfirmed_candidate",
+      "near_duplicate_primary_exclusion": false,
+      "primary_identity_eligible_images": 1589,
+      "analysis_unit": "single_CFP_image",
+      "resampling_group": "patient_group_id"
+    }
+  ],
+  "development_signal_summary": {
+    "aptos_dr_5class::expert_history_net::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.5142513795259791,
+      "q25_auroc": 0.4414313531645593,
+      "q75_auroc": 0.5815311729234652
+    },
+    "aptos_dr_5class::expert_history_net::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.4945624194393796,
+      "q25_auroc": 0.2962803816086916,
+      "q75_auroc": 0.6449547398500278
+    },
+    "aptos_dr_5class::scout_entropy::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.576374299719888,
+      "q25_auroc": 0.5420610349402919,
+      "q75_auroc": 0.6235152767725852
+    },
+    "aptos_dr_5class::scout_entropy::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.8427499376714036,
+      "q25_auroc": 0.7939450225204505,
+      "q75_auroc": 0.8807095745282643
+    },
+    "aptos_dr_5class::scout_inverse_margin::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.6150591270728571,
+      "q25_auroc": 0.5643425202248732,
+      "q75_auroc": 0.6619092916821883
+    },
+    "aptos_dr_5class::scout_inverse_margin::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.8541469055992528,
+      "q25_auroc": 0.8083408405652488,
+      "q75_auroc": 0.8804292766223957
+    },
+    "aptos_dr_5class::scout_reference_js_divergence::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.4866353707380229,
+      "q25_auroc": 0.4328022478678425,
+      "q75_auroc": 0.5344931700816259
+    },
+    "aptos_dr_5class::scout_reference_js_divergence::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.7077532526989119,
+      "q25_auroc": 0.6721003511133534,
+      "q75_auroc": 0.7574112799426279
+    },
+    "aptos_dr_5class::scout_severe_probability_mass::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.5478705786776653,
+      "q25_auroc": 0.5146647008642112,
+      "q75_auroc": 0.5959050476235768
+    },
+    "aptos_dr_5class::scout_severe_probability_mass::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.8201955852676924,
+      "q25_auroc": 0.7828155822279983,
+      "q75_auroc": 0.8445348742777141
+    },
+    "deepdrid_dr_5class_native::expert_history_net::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.47419667053813397,
+      "q25_auroc": 0.4299778244631186,
+      "q75_auroc": 0.5165895061728396
+    },
+    "deepdrid_dr_5class_native::expert_history_net::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.5589593596059113,
+      "q25_auroc": 0.4648696588010204,
+      "q75_auroc": 0.6328566859814793
+    },
+    "deepdrid_dr_5class_native::scout_entropy::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.550167724152278,
+      "q25_auroc": 0.5010521885521885,
+      "q75_auroc": 0.6023789541199268
+    },
+    "deepdrid_dr_5class_native::scout_entropy::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.7668237731243577,
+      "q25_auroc": 0.717180442101486,
+      "q75_auroc": 0.8095371087715415
+    },
+    "deepdrid_dr_5class_native::scout_inverse_margin::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.576578019681468,
+      "q25_auroc": 0.5375612021836707,
+      "q75_auroc": 0.6384600313479623
+    },
+    "deepdrid_dr_5class_native::scout_inverse_margin::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.7717633928571429,
+      "q25_auroc": 0.7298050971129253,
+      "q75_auroc": 0.8304662905357907
+    },
+    "deepdrid_dr_5class_native::scout_reference_js_divergence::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.5077330787201302,
+      "q25_auroc": 0.4578249818445897,
+      "q75_auroc": 0.5577295008912655
+    },
+    "deepdrid_dr_5class_native::scout_reference_js_divergence::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.4245593027813781,
+      "q25_auroc": 0.32639764327743864,
+      "q75_auroc": 0.49861703560436454
+    },
+    "deepdrid_dr_5class_native::scout_severe_probability_mass::corrected::scout_wrong_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.5668706957821728,
+      "q25_auroc": 0.5030594405594405,
+      "q75_auroc": 0.631273315777924
+    },
+    "deepdrid_dr_5class_native::scout_severe_probability_mass::introduced::scout_correct_only": {
+      "route_count": 90,
+      "informative_route_count": 90,
+      "median_auroc": 0.7141361299813226,
+      "q25_auroc": 0.6722585274543171,
+      "q75_auroc": 0.763095238095238
+    }
+  },
+  "baseline_rows": 9376,
+  "v1_1_baseline_rows": 16,
+  "test_policy": {
+    "test_used_for_feature_definition": false,
+    "test_used_for_threshold": false,
+    "test_used_for_route_selection": false,
+    "retrospective_only": true,
+    "independent_confirmation_missing": true
+  },
+  "clinical_claim_boundary": "corrected/introduced are label-defined model-error proxies, not patient harm, clinical benefit, diagnosis, or treatment outcomes"
+}

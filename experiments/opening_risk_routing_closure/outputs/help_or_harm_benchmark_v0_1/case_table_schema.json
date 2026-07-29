@@ -1,0 +1,343 @@
+{
+  "schema_version": "ophagent.help_or_harm_case_table_schema.v0_1",
+  "analysis_unit": "single_CFP_image",
+  "resampling_group": {
+    "DeepDRiD_v1.1": "patient_group_id",
+    "APTOS2019": "exact_image_sha256_then_case_id"
+  },
+  "class_order": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "outcomes": {
+    "corrected": "scout_pred != y_true and expert_pred == y_true",
+    "introduced": "scout_pred == y_true and expert_pred != y_true",
+    "both_correct": "scout_pred == y_true and expert_pred == y_true",
+    "both_wrong": "scout_pred != y_true and expert_pred != y_true",
+    "dangerous_introduced": "scout is not grade>=3 undergrading and expert is grade>=3 undergrading"
+  },
+  "legal_feature_columns": [
+    "scout_prob_0",
+    "scout_prob_1",
+    "scout_prob_2",
+    "scout_prob_3",
+    "scout_prob_4",
+    "scout_confidence",
+    "scout_entropy",
+    "scout_margin",
+    "scout_severe_probability_mass",
+    "expert_history_corrected_rate",
+    "expert_history_introduced_rate",
+    "expert_history_net",
+    "expert_history_support",
+    "scout_reference_js_divergence"
+  ],
+  "metadata_not_default_features": [
+    "dataset_id",
+    "task_id",
+    "patient_group_id",
+    "eye",
+    "exam_id",
+    "image_id"
+  ],
+  "post_consultation_audit_only_columns": [
+    "expert_pred",
+    "expert_prob_0",
+    "expert_prob_1",
+    "expert_prob_2",
+    "expert_prob_3",
+    "expert_prob_4",
+    "corrected",
+    "introduced",
+    "both_correct",
+    "both_wrong",
+    "dangerous_introduced"
+  ],
+  "private_paths_included": false,
+  "rows": 214410,
+  "columns": [
+    {
+      "name": "schema_version",
+      "dtype": "object"
+    },
+    {
+      "name": "task_id",
+      "dtype": "object"
+    },
+    {
+      "name": "dataset_id",
+      "dtype": "object"
+    },
+    {
+      "name": "evaluation_design",
+      "dtype": "object"
+    },
+    {
+      "name": "route_id",
+      "dtype": "object"
+    },
+    {
+      "name": "scout_id",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_id",
+      "dtype": "object"
+    },
+    {
+      "name": "benchmark_split",
+      "dtype": "object"
+    },
+    {
+      "name": "case_id",
+      "dtype": "object"
+    },
+    {
+      "name": "patient_group_id",
+      "dtype": "object"
+    },
+    {
+      "name": "eye",
+      "dtype": "object"
+    },
+    {
+      "name": "exam_id",
+      "dtype": "object"
+    },
+    {
+      "name": "image_id",
+      "dtype": "object"
+    },
+    {
+      "name": "view",
+      "dtype": "object"
+    },
+    {
+      "name": "source_split",
+      "dtype": "object"
+    },
+    {
+      "name": "analysis_unit_id",
+      "dtype": "object"
+    },
+    {
+      "name": "resampling_group_id",
+      "dtype": "object"
+    },
+    {
+      "name": "image_sha256",
+      "dtype": "object"
+    },
+    {
+      "name": "y_true",
+      "dtype": "int64"
+    },
+    {
+      "name": "scout_pred",
+      "dtype": "int64"
+    },
+    {
+      "name": "expert_pred",
+      "dtype": "int64"
+    },
+    {
+      "name": "identity_label_conflict",
+      "dtype": "bool"
+    },
+    {
+      "name": "identity_patient_conflict",
+      "dtype": "bool"
+    },
+    {
+      "name": "exact_group_size",
+      "dtype": "int64"
+    },
+    {
+      "name": "cross_split_exact_duplicate",
+      "dtype": "bool"
+    },
+    {
+      "name": "exact_duplicate_label_conflict",
+      "dtype": "bool"
+    },
+    {
+      "name": "exact_group_representative",
+      "dtype": "bool"
+    },
+    {
+      "name": "near_duplicate_candidate",
+      "dtype": "bool"
+    },
+    {
+      "name": "primary_cohort_eligible",
+      "dtype": "bool"
+    },
+    {
+      "name": "scout_cost_ms_per_image",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_cost_ms_per_image",
+      "dtype": "float64"
+    },
+    {
+      "name": "cost_protocol_id",
+      "dtype": "object"
+    },
+    {
+      "name": "cost_comparable",
+      "dtype": "bool"
+    },
+    {
+      "name": "scout_prediction_asset_sha256",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_prediction_asset_sha256",
+      "dtype": "object"
+    },
+    {
+      "name": "scout_prob_0",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_prob_0",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_prob_1",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_prob_1",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_prob_2",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_prob_2",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_prob_3",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_prob_3",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_prob_4",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_prob_4",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_confidence",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_entropy",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_margin",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_severe_probability_mass",
+      "dtype": "float64"
+    },
+    {
+      "name": "corrected",
+      "dtype": "bool"
+    },
+    {
+      "name": "introduced",
+      "dtype": "bool"
+    },
+    {
+      "name": "both_correct",
+      "dtype": "bool"
+    },
+    {
+      "name": "both_wrong",
+      "dtype": "bool"
+    },
+    {
+      "name": "dangerous_introduced",
+      "dtype": "bool"
+    },
+    {
+      "name": "near_duplicate_sensitivity_eligible",
+      "dtype": "bool"
+    },
+    {
+      "name": "expert_history_corrected_rate",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_history_introduced_rate",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_history_net",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_history_support",
+      "dtype": "float64"
+    },
+    {
+      "name": "profile_fold",
+      "dtype": "float64"
+    },
+    {
+      "name": "profile_training_case_count",
+      "dtype": "float64"
+    },
+    {
+      "name": "scout_reference_js_divergence",
+      "dtype": "float64"
+    },
+    {
+      "name": "reference_training_case_count",
+      "dtype": "float64"
+    },
+    {
+      "name": "expert_profile_source",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_profile_excludes_current_group",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_profile_source_task_id",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_profile_source_split",
+      "dtype": "object"
+    },
+    {
+      "name": "expert_profile_domain_shift",
+      "dtype": "bool"
+    },
+    {
+      "name": "current_case_expert_output_used_for_feature",
+      "dtype": "bool"
+    },
+    {
+      "name": "test_outcome_used_for_feature_or_threshold",
+      "dtype": "bool"
+    }
+  ]
+}

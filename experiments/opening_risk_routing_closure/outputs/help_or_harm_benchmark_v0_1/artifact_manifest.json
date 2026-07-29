@@ -1,0 +1,298 @@
+{
+  "schema_version": "ophagent.help_or_harm_artifact_manifest.v0_1",
+  "protocol_id": "help_or_harm_case_benchmark_v0_1",
+  "protocol_uri": "repo://experiments/opening_risk_routing_closure/configs/protocols/help_or_harm_benchmark_v0_1.json",
+  "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+  "source_commit_sha": "66e0ca67887e95162170dd7a7048722b738b2b03",
+  "generated_at_utc": "2026-07-29T17:12:20.825688+00:00",
+  "decision": "CONDITIONAL_GO",
+  "frozen_source_assets_modified": false,
+  "model_inference_performed": false,
+  "route_selection_performed": false,
+  "test_used_for_feature_threshold_or_route_selection": false,
+  "input_assets": [
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "66a087605618390018abcba9c07b4e28c396c075a254424e0f13bd88669fee62"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/convnext_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "a8e920bf418b81f320e26b18447ff5622a840a1d4fa57a9c274de1f0dc6e2245"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/eyeclip_cfp/20260723T082659Z/predictions/validation_predictions.csv",
+      "sha256": "c5f770478020f6e32cd5c6850a26c3cf424683ee6b982fd391fe4a61516feda9"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/eyeclip_cfp/20260723T082659Z/predictions/test_predictions.csv",
+      "sha256": "07dc0ebf880edc263262f72c187926143910ab3d3571ab0c692ced5d369912e9"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "3efec0a8c1c15b689688cc6f4c16d2d6f898bb1a348be5d8c01967a5e8ad7f8a"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/flair/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "f82c05283f4eb340699bfba5d0f0bf32b53a83984682e7bb5bdeec8477a11e61"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/keepfit_cfp/20260723T082655Z/predictions/validation_predictions.csv",
+      "sha256": "d7a4471f5c8b87f73b39a52a9b595c251054a75aa58df53ef39f0aee7296846f"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/keepfit_cfp/20260723T082655Z/predictions/test_predictions.csv",
+      "sha256": "3ff60c995a6e0582b655a1cd9c9cef8e1c65248bdf009a9fa80951447b2b48da"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/validation_predictions.csv",
+      "sha256": "8bf3b2c6efdd732526161f9a11c8f119d9a720a268b4be41bec79306a5c41234"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/preti/seed42_20260722/predictions/test_predictions.csv",
+      "sha256": "0d2b0ab0a89980bd756ee66f131482f8b5922c65e5f8f4bdf9d56df2a3aa50e5"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/ret_clip/20260723T082658Z/predictions/validation_predictions.csv",
+      "sha256": "a9fab4dcf4b0721bc445036065f32f1c07313447a77ad686b4cf3c719ca6655b"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/ret_clip/20260723T082658Z/predictions/test_predictions.csv",
+      "sha256": "fdf1112b455a4b3af590973683cd1e48d2ff8f697ca3f066dfe4666945f7df85"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/validation_predictions.csv",
+      "sha256": "9b882479d12c66f22dc587149d76b10f533f625a798038fbff012a23d8b5670f"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retfound_cfp/bicubic_evalcrop_20260722/test_predictions.csv",
+      "sha256": "b987d6abbf8fa27bb5122f892caedd2abd1689aef8de6b42a466032a2b4ad3c9"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "6a5e8110a3eb8a9862da0aa09e3442b4340956b5db6a31643d99b424a2d3dcee"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retfound_green/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "97775982710ca70abbe0aee4bb5133d835a4fb3bc98a58313baba61a053c332a"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retizero/20260723T082829Z/predictions/validation_predictions.csv",
+      "sha256": "a1e84b35349fa64d0524596428b2b132668cbe0e86103f4f05ae1ba87a380e40"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/retizero/20260723T082829Z/predictions/test_predictions.csv",
+      "sha256": "70ca9481c231d30dd847b6955f1bfc0d7c929893508d0ad4c81ae5644d3c33a5"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/validation_predictions.csv",
+      "sha256": "eb67213b0b82f6eb2cdf92fbebe109f6ac6cdb603d60fcb92810ef5629e82878"
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/replays/swin_tiny/full_replay_20260722/predictions/test_predictions.csv",
+      "sha256": "abdf511a2f5e2d220768ad6ed53d210204600642c5347ebe2529d20df07760fa"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/convnext_tiny/predictions.csv",
+      "sha256": "84ea1e11e901e4b5b341fd9a4c7c1d06ff984735d02051958877a2a4283e2e26"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/flair/predictions.csv",
+      "sha256": "80911e53091513f49d0d6d3105a5fdf0902d5134d32aac1d80f9d0331f50f2a6"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/preti/predictions.csv",
+      "sha256": "146b3afa140210f2dcb020e55ad71ed8aa681824ef184e6483505ba58764afe9"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/retfound_cfp/predictions.csv",
+      "sha256": "2615da452a02f37e14b0f32e2b7152bf53c23aff5e2767055d819df255561889"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/retfound_green/predictions.csv",
+      "sha256": "ea70dd2d68de53ebf2abd8b630ebe80719e4db1937fe1f23ee31e4fccf6e96e8"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/external_transfer/deepdrid_v1.1/frozen_official_validation/swin_tiny/predictions.csv",
+      "sha256": "1c4e169970b5b3f629f95869f8ad16c7b670bf5d3d26d68adbc764aa9efe224f"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/convnext_tiny/20260726T032050Z/predictions/validation_predictions.csv",
+      "sha256": "f1ce93e81eba7080e825d5e603ea4b25b89439c4addd734c60838d677d7c370c"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/convnext_tiny/20260726T032050Z/predictions/test_predictions.csv",
+      "sha256": "0ca6a1c04dace36224c722f8e2c8d4e213ce7bf68b12b672a1d3bf0dd331134c"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/eyeclip_cfp/20260726T032134Z/predictions/validation_predictions.csv",
+      "sha256": "b6db5376f2640210d5685470e63079a19baf848a7e7ed124f6314361270d52b6"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/eyeclip_cfp/20260726T032134Z/predictions/test_predictions.csv",
+      "sha256": "064d4cfc2a8313320af5dbfd855c70a3ac6fad895461897ba15385e3fc56af53"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/flair/20260726T032056Z/predictions/validation_predictions.csv",
+      "sha256": "2cd0eca1d0048fe4db5949f90819e36fd4b014062551a142f04e2fddd67e978b"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/flair/20260726T032056Z/predictions/test_predictions.csv",
+      "sha256": "11c33c7a80293dc4d67c95ad215b0f36f988d0b0f522fa52a813cb25fa3d5305"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/keepfit_cfp/20260726T032150Z/predictions/validation_predictions.csv",
+      "sha256": "5ecd34cd3917630448adeeff4ce6fc164a29eafd4ae19f037bc6f9e07d784924"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/keepfit_cfp/20260726T032150Z/predictions/test_predictions.csv",
+      "sha256": "b8c04672d913ee4e40e861837716c1af48011fde5ed854030a60ec74c7a07fdf"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/preti/20260726T032123Z/predictions/validation_predictions.csv",
+      "sha256": "8a20f6997b8997fa47df29de04ee245057252de40968f8ca143af504c2b10552"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/preti/20260726T032123Z/predictions/test_predictions.csv",
+      "sha256": "7e5beead9022328c5baf19a29189b8a7680efbd6879d7b7cc742ebd4864cc7cb"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/ret_clip/20260726T032212Z/predictions/validation_predictions.csv",
+      "sha256": "d3413cbbadcce57348a3c0c9eff825c1f40d95560d3e7ef0c129b30ff4a4b19e"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/ret_clip/20260726T032212Z/predictions/test_predictions.csv",
+      "sha256": "947ecb6f39b6bbe436cd9364b21a15b0063239d1797ae93fc4a9156c4ea53610"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retfound_cfp/20260726T032055Z/predictions/validation_predictions.csv",
+      "sha256": "6d87388177721e402c4f0f7b8587f1f36f9a379839c521de46ea5bc578348030"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retfound_cfp/20260726T032055Z/predictions/test_predictions.csv",
+      "sha256": "00fdbf8ab72e78e4739c82a5da3351fcb82d6f44fc2b6141dc67d526dc2f5ae0"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retfound_green/20260726T032118Z/predictions/validation_predictions.csv",
+      "sha256": "b2b617371232e53168ac9de7f5df1159a7c0ccefc523600040b9b2a8127141f3"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retfound_green/20260726T032118Z/predictions/test_predictions.csv",
+      "sha256": "f8ee40d925582d3b291caca5ebae753adc3c1abb6dfa5b66a69051836c95b6b7"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retizero/20260726T032215Z/predictions/validation_predictions.csv",
+      "sha256": "39d0e2bc867ff093fcb2516ef299602c07bf135ebe4f37c7e25a581a8d715d42"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/retizero/20260726T032215Z/predictions/test_predictions.csv",
+      "sha256": "1fb79abba0e09f0143c1c29aab2d3efb9b65f3d313d78c1021dbb74064fa155b"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/swin_tiny/20260726T032050Z/predictions/validation_predictions.csv",
+      "sha256": "7b7a492c11be0a7a47804d422728c48607c9389e2b5e34d12d901e89a93928b1"
+    },
+    {
+      "uri": "ophagent_asset://experiments/model_hub/runs/native_adaptation/deepdrid_v1.1/swin_tiny/20260726T032050Z/predictions/test_predictions.csv",
+      "sha256": "381c937383346ea4c3780249390c8751d31c935ea5d3fbbd9952720afa479bf3"
+    },
+    {
+      "uri": "repo://experiments/summary/v0_7_0/external_dr_dataset_inventory.csv",
+      "sha256": "409985e1bbb4fa457c60e4cd80d532af7fb74f65893dbc65982a54f7c06d158b"
+    },
+    {
+      "uri": "dataset_asset://aptos_dataset_manifest.json",
+      "sha256": "65c44d5c0579cd95277899062e16fe4ba0f92cbaa03dd9af3b7315164c8f3ec6"
+    },
+    {
+      "uri": "dataset_asset://deepdrid_admission_manifest.csv",
+      "sha256": "2343c8a402cf8e57670b20aadf13646ac730fe9ac2ef16d0152b5e9c57b8f739"
+    }
+  ],
+  "outputs": [
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/candidate_route_inventory.csv",
+      "sha256": "b683cf46920479938b79ffc9c6cce79591e9618baaa13158841214295de1c9dd",
+      "size_bytes": 127935
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/prediction_asset_audit.csv",
+      "sha256": "6e892387b2dec110f2d1735e90b07c77c7f894e076f91b7b2d20140a481b24e3",
+      "size_bytes": 20307
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/case_alignment_audit.csv",
+      "sha256": "679e04982048a7c9583fdd65783629546f3a19b0583cd4df87fdfa1427911a82",
+      "size_bytes": 70249
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/image_identity_inventory.csv.gz",
+      "sha256": "44f00095d3ffa60d842ca85cb34ccc660c23f85375b226478df52df83103ad41",
+      "size_bytes": 425495
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/exact_duplicate_members.csv",
+      "sha256": "1b09021bea78a44d3191d7a1fb97a26aa79810b73a6285bde3a5c50381afca38",
+      "size_bytes": 30195
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/near_duplicate_candidates.csv",
+      "sha256": "f30d8c4b0045ce817389ff71bed6a4dc87056dfa757cd3deeb7ac6fa9e1fa4a8",
+      "size_bytes": 64556
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/image_leakage_audit.csv",
+      "sha256": "b6ab4280857170e25588fd2434d72cf41f3d3f263d1ef7261b627402299ccb82",
+      "size_bytes": 696
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/semantic_compatibility_audit.csv",
+      "sha256": "a7514342b6f83bb374f63d1116f752c332bef13c67d8a190dac808d93cd06c93",
+      "size_bytes": 1120
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/legal_feature_contract.csv",
+      "sha256": "baac1378a2df5fe160b2ea9975fa25cf947de414db582ad575e55aebb343235d",
+      "size_bytes": 2113
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/case_level_benchmark.csv.gz",
+      "sha256": "2a29402027557c7638ac34888fb8e4c2cbbaf8bee09d043cec5ab4e3e42be60f",
+      "size_bytes": 40030109
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/route_event_audit.csv",
+      "sha256": "865bf1682e05247bc8cc354729517275defdc616b9339025055718014cc02142",
+      "size_bytes": 258808
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/development_signal_results.csv",
+      "sha256": "02e22662769774c12f508b38073cbb9e08bdadbffac3f4952e825285d5bcd423",
+      "size_bytes": 1279582
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/baseline_results.csv",
+      "sha256": "2431f1222d19180380e15dccb898d8bdff3437b151a522d3ac65b661ae269bb6",
+      "size_bytes": 4109188
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/expert_history_profile_audit.csv",
+      "sha256": "eeb32faf7cbdc93e77340f2043a358c1e25fa691f181b4eb07702059883166e2",
+      "size_bytes": 91448
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/case_table_schema.json",
+      "sha256": "687ebf2f962227757f0357378bed1dcbabceb6a35aaae5141116b544894e4b9b",
+      "size_bytes": 6671
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/benchmark_summary.json",
+      "sha256": "e4c4681868d49e1b61be51492ab197148a89969cbbf7ba7098551b7ee362d2f8",
+      "size_bytes": 9716
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/feasibility_audit.md",
+      "sha256": "23300a0f6e0de1fb73c11d8d0a971e365c47c385fcb03f67f118d89cf50fa06a",
+      "size_bytes": 8710
+    }
+  ]
+}
