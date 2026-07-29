@@ -603,7 +603,7 @@ def dominant_budgets(
         & core["analysis_split"].eq(analysis_split)
         & core["comparison_axis"].eq("same_budget")
         & core["policy"].eq(policy)
-        & core["requested_budget"].isin(OPERATING_BUDGETS)
+        & core["requested_budget"].isin(FIXED_BUDGETS)
     ].copy()
     dominant = rows.loc[
         rows["delta_corrected_selected"].ge(0)
@@ -930,6 +930,10 @@ def build_report(
                     f"{int(row['comparator_net_selected'])}"
                 ),
                 int(row["delta_net_selected"]),
+                (
+                    f"[{format_metric(row['net_difference_ci_lower'])}, "
+                    f"{format_metric(row['net_difference_ci_upper'])}]"
+                ),
             ]
         )
 
@@ -1043,6 +1047,11 @@ def build_report(
             "确认或更复杂训练。"
         ),
     }
+    aptos_reproduction = (
+        f"{aptos_reproduced}/{aptos_prequalified}"
+        if aptos_prequalified
+        else "不适用（0 条开发预筛路线）"
+    )
     return "\n".join(
         [
             "# OphAgent 预咨询选择性会诊方法研究 v0.1",
@@ -1065,14 +1074,14 @@ def build_report(
             "",
             "## 研究设计",
             "",
-            "- 主分析固定为 DeepDRiD 原生 `keepfit_cfp→flair`，按患者分组；"
-            "- 其余 DeepDRiD 原生路线只做开发预筛后的异质性分析；"
-            "- APTOS 仅在确认重复排除后的图像级队列做敏感性分析；"
-            "- DeepDRiD 外部迁移因缺少同域开发折而排除，未在冻结结果上拟合；"
-            "- 两个 L2 逻辑回归分别预测 corrected 与 introduced；无调参搜索；"
+            "- 主分析固定为 DeepDRiD 原生 `keepfit_cfp→flair`，按患者分组；",
+            "- 其余 DeepDRiD 原生路线只做开发预筛后的异质性分析；",
+            "- APTOS 仅在确认重复排除后的图像级队列做敏感性分析；",
+            "- DeepDRiD 外部迁移因缺少同域开发折而排除，未在冻结结果上拟合；",
+            "- 两个 L2 逻辑回归分别预测 corrected 与 introduced；无调参搜索；",
             "- 双模型策略先取预测 introduced 风险最低的 2×预算安全池，再按"
-            " predicted corrected 排序；没有事后加权综合分数；"
-            "- 开发预测采用嵌套分组交叉拟合；回顾性预测只使用完整开发折拟合。"
+            " predicted corrected 排序；没有事后加权综合分数；",
+            "- 开发预测采用嵌套分组交叉拟合；回顾性预测只使用完整开发折拟合。",
             "",
             "## 固定主路线：相同 Expert 预算",
             "",
@@ -1085,12 +1094,17 @@ def build_report(
                     "introduced 方法/基线",
                     "net 方法/基线",
                     "Δnet",
+                    "Δnet 95% CI",
                 ],
             ),
             "",
-            "预算 0.30 的患者配对 bootstrap Δnet 95% 区间："
-            f"[{format_metric(primary_rows.loc[primary_rows['requested_budget'].eq(0.30), 'net_difference_ci_lower'].iloc[0])}, "
-            f"{format_metric(primary_rows.loc[primary_rows['requested_budget'].eq(0.30), 'net_difference_ci_upper'].iloc[0])}]。",
+            "5% 与 20% 预算点分别得到 Δnet +4 与 +8，但患者配对区间均跨 "
+            "0；5% 不属于预声明的决策预算，20% 又少保留 1 个 corrected，"
+            "因此都不满足“corrected 不降低且 introduced 不增加”的支配条件。",
+            "",
+            "冻结 v1.1 在 30% 预算为 corrected 25、introduced 18、net 7；"
+            "双模型为 22、17、5。开发 OOF 锁定的更强 margin 基线为 "
+            "30、22、8。",
             "",
             "## 固定主路线：模型可识别性",
             "",
@@ -1100,7 +1114,9 @@ def build_report(
             ),
             "",
             "条件 AUROC 用于区分真正的 Expert 特异信号与一般 Scout 错误检测，"
-            "不作为临床安全终点。",
+            "不作为临床安全终点。introduced 条件 AUROC 从开发 OOF 0.626 "
+            "外推至 0.705，但 harm-only 排序为降低错误牺牲了过多 corrected，"
+            "未达到 HARM_ONLY_GO 的净效益约束。",
             "",
             "## 固定主路线：由开发 OOF 锁定的 introduced 风险上限",
             "",
@@ -1127,8 +1143,8 @@ def build_report(
             f"- 回顾性复现覆盖 Scout {evidence['reproduced_distinct_scout_count']} "
             f"种、Expert {evidence['reproduced_distinct_expert_count']} 种；",
             f"- APTOS 图像级敏感性：开发预筛通过 {aptos_prequalified}/90，"
-            f"回顾性复现 {aptos_reproduced}/{aptos_prequalified or 0}；",
-            "- APTOS 无患者/眼别标识，不能把图像级稳定性解释为患者级泛化。"
+            f"回顾性复现 {aptos_reproduction}；",
+            "- APTOS 无患者/眼别标识，不能把图像级稳定性解释为患者级泛化。",
             "",
             "## 失败边界",
             "",
@@ -1137,7 +1153,7 @@ def build_report(
             "治疗获益或最终诊断；",
             "- 路线共享病例和模型，90 条路线不能当作 90 个独立临床样本；",
             "- 当前特征没有真实图像质量、多模态或临床资料；",
-            "- 更复杂模型只有在独立患者级确认集与足够事件数就绪后才有意义。"
+            "- 更复杂模型只有在独立患者级确认集与足够事件数就绪后才有意义。",
             "",
             "## 追溯",
             "",
@@ -1146,7 +1162,7 @@ def build_report(
             f"- 输入 Benchmark manifest SHA256："
             f"`{benchmark_audit['manifest_sha256']}`",
             f"- 输入病例表 SHA256：`{benchmark_audit['case_table_sha256']}`",
-            "- 眼底模型训练/推理：未执行；冻结预测资产：未修改。"
+            "- 眼底模型训练/推理：未执行；冻结预测资产：未修改。",
             "",
         ]
     )
