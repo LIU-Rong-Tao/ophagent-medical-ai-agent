@@ -17,6 +17,28 @@ PROFILE_PATH = (
     / "experiments/opening_risk_routing_closure/configs/protocols"
     / "model_hub_task_profiles_v2.json"
 )
+MISSING_CLINICAL_VALUE_PREFIXES = ("未提供", "未采集", "未知", "不详")
+MISSING_CLINICAL_VALUES = {
+    "",
+    "未记录",
+    "暂无",
+    "无资料",
+    "n/a",
+    "na",
+    "none",
+    "null",
+    "unknown",
+    "not provided",
+}
+
+
+def _is_present_clinical_value(value: Any) -> bool:
+    if not isinstance(value, (str, int, float)):
+        return False
+    normalized = str(value).strip()
+    if normalized.casefold() in MISSING_CLINICAL_VALUES:
+        return False
+    return not normalized.startswith(MISSING_CLINICAL_VALUE_PREFIXES)
 
 
 @dataclass(frozen=True)
@@ -32,7 +54,7 @@ class ClinicalFieldSpec:
     def view(self, metadata: dict[str, Any]) -> dict[str, str]:
         for key in self.metadata_keys:
             value = metadata.get(key)
-            if isinstance(value, (str, int, float)) and str(value).strip():
+            if _is_present_clinical_value(value):
                 return {
                     "label": self.label,
                     "value": str(value).strip(),
@@ -87,7 +109,7 @@ _DR_CLINICAL_PROFILE = ClinicalAssistProfile(
     result_heading="糖尿病视网膜病变影像分级提示",
     evidence_label="彩色眼底照片（CFP）",
     model_scope=(
-        "当前模型只分析单张 CFP 的 DR 影像分级；不评估视力、"
+        "本次结果仅基于单张 CFP 的 DR 影像分级；不评估视力、"
         "黄斑厚度或液体，也不替代双眼散瞳检查。"
     ),
     review_prompt=(
@@ -131,7 +153,7 @@ _GLAUCOMA_CLINICAL_PROFILE = ClinicalAssistProfile(
     result_heading="青光眼相关眼底影像提示",
     evidence_label="彩色眼底照片（CFP）",
     model_scope=(
-        "当前模型只分析 CFP；单张眼底照片不能确认青光眼，"
+        "本次结果仅基于 CFP；单张眼底照片不能确认青光眼，"
         "也不能反映眼压、视野功能或视网膜神经纤维层厚度。"
     ),
     review_prompt=(

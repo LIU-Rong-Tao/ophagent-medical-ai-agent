@@ -21,6 +21,7 @@ from app.model_hub_assist import (
     run_frozen_assist,
     run_live_assist,
     select_live_scout_artifact,
+    source_matches_selection,
 )
 from app.model_hub_task_adapters import task_adapter_for
 from app.model_hub_review import ReviewCase
@@ -133,6 +134,28 @@ def test_browser_session_isolates_feedback_state_and_remains_idempotent() -> Non
     assert len(normalize_assist_session("invalid token")) == 16
 
 
+def test_source_switch_does_not_restore_the_other_source_result() -> None:
+    assert source_matches_selection("上传 CFP", assist.SOURCE_LIVE) is True
+    assert (
+        source_matches_selection(
+            "选择冻结脱敏病例",
+            assist.SOURCE_FROZEN,
+        )
+        is True
+    )
+    assert (
+        source_matches_selection("上传 CFP", assist.SOURCE_FROZEN)
+        is False
+    )
+    assert (
+        source_matches_selection(
+            "选择冻结脱敏病例",
+            assist.SOURCE_LIVE,
+        )
+        is False
+    )
+
+
 def test_live_scout_is_chosen_from_unified_capability_index() -> None:
     context = _tool_context(
         [
@@ -182,7 +205,7 @@ def test_live_result_states_real_scout_and_rule_baseline_boundary() -> None:
     assert view["source_mode"] == "LIVE_INFERENCE"
     assert view["scout_real_run"] is True
     assert view["frozen_second_opinion_used"] is False
-    assert view["case_handling"] == "转人工复核"
+    assert view["case_handling"] == "现有证据不足，需人工复核"
     assert "现有规则基线" in view["reason"]
     assert "Expert 路由" in view["reason"]
     clinical = view["clinical_context"]
@@ -193,11 +216,14 @@ def test_live_result_states_real_scout_and_rule_baseline_boundary() -> None:
         for item in clinical["fields"]
     )
     markup = assist._result_html(view)
-    assert "临床资料完整性" in markup
+    assert "本次实际使用的资料" in markup
+    assert "可选补充证据（暂未接入）" in markup
     assert "最佳矫正视力" in markup
     assert "黄斑 OCT" in markup
-    assert "缺失项不会由模型猜测" in markup
+    assert "本次结果仅基于当前展示的 CFP 证据" in markup
     assert "LIVE_INFERENCE" in markup
+    assert "查看本次结果来源与系统处理说明" not in markup
+    assert "Scout 是否真实运行" not in markup
 
 
 def test_task_adapter_injects_glaucoma_context_without_fabricating_values() -> None:
@@ -213,6 +239,19 @@ def test_task_adapter_injects_glaucoma_context_without_fabricating_values() -> N
     assert by_label["OCT RNFL / GCC"]["value"] == "未提供"
     assert by_label["标准自动视野"]["value"] == "未提供"
 
+    sentinel_missing = profile.view(
+        {"IOP": "未提供", "cdr": "未知"},
+        image_count=1,
+    )
+    sentinel_by_label = {
+        item["label"]: item for item in sentinel_missing["fields"]
+    }
+    assert sentinel_by_label["眼压（含测量时间）"]["status"] == "missing"
+    assert (
+        sentinel_by_label["杯盘比 / 视盘结构"]["status"]
+        == "not_assessed"
+    )
+
     supplied = profile.view(
         {"IOP": "右眼 18 mmHg", "cdr": "0.7"},
         image_count=1,
@@ -227,14 +266,24 @@ def test_task_adapter_injects_glaucoma_context_without_fabricating_values() -> N
 @pytest.mark.parametrize(
     ("action", "expert_used", "expected_handling", "expected_source"),
     [
-        ("KEEP_SCOUT", False, "保留 Scout 输出", "冻结 Scout 输出"),
+        (
+            "KEEP_SCOUT",
+            False,
+            "当前结果交由医生复核",
+            "冻结 Scout 输出",
+        ),
         (
             "REQUEST_EXPERT",
             True,
-            "请求第二意见",
+            "历史流程采用第二模型复核",
             "冻结 Expert 第二意见",
         ),
-        ("REFER_TO_HUMAN", False, "转人工复核", "冻结 Scout 输出"),
+        (
+            "REFER_TO_HUMAN",
+            False,
+            "现有证据不足，需人工复核",
+            "冻结 Scout 输出",
+        ),
     ],
 )
 def test_frozen_result_card_covers_all_three_actions(

@@ -379,11 +379,13 @@ def inject_model_hub_css() -> None:
         .d1-clinical-summary small{{display:block;margin-bottom:.3rem;color:#748396;font-size:.69rem;font-weight:750}}
         .d1-clinical-summary b{{display:block;color:#17354b;font-size:1rem;line-height:1.4}}
         .d1-clinical-summary p{{margin:.35rem 0 0;color:#4c6074;font-size:.8rem;line-height:1.65}}
+        .d1-source-note{{margin:.9rem 1.2rem 0;padding:.7rem .8rem;border:1px solid #dbe4ec;border-left:4px solid #6d83a0;border-radius:7px;background:#f8fafc;color:#526579;font-size:.75rem;line-height:1.6}}
         .d1-clinical-block{{padding:1.05rem 1.2rem 1.15rem;background:#fff}}
         .d1-clinical-title{{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:.7rem}}
         .d1-clinical-title b{{color:#17354b;font-size:.9rem}}
         .d1-clinical-title span{{color:#758498;font-size:.7rem}}
-        .d1-clinical-grid{{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.6rem}}
+        .d1-clinical-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem}}
+        .d1-clinical-grid.pending{{grid-template-columns:repeat(4,minmax(0,1fr))}}
         .d1-clinical-item{{min-width:0;padding:.78rem .78rem .72rem;border:1px solid #e0e7ed;border-top:3px solid #c0cad4;border-radius:9px;background:#fbfcfd}}
         .d1-clinical-item.provided{{border-top-color:#0f8a78;background:#f5fbf9}}
         .d1-clinical-item.missing{{border-top-color:#d88b18;background:#fffaf1}}
@@ -396,9 +398,13 @@ def inject_model_hub_css() -> None:
         .d1-clinical-item.not_assessed .d1-clinical-item-head span{{background:#e5e8f2;color:#506187}}
         .d1-clinical-item p{{margin:.48rem 0 .38rem;color:#253b50;font-size:.76rem;font-weight:720;line-height:1.45;overflow-wrap:anywhere}}
         .d1-clinical-item small{{display:block;color:#6d7d8e;font-size:.66rem;line-height:1.5}}
-        .d1-provenance{{margin:0 1.2rem 1rem;border:1px solid #dfe6ec;border-radius:8px;background:#fbfcfd}}
-        .d1-provenance summary{{cursor:pointer;padding:.72rem .82rem;color:#53667a;font-size:.74rem;font-weight:760;list-style-position:inside}}
-        .d1-provenance[open] summary{{border-bottom:1px solid #e3e9ee}}
+        .d1-optional-evidence{{margin:0 1.2rem 1rem;border:1px solid #e0e6ec;border-radius:8px;background:#fbfcfd}}
+        .d1-optional-evidence summary{{display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer;padding:.78rem .85rem;color:#44596d;list-style-position:inside}}
+        .d1-optional-evidence summary>div{{display:inline-flex;flex-direction:column;gap:.15rem;vertical-align:middle}}
+        .d1-optional-evidence summary b{{font-size:.78rem}}
+        .d1-optional-evidence summary span,.d1-optional-evidence summary>small{{color:#748396;font-size:.67rem;font-weight:500}}
+        .d1-optional-evidence[open] summary{{border-bottom:1px solid #e3e9ee}}
+        .d1-optional-evidence-body{{padding:.85rem}}
         .d1-result-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-bottom:1px solid #e7edf2}}
         .d1-result-grid>div{{min-width:0;padding:1rem 1.15rem;border-right:1px solid #e7edf2;border-bottom:1px solid #e7edf2}}
         .d1-result-grid>div:nth-child(3n){{border-right:0}}
@@ -425,11 +431,11 @@ def inject_model_hub_css() -> None:
         [data-testid="stExpander"]{{border-color:var(--hub-line);border-radius:5px;background:#fff}}
         [data-testid="stFileUploader"] section{{border:1px dashed #8fa2b6;border-radius:5px;background:#fbfcfe}}
         div[data-testid="stAlert"]{{border-radius:4px}}
-        @media(max-width:1100px){{.hub-audit-kpis{{grid-template-columns:repeat(3,minmax(0,1fr))}}.hub-audit-kpis.compact{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-overview-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow-step:nth-child(2){{border-right:0}}.d1-clinical-grid{{grid-template-columns:repeat(3,minmax(0,1fr))}}}}
+        @media(max-width:1100px){{.hub-audit-kpis{{grid-template-columns:repeat(3,minmax(0,1fr))}}.hub-audit-kpis.compact{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-overview-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow{{grid-template-columns:repeat(2,minmax(0,1fr))}}.hub-flow-step:nth-child(2){{border-right:0}}.d1-clinical-grid.pending{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
         @media(max-width:900px){{.hub-page-title{{font-size:1.65rem!important}}.hub-page-copy{{font-size:.8rem}}}}
-        @media(max-width:900px){{.review-route-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.agent-decision-strip{{grid-template-columns:1fr}}.agent-decision-step{{border-right:0;border-bottom:1px solid var(--hub-line)}}.agent-decision-step:last-child{{border-bottom:0}}.d1-progress-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.d1-result-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.d1-result-grid>div,.d1-result-grid>div:nth-child(3n){{border-right:1px solid #e7edf2;border-bottom:1px solid #e7edf2}}.d1-result-grid>div:nth-child(2n){{border-right:0}}.d1-result-grid>div:nth-last-child(-n+2){{border-bottom:0}}.d1-clinical-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
+        @media(max-width:900px){{.review-route-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.agent-decision-strip{{grid-template-columns:1fr}}.agent-decision-step{{border-right:0;border-bottom:1px solid var(--hub-line)}}.agent-decision-step:last-child{{border-bottom:0}}.d1-progress-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.d1-result-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.d1-result-grid>div,.d1-result-grid>div:nth-child(3n){{border-right:1px solid #e7edf2;border-bottom:1px solid #e7edf2}}.d1-result-grid>div:nth-child(2n){{border-right:0}}.d1-result-grid>div:nth-last-child(-n+2){{border-bottom:0}}}}
         @media(max-width:760px){{.main .block-container{{padding:1.15rem .9rem 3rem}}.hub-page-head{{align-items:flex-start;flex-direction:column}}.hub-page-context{{white-space:normal}}.hub-brand{{align-items:flex-start}}.hub-strip,.hub-mini-strip,.hub-overview-grid,.hub-audit-kpis,.hub-audit-kpis.compact{{grid-template-columns:1fr 1fr}}.hub-flow,.hub-process{{grid-template-columns:1fr}}.hub-flow-step,.hub-process-item{{border-right:0;border-bottom:1px solid var(--hub-line)}}.proxy-event-cards{{grid-template-columns:1fr}}.case-result-grid{{grid-template-columns:1fr}}.model-entry-row,.model-detail-grid{{grid-template-columns:1fr}}.review-offline-banner,.agent-decision-head,.d1-result-head,.d1-feedback-title,.d1-clinical-title{{align-items:flex-start;flex-direction:column}}.d1-result-badges{{justify-content:flex-start}}.d1-clinical-summary{{grid-template-columns:1fr}}.d1-clinical-summary>div+div{{border-left:0;border-top:1px solid #e4ebf0}}}}
-        @media(max-width:560px){{.d1-progress-grid,.d1-result-grid,.d1-clinical-grid{{grid-template-columns:1fr}}.d1-result-grid>div,.d1-result-grid>div:nth-child(2n),.d1-result-grid>div:nth-child(3n){{border-right:0;border-bottom:1px solid #e7edf2}}.d1-result-grid>div:last-child{{border-bottom:0}}.d1-progress-step b{{white-space:normal}}}}
+        @media(max-width:560px){{.d1-progress-grid,.d1-result-grid,.d1-clinical-grid,.d1-clinical-grid.pending{{grid-template-columns:1fr}}.d1-result-grid>div,.d1-result-grid>div:nth-child(2n),.d1-result-grid>div:nth-child(3n){{border-right:0;border-bottom:1px solid #e7edf2}}.d1-result-grid>div:last-child{{border-bottom:0}}.d1-progress-step b{{white-space:normal}}.d1-optional-evidence summary{{align-items:flex-start;flex-direction:column}}}}
         </style>
         """,
         unsafe_allow_html=True,

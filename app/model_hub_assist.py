@@ -78,9 +78,9 @@ SCENARIO_LABELS = {
     ),
 }
 ACTION_LABELS = {
-    "KEEP_SCOUT": "保留 Scout 输出",
-    "REQUEST_EXPERT": "请求第二意见",
-    "REFER_TO_HUMAN": "转人工复核",
+    "KEEP_SCOUT": "当前结果交由医生复核",
+    "REQUEST_EXPERT": "历史流程采用第二模型复核",
+    "REFER_TO_HUMAN": "现有证据不足，需人工复核",
 }
 PROGRESS_LABELS = (
     "图像与任务检查",
@@ -158,6 +158,15 @@ def assist_scenario_scope(
     if scenario_label:
         parts.append(scenario_label)
     return ":".join(parts)
+
+
+def source_matches_selection(selection: str, source_mode: str) -> bool:
+    return (
+        selection == "上传 CFP" and source_mode == SOURCE_LIVE
+    ) or (
+        selection == "选择冻结脱敏病例"
+        and source_mode == SOURCE_FROZEN
+    )
 
 
 def persist_uploaded_cfp(
@@ -569,21 +578,36 @@ def assist_result_view_model(run: AssistRun) -> dict[str, Any]:
             "现有规则基线将结果交由医生复核。"
         )
         adopted_source = "真实 Scout 输出"
+        source_boundary = (
+            "本次仅对上传的 CFP 运行初筛模型，未调用第二模型。"
+        )
     elif action == "REQUEST_EXPERT" and expert_used:
         reason = (
             "历史冻结策略请求第二意见；系统只读载入当时的冻结 Expert "
             "结果，不代表实时专家会诊。"
         )
         adopted_source = "冻结 Expert 第二意见"
+        source_boundary = (
+            "这是历史脱敏病例回放，展示的是当时保存的第二模型结果；"
+            "本次没有重新运行模型，也不是在线专家会诊。"
+        )
     elif action == "KEEP_SCOUT":
         reason = "历史冻结策略未请求第二意见，沿用冻结 Scout 输出。"
         adopted_source = "冻结 Scout 输出"
+        source_boundary = (
+            "这是历史脱敏病例回放，展示的是当时保存的模型结果；"
+            "本次没有重新运行模型。"
+        )
     else:
         reason = (
             "现有规则基线未通过资格或预算限制，未调用 Expert，"
             "结果转人工复核。"
         )
         adopted_source = "冻结 Scout 输出"
+        source_boundary = (
+            "这是历史脱敏病例回放。现有证据不足，系统没有追加"
+            "第二模型，本次也没有重新运行模型。"
+        )
     feedback = dict(state.report.get("research_feedback", {}))
     return {
         "failed": False,
@@ -603,6 +627,7 @@ def assist_result_view_model(run: AssistRun) -> dict[str, Any]:
         "execution_label": "状态恢复" if run.replayed else "新执行",
         "feedback": feedback,
         "clinical_context": clinical_context,
+        "source_boundary": source_boundary,
     }
 
 
@@ -629,43 +654,61 @@ def _result_html(view: dict[str, Any]) -> str:
         "live" if view["source_mode"] == SOURCE_LIVE else "frozen"
     )
     source_badge = (
-        "LIVE_INFERENCE"
+        "本次实时初筛 · LIVE_INFERENCE"
         if view["source_mode"] == SOURCE_LIVE
-        else "FROZEN_REPLAY"
-    )
-    scout_text = (
-        "是 · 本次真实运行" if view["scout_real_run"] else "否 · 冻结概率回放"
-    )
-    expert_text = (
-        "是 · 历史冻结第二意见"
-        if view["frozen_second_opinion_used"]
-        else "否"
+        else "历史结果回放 · FROZEN_REPLAY"
     )
     clinical = dict(view["clinical_context"])
-    evidence_items = [
-        {
-            "label": "当前影像证据",
-            "value": str(clinical["current_evidence"]),
-            "status": "provided",
-            "status_label": "已提供",
-            "note": str(clinical["quality_boundary"]),
-        },
-        *list(clinical["fields"]),
+    current_evidence = {
+        "label": "当前影像证据",
+        "value": str(clinical["current_evidence"]),
+        "status": "provided",
+        "status_label": "已提供",
+        "note": str(clinical["quality_boundary"]),
+    }
+    clinical_fields = list(clinical["fields"])
+    provided_items = [
+        current_evidence,
+        *[
+            item
+            for item in clinical_fields
+            if item["status"] == "provided"
+        ],
     ]
-    evidence_html = "".join(
-        '<div class="d1-clinical-item '
-        f'{html.escape(str(item["status"]))}">'
-        '<div class="d1-clinical-item-head">'
-        f'<b>{html.escape(str(item["label"]))}</b>'
-        f'<span>{html.escape(str(item["status_label"]))}</span></div>'
-        f'<p>{html.escape(str(item["value"]))}</p>'
-        f'<small>{html.escape(str(item["note"]))}</small></div>'
-        for item in evidence_items
-    )
+    pending_items = [
+        item
+        for item in clinical_fields
+        if item["status"] != "provided"
+    ]
+
+    def evidence_html(items: list[dict[str, Any]]) -> str:
+        return "".join(
+            '<div class="d1-clinical-item '
+            f'{html.escape(str(item["status"]))}">'
+            '<div class="d1-clinical-item-head">'
+            f'<b>{html.escape(str(item["label"]))}</b>'
+            f'<span>{html.escape(str(item["status_label"]))}</span></div>'
+            f'<p>{html.escape(str(item["value"]))}</p>'
+            f'<small>{html.escape(str(item["note"]))}</small></div>'
+            for item in items
+        )
+
+    pending_section = ""
+    if pending_items:
+        pending_section = (
+            '<details class="d1-optional-evidence"><summary><div>'
+            "<b>可选补充证据（暂未接入）</b>"
+            "<span>这些资料未参与本次分析，也不代表已完成多模态分析。</span>"
+            "</div>"
+            f'<small>{len(pending_items)} 项待补充</small></summary>'
+            '<div class="d1-optional-evidence-body">'
+            f'<div class="d1-clinical-grid pending">'
+            f'{evidence_html(pending_items)}</div></div></details>'
+        )
     result_prefix = (
         "CFP 模型提示"
         if view["source_mode"] == SOURCE_LIVE
-        else "冻结回放结果"
+        else "历史病例回放"
     )
     return (
         '<section class="d1-result-card">'
@@ -674,8 +717,9 @@ def _result_html(view: dict[str, Any]) -> str:
         f'{html.escape(str(clinical["result_heading"]))}</span>'
         f'<h2>{html.escape(result_prefix)}：'
         f'{html.escape(view["auxiliary_result"])}</h2>'
-        '<p class="d1-result-subtitle">本结果需结合临床资料与人工阅片复核。</p>'
-        "</div>"
+        '<p class="d1-result-subtitle">'
+        "本次结果仅基于当前展示的 CFP 证据，需由医生结合临床资料复核。"
+        "</p></div>"
         '<div class="d1-result-badges">'
         f'<span class="d1-source-badge {source_class}">{source_badge}</span>'
         f'<span class="d1-run-badge">{html.escape(view["execution_label"])}</span>'
@@ -684,32 +728,20 @@ def _result_html(view: dict[str, Any]) -> str:
         '<div><small>本例处理</small>'
         f'<b>{html.escape(view["case_handling"])}</b>'
         f'<p>{html.escape(str(clinical["review_prompt"]))}</p></div>'
-        '<div><small>当前证据边界</small>'
+        '<div><small>本次分析能回答什么</small>'
         f'<p>{html.escape(str(clinical["model_scope"]))}</p></div>'
         '</div>'
+        '<div class="d1-source-note">'
+        f'{html.escape(str(view["source_boundary"]))}</div>'
         '<div class="d1-clinical-block">'
-        '<div class="d1-clinical-title"><b>临床资料完整性</b>'
-        "<span>只显示实际收到的资料；缺失项不会由模型猜测。</span></div>"
-        f'<div class="d1-clinical-grid">{evidence_html}</div></div>'
-        '<details class="d1-provenance"><summary>'
-        "查看本次结果来源与系统处理说明</summary>"
-        '<div class="d1-result-grid">'
-        '<div><small>辅助结果</small>'
-        f'<b>{html.escape(view["auxiliary_result"])}</b></div>'
-        '<div><small>Scout 是否真实运行</small>'
-        f'<b>{html.escape(scout_text)}</b></div>'
-        '<div><small>是否使用冻结第二意见</small>'
-        f'<b>{html.escape(expert_text)}</b></div>'
-        '<div><small>最终采用结果</small>'
-        f'<b>{html.escape(view["adopted_source"])}</b></div>'
-        '<div><small>执行来源</small>'
-        f'<b>{html.escape(view["source_label"])}</b></div>'
-        '<div><small>规则基线说明</small>'
-        f'<b>{html.escape(view["reason"])}</b></div>'
-        "</div></details>"
+        '<div class="d1-clinical-title"><b>本次实际使用的资料</b>'
+        "<span>只显示系统实际收到并用于本次分析的资料。</span></div>"
+        '<div class="d1-clinical-grid primary">'
+        f'{evidence_html(provided_items)}</div></div>'
+        f"{pending_section}"
         '<div class="d1-safety-note">'
         "本结果仅用于研究型辅助分析，不是最终临床诊断；"
-        "现有规则基线不预测本病例使用 Expert 后将获益或受害。"
+        "当前规则不判断增加第二模型后本病例一定获益或受害。"
         "</div></section>"
     )
 
@@ -931,7 +963,9 @@ def render_one_click_assist() -> None:
                     )
         except (RuntimeError, ValueError) as exc:
             st.error(str(exc))
-    elif query_source == SOURCE_LIVE:
+    elif source_matches_selection(mode, query_source) and (
+        query_source == SOURCE_LIVE
+    ):
         stored = restore_uploaded_cfp(query_token)
         if stored is None:
             st.warning("上一例上传图像缓存不可用，请重新上传后开始分析。")
@@ -944,7 +978,9 @@ def render_one_click_assist() -> None:
                 )
             except (RuntimeError, ValueError) as exc:
                 st.error(f"状态恢复失败：{exc}")
-    elif query_source == SOURCE_FROZEN:
+    elif source_matches_selection(mode, query_source) and (
+        query_source == SOURCE_FROZEN
+    ):
         restored_option = options_by_key.get(query_token)
         if restored_option is None:
             st.warning("上一例冻结病例不可用，请重新选择后开始分析。")
