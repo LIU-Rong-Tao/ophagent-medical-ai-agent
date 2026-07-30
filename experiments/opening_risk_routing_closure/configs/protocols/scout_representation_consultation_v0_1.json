@@ -1,0 +1,139 @@
+{
+  "schema_version": "ophagent.scout_representation_consultation_protocol.v0_1",
+  "protocol_id": "scout_representation_consultation_v0_1",
+  "purpose": "preconsultation_expert_complementarity_from_same_forward_scout_representation",
+  "input_benchmark": {
+    "protocol_id": "help_or_harm_case_benchmark_v0_1",
+    "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+    "decision_required": [
+      "GO",
+      "CONDITIONAL_GO"
+    ],
+    "frozen_assets_modified": false
+  },
+  "input_contract": {
+    "benchmark_protocol_id": "help_or_harm_case_benchmark_v0_1",
+    "benchmark_protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+    "route_screening_protocol_sha256": "57ba5c6490bc6f44b2cc78b43b8e0e1e7a3513eb63402874eca5d06071aae8a2",
+    "qualified_routes_sha256": "c27b97d4a7728b175cdf820611168095019472b1404ac42c55c7292ba3b8bc0c",
+    "prior_simple_gate_results_sha256": "a4fc7dad020b28b044565781fc8f5c119b90e0e510fff27b788bb082d7d5a134",
+    "qualified_route_ids": [
+      "aptos_dr_5class::flair__to__swin_tiny",
+      "aptos_dr_5class::retfound_green__to__retfound_cfp",
+      "aptos_dr_5class::retfound_green__to__swin_tiny"
+    ],
+    "route_selection_may_read_retrospective_evaluation": false
+  },
+  "analysis_scope": {
+    "task_id": "aptos_dr_5class",
+    "dataset_id": "APTOS2019",
+    "development_split": "development",
+    "evaluation_split": "retrospective_frozen",
+    "analysis_unit": "exact_image_group_after_confirmed_duplicate_exclusion",
+    "patient_level_claim_allowed": false,
+    "retrospective_only": true,
+    "independent_patient_level_confirmation_required": true
+  },
+  "representation_assets": {
+    "flair": {
+      "representation": "classification_head_input",
+      "dimension": 512,
+      "validation_path": "/training_data/lizekun/ophagent_assets/experiments/help_or_harm/scout_representation_v0_1/flair_validation_representations.npz",
+      "validation_sha256": "b2362072c70f55acfd4297ab09b0282f435c7b13b94360a508cc2f8dc8e56da7",
+      "test_path": "/training_data/lizekun/ophagent_assets/experiments/help_or_harm/scout_representation_v0_1/flair_test_representations.npz",
+      "test_sha256": "2442570b9d8e07d8599728a3360cc8423019c828ebd93014979c4e1b6ff233e2",
+      "one_time_retrospective_forward_required": true,
+      "incremental_online_encoder_forward_calls": 0
+    },
+    "retfound_green": {
+      "representation": "classification_head_input",
+      "dimension": 384,
+      "validation_path": "/training_data/lizekun/ophagent_assets/experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_val_embeddings.csv",
+      "validation_sha256": "0b62f7ca5c1d7b3fb1e3f5103efbc9a5876a6159d6b63497e563bb4fbdb5b936",
+      "test_path": "/training_data/lizekun/ophagent_assets/experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_test_embeddings.csv",
+      "test_sha256": "648ac4584ce055314f4fb048b40daf27b524a4765e063d9f5e412c8c079451ca",
+      "one_time_retrospective_forward_required": false,
+      "incremental_online_encoder_forward_calls": 0
+    }
+  },
+  "legal_feature_contract": {
+    "allowed": [
+      "same_forward_scout_classification_head_input",
+      "scout_probabilities",
+      "scout_entropy",
+      "scout_margin",
+      "scout_severe_probability_mass",
+      "development_fold_internal_route_history",
+      "development_fold_internal_unlabeled_reference_shift"
+    ],
+    "forbidden": [
+      "current_case_expert_output",
+      "current_case_expert_embedding",
+      "retrospective_evaluation_outcome_for_fit_selection_or_threshold",
+      "dataset_id_as_predictor",
+      "additional_uncosted_scout_forward",
+      "patient_or_private_identifier"
+    ]
+  },
+  "model_contract": {
+    "implementation": "separate_fixed_L2_logistic_for_corrected_and_introduced",
+    "embedding_standardization": "training_fold_only",
+    "pca_components": 32,
+    "pca_whiten": false,
+    "pca_fit_scope": "training_fold_only",
+    "route_profile_fit_scope": "training_fold_only",
+    "development_outer_folds": 5,
+    "safe_pool_multiplier": 2.0,
+    "hyperparameter_search": false,
+    "formal_model_search": false
+  },
+  "comparison_contract": {
+    "curve_budgets": [
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3
+    ],
+    "decision_budgets": [
+      0.1,
+      0.2,
+      0.3
+    ],
+    "same_budget_policies": [
+      "entropy",
+      "margin",
+      "prior_simple_gate",
+      "scout_representation"
+    ],
+    "reference_policies": [
+      "scout_only",
+      "always_expert"
+    ],
+    "strongest_comparator_selection": "development_OOF_only_lexicographic_net_corrected_negative_introduced",
+    "same_budget_requires_equal_call_count": true,
+    "bootstrap_replicates": 1000,
+    "bootstrap_unit": "exact_image_analysis_unit"
+  },
+  "decision_contract": {
+    "allowed": [
+      "REPRESENTATION_GO",
+      "ROUTE_SPECIFIC_GO",
+      "NO_IMPROVEMENT"
+    ],
+    "route_dominance": "corrected_not_lower_and_introduced_not_higher_and_net_strictly_higher_than_development_locked_strongest_comparator",
+    "minimum_dominant_decision_budgets_per_route": 2,
+    "must_include_budget": 0.3,
+    "budget_0_3_paired_net_ci_lower_must_be_nonnegative": true,
+    "REPRESENTATION_GO": "At least two routes with at least two distinct Scout models satisfy the frozen route rule.",
+    "ROUTE_SPECIFIC_GO": "At least one route satisfies the frozen route rule but the multi-Scout rule is not met.",
+    "NO_IMPROVEMENT": "No route satisfies the frozen route rule.",
+    "boundary": "A positive result is retrospective image-level evidence and cannot grant route eligibility."
+  },
+  "required_outputs": [
+    "core_results.csv",
+    "risk_budget_comparison.png",
+    "research_report.md"
+  ]
+}
