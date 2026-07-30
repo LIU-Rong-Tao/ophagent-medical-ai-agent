@@ -1,0 +1,94 @@
+{
+  "schema_version": "ophagent.aptos_high_capability_simple_gate_protocol.v0_1",
+  "protocol_id": "aptos_high_capability_simple_gate_v0_1",
+  "purpose": "same_task_high_capability_scout_expert_complementarity_test",
+  "input_benchmark": {
+    "protocol_id": "help_or_harm_case_benchmark_v0_1",
+    "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+    "decision_required": [
+      "GO",
+      "CONDITIONAL_GO"
+    ],
+    "frozen_assets_modified": false
+  },
+  "analysis_scope": {
+    "task_id": "aptos_dr_5class",
+    "dataset_id": "APTOS2019",
+    "evaluation_design": "aptos_task_adaptation",
+    "route_family": "all_ordered_distinct_model_pairs",
+    "screening_split": "development",
+    "evaluation_split": "retrospective_frozen",
+    "evaluation_may_select_route": false,
+    "evaluation_may_change_threshold": false,
+    "same_task_adaptation_not_cross_dataset_transfer": true,
+    "analysis_unit": "exact_image_group_after_confirmed_duplicate_exclusion",
+    "patient_level_claim_allowed": false,
+    "retrospective_only": true,
+    "independent_confirmation_required": true
+  },
+  "route_screening": {
+    "minimum_scout_accuracy": 0.8,
+    "minimum_expert_accuracy": 0.85,
+    "minimum_expert_accuracy_gain": 0.05,
+    "minimum_corrected_to_introduced_ratio": 1.7,
+    "minimum_corrected_events": 30,
+    "minimum_introduced_events": 20,
+    "minimum_net_events": 20,
+    "n_stability_folds": 5,
+    "minimum_positive_gain_folds": 4,
+    "minimum_nonnegative_net_folds": 4,
+    "maximum_fold_gain_standard_deviation": 0.12,
+    "fold_salt": "aptos_high_capability_simple_gate_v0_1:quality"
+  },
+  "method_contract": {
+    "implementation": "dual_logistic_harm_screened_help",
+    "implementation_source": "app.selective_consultation",
+    "safe_pool_multiplier": 2.0,
+    "minimum_route_events": 10,
+    "development_outer_folds": 5,
+    "hyperparameter_search": false,
+    "current_case_expert_output_allowed": false,
+    "test_fit_or_selection_allowed": false,
+    "dataset_id_as_predictor_allowed": false
+  },
+  "comparison_contract": {
+    "operating_budgets": [
+      0.1,
+      0.2,
+      0.3
+    ],
+    "same_budget_policies": [
+      "entropy",
+      "margin"
+    ],
+    "reference_policies": [
+      "scout_only",
+      "always_expert"
+    ],
+    "v1_1_policy": "report_only_when_selected_route_has_unique_frozen_v1_1_identity",
+    "strongest_comparator_selection": "development_OOF_only_lexicographic_net_corrected_negative_introduced",
+    "same_budget_requires_equal_call_count": true,
+    "bootstrap_replicates": 1000,
+    "bootstrap_unit": "exact_image_analysis_unit"
+  },
+  "decision_contract": {
+    "allowed": [
+      "ROUTE_SPECIFIC_GO",
+      "NO_IMPROVEMENT"
+    ],
+    "route_dominance": "corrected_not_lower_and_introduced_not_higher_and_net_strictly_higher_than_development_locked_comparator",
+    "minimum_dominant_operating_budgets_per_route": 2,
+    "must_include_budget": 0.3,
+    "budget_0_3_paired_net_ci_lower_must_be_nonnegative": true,
+    "minimum_qualified_routes": 2,
+    "minimum_successful_routes": 2,
+    "ROUTE_SPECIFIC_GO": "At least two development-qualified high-capability APTOS routes satisfy the frozen route success rule.",
+    "NO_IMPROVEMENT": "The route-specific success rule is not reproduced on at least two development-qualified high-capability APTOS routes.",
+    "boundary": "A positive label is retrospective image-level research evidence only and cannot grant route eligibility."
+  },
+  "required_outputs": [
+    "qualified_routes.csv",
+    "core_comparison_results.csv",
+    "research_report.md"
+  ]
+}
