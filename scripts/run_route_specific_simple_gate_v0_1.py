@@ -310,8 +310,11 @@ def _annotate_locked_comparators(
 ) -> tuple[pd.DataFrame, dict[tuple[str, float], str]]:
     result = core.copy()
     comparator_map: dict[tuple[str, float], str] = {}
+    result["locked_comparator_policy"] = pd.Series(
+        index=result.index,
+        dtype="object",
+    )
     for column in (
-        "locked_comparator_policy",
         "comparator_corrected_selected",
         "comparator_introduced_selected",
         "comparator_net_selected",
