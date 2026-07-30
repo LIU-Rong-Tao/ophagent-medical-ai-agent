@@ -603,7 +603,7 @@ def dominant_budgets(
         & core["analysis_split"].eq(analysis_split)
         & core["comparison_axis"].eq("same_budget")
         & core["policy"].eq(policy)
-        & core["requested_budget"].isin(FIXED_BUDGETS)
+        & core["requested_budget"].isin(OPERATING_BUDGETS)
     ].copy()
     dominant = rows.loc[
         rows["delta_corrected_selected"].ge(0)
@@ -909,7 +909,7 @@ def build_report(
         & core["analysis_split"].eq("retrospective_evaluation")
         & core["comparison_axis"].eq("same_budget")
         & core["policy"].eq("dual_logistic_harm_screened_help")
-        & core["requested_budget"].isin(OPERATING_BUDGETS)
+        & core["requested_budget"].isin(FIXED_BUDGETS)
     ].sort_values("requested_budget")
     primary_table: list[list[Any]] = []
     for _, row in primary_rows.iterrows():

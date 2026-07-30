@@ -17,6 +17,10 @@ from app.selective_consultation import (
     paired_cluster_bootstrap_difference,
     select_consultations,
 )
+from scripts.run_selective_consultation_method_v0_1 import (
+    dominant_budgets,
+    route_qualifies,
+)
 
 
 def _case_frame(n_cases: int = 100) -> pd.DataFrame:
@@ -273,3 +277,29 @@ def test_safe_pool_multiplier_cannot_be_less_than_one() -> None:
             ),
             safe_pool_multiplier=0.5,
         )
+
+
+def test_decision_dominance_excludes_non_operating_five_percent_budget() -> None:
+    core = pd.DataFrame(
+        {
+            "record_type": ["policy_performance"] * 4,
+            "route_id": ["route-a"] * 4,
+            "analysis_split": ["retrospective_evaluation"] * 4,
+            "comparison_axis": ["same_budget"] * 4,
+            "policy": ["dual_logistic_harm_screened_help"] * 4,
+            "requested_budget": [0.05, 0.10, 0.20, 0.30],
+            "delta_corrected_selected": [0, -1, -1, 0],
+            "delta_introduced_selected": [-1, -1, -1, -1],
+            "delta_net_selected": [1, 0, 0, 1],
+        }
+    )
+
+    dominant = dominant_budgets(
+        core,
+        route_id="route-a",
+        analysis_split="retrospective_evaluation",
+        policy="dual_logistic_harm_screened_help",
+    )
+
+    assert dominant == [0.30]
+    assert route_qualifies(dominant) is False
