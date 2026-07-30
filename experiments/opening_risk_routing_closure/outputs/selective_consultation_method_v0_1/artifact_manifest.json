@@ -1,0 +1,68 @@
+{
+  "schema_version": "ophagent.selective_consultation_artifact_manifest.v0_1",
+  "protocol_id": "preconsultation_selective_consultation_v0_1",
+  "protocol_uri": "repo://experiments/opening_risk_routing_closure/configs/protocols/selective_consultation_method_v0_1.json",
+  "protocol_sha256": "984c5e2b4d8a7b57e21b24120eab8d0b26d4de9dc356bffc5cc09c1b6b84a2ac",
+  "source_commit_sha": "c2d21f5886153a3a27fbddbecccd971fa51aaca3",
+  "generated_at_utc": "2026-07-30T09:21:09+08:00",
+  "decision": "NO_IMPROVEMENT",
+  "decision_evidence": {
+    "primary_route_id": "deepdrid_dr_5class_native::keepfit_cfp__to__flair",
+    "primary_dominant_budgets": [],
+    "primary_budget_0_3_net_difference_ci_lower": -16.0,
+    "primary_harm_only_condition_budgets": [],
+    "primary_conditional_harm_auroc_development_oof": 0.6258081896551724,
+    "primary_conditional_harm_auroc_retrospective": 0.7048115477145148,
+    "deepdrid_native_route_count": 90,
+    "development_prequalified_route_count": 0,
+    "retrospectively_reproduced_route_count": 0,
+    "retrospectively_reproduced_route_ids": [],
+    "reproduced_distinct_scout_count": 0,
+    "reproduced_distinct_expert_count": 0
+  },
+  "input_benchmark": {
+    "manifest_uri": "repo://experiments/opening_risk_routing_closure/outputs/help_or_harm_benchmark_v0_1/artifact_manifest.json",
+    "manifest_sha256": "178dc7979363fa54418e85c90c3f1be0a8dd4db5fef73bd11e77862569209a35",
+    "case_table_sha256": "2a29402027557c7638ac34888fb8e4c2cbbaf8bee09d043cec5ab4e3e42be60f",
+    "route_inventory_sha256": "b683cf46920479938b79ffc9c6cce79591e9618baaa13158841214295de1c9dd",
+    "benchmark_source_commit": "66e0ca67887e95162170dd7a7048722b738b2b03",
+    "benchmark_decision": "CONDITIONAL_GO"
+  },
+  "environment": {
+    "python": "3.10.20",
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.7.2"
+  },
+  "frozen_benchmark_modified": false,
+  "frozen_prediction_assets_modified": false,
+  "ophthalmic_model_training_performed": false,
+  "ophthalmic_model_inference_performed": false,
+  "statistical_control_model_fit_performed": true,
+  "external_api_used": false,
+  "test_used_for_fit_threshold_budget_or_route_selection": false,
+  "retrospective_results_used_for_research_decision": true,
+  "independent_confirmation_required": true,
+  "outputs": [
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/selective_consultation_method_v0_1/core_results.csv",
+      "sha256": "bd641081a02725fba39cc83e88613193a8192005821ceb7e4b71486678387e21",
+      "size_bytes": 9379745
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/selective_consultation_method_v0_1/risk_budget_curve.csv",
+      "sha256": "a25af3307211d4ad61402cb78c85453ce5d3fd199142e808b5455fbc4d6ead76",
+      "size_bytes": 33079101
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/selective_consultation_method_v0_1/failure_case_audit.csv",
+      "sha256": "689e53550c82ad73fbc965eab2921a1e76df753a41542a44fdc2e9b3eadc5236",
+      "size_bytes": 73776
+    },
+    {
+      "uri": "repo://experiments/opening_risk_routing_closure/outputs/selective_consultation_method_v0_1/research_report.md",
+      "sha256": "37ccf64a04fb54e0804953e9070a80242b171fa6aa48e7f39aeb1b142de4a2f4",
+      "size_bytes": 4789
+    }
+  ]
+}
