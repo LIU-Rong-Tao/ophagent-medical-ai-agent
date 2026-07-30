@@ -1,0 +1,140 @@
+{
+  "schema_version": "ophagent.review_result_adoption_feasibility_protocol.v0_1",
+  "protocol_id": "review_result_adoption_feasibility_v0_1",
+  "purpose": "safe_adoption_after_review_model_output_is_available",
+  "input_benchmark": {
+    "protocol_id": "help_or_harm_case_benchmark_v0_1",
+    "protocol_sha256": "de3390a4818629660a58c356af328e7b78d4e07cea0ef0b3bf2a3d37ac1988ea",
+    "decision_required": [
+      "GO",
+      "CONDITIONAL_GO"
+    ],
+    "frozen_assets_modified": false
+  },
+  "frozen_inputs": {
+    "qualified_routes_sha256": "c27b97d4a7728b175cdf820611168095019472b1404ac42c55c7292ba3b8bc0c",
+    "preconsultation_representation_protocol_sha256": "ff9a50b497490399eba91d59ae7a64a38776be826b46da9e41e39c758dbb0e18",
+    "preconsultation_negative_result_sha256": "abc8e0bbe61ea27a2bced5af251af18efd918fffda53a95cb0089400baa04ce6",
+    "qualified_route_ids": [
+      "aptos_dr_5class::flair__to__swin_tiny",
+      "aptos_dr_5class::retfound_green__to__retfound_cfp",
+      "aptos_dr_5class::retfound_green__to__swin_tiny"
+    ]
+  },
+  "analysis_scope": {
+    "task_id": "aptos_dr_5class",
+    "dataset_id": "APTOS2019",
+    "development_split": "development",
+    "evaluation_split": "retrospective_frozen",
+    "analysis_unit": "exact_image_group_after_confirmed_duplicate_exclusion",
+    "patient_level_claim_allowed": false,
+    "human_review_outcome_observed": false,
+    "human_review_primary_interpretation": "deferred_without_assumed_resolution",
+    "retrospective_only": true
+  },
+  "representation_assets": {
+    "flair": {
+      "dimension": 512,
+      "validation_path": "/training_data/lizekun/ophagent_assets/experiments/help_or_harm/scout_representation_v0_1/flair_validation_representations.npz",
+      "validation_sha256": "b2362072c70f55acfd4297ab09b0282f435c7b13b94360a508cc2f8dc8e56da7",
+      "test_path": "/training_data/lizekun/ophagent_assets/experiments/help_or_harm/scout_representation_v0_1/flair_test_representations.npz",
+      "test_sha256": "2442570b9d8e07d8599728a3360cc8423019c828ebd93014979c4e1b6ff233e2"
+    },
+    "retfound_green": {
+      "dimension": 384,
+      "validation_path": "/training_data/lizekun/ophagent_assets/experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_val_embeddings.csv",
+      "validation_sha256": "0b62f7ca5c1d7b3fb1e3f5103efbc9a5876a6159d6b63497e563bb4fbdb5b936",
+      "test_path": "/training_data/lizekun/ophagent_assets/experiments/v0_8_0_greenscout_feasibility/green_embeddings/retfound_green_test_embeddings.csv",
+      "test_sha256": "648ac4584ce055314f4fb048b40daf27b524a4765e063d9f5e412c8c079451ca"
+    }
+  },
+  "feature_contract": {
+    "allowed": [
+      "scout_full_probabilities",
+      "review_full_probabilities",
+      "confidence_entropy_and_margin",
+      "probability_disagreement",
+      "predicted_grade_transition",
+      "development_fold_internal_transition_profile",
+      "existing_same_forward_scout_representation"
+    ],
+    "forbidden": [
+      "current_case_ground_truth",
+      "retrospective_evaluation_outcome_for_fit_selection_or_threshold",
+      "patient_or_private_identifier",
+      "new_fundus_model_inference",
+      "free_text_agent",
+      "llm_or_rl"
+    ]
+  },
+  "model_contract": {
+    "implementation": "fixed_multinomial_L2_logistic",
+    "outcome_states": [
+      "both_correct",
+      "corrected",
+      "introduced",
+      "both_wrong"
+    ],
+    "embedding_standardization": "training_fold_only",
+    "pca_components": 32,
+    "pca_fit_scope": "training_fold_only",
+    "transition_profile_fit_scope": "training_fold_only",
+    "development_outer_folds": 5,
+    "hyperparameter_search": false
+  },
+  "action_contract": {
+    "allowed_actions": [
+      "KEEP_SCOUT",
+      "ADOPT_REVIEW_RESULT",
+      "HUMAN_REVIEW"
+    ],
+    "automatic_action": "choose_the_lower_predicted_error_between_scout_and_review",
+    "human_review_ranking": "highest_predicted_error_after_automatic_action",
+    "human_review_resolution_assumed_correct": false
+  },
+  "comparison_contract": {
+    "human_review_fractions": [
+      0.05,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "decision_fractions": [
+      0.1,
+      0.2,
+      0.3
+    ],
+    "reference_endpoints": [
+      "keep_scout",
+      "always_adopt_review"
+    ],
+    "decision_comparators": [
+      "higher_confidence",
+      "soft_vote"
+    ],
+    "baseline_human_review_rule": "lowest_final_prediction_confidence",
+    "strongest_comparator_selection": "development_OOF_only_lexicographic_net_corrected_negative_introduced_negative_dangerous",
+    "same_human_review_count_required": true,
+    "bootstrap_replicates": 1000,
+    "bootstrap_unit": "exact_image_analysis_unit"
+  },
+  "decision_contract": {
+    "allowed": [
+      "ADOPTION_GO",
+      "ROUTE_SPECIFIC_GO",
+      "NO_SIGNAL"
+    ],
+    "route_dominance": "corrected_retained_not_lower_introduced_and_dangerous_not_higher_net_strictly_higher_than_development_locked_comparator",
+    "minimum_dominant_fractions_per_route": 2,
+    "must_include_fraction": 0.2,
+    "fraction_0_2_paired_net_ci_lower_must_be_nonnegative": true,
+    "ADOPTION_GO": "At least two routes with two distinct Scout models satisfy the frozen route rule.",
+    "ROUTE_SPECIFIC_GO": "At least one route satisfies the frozen route rule but the multi-Scout rule is not met.",
+    "NO_SIGNAL": "No route satisfies the frozen route rule.",
+    "boundary": "No result grants clinical validity, route eligibility, or correctness of deferred human review."
+  },
+  "required_outputs": [
+    "core_results.csv",
+    "research_report.md"
+  ]
+}
